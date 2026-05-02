@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<title>Budget</title>
+<style>
+:root{
+  --bg0:#0a0a0a; --bg1:#0f0f12; --bg2:#16161a; --bg3:#222228;
+  --wht:#e8e8ea; --gry:#8a8a92; --gry2:#3a3a44; --gry3:#5a5a64;
+  --amb:#00d4ff; --ambb:#7fe7ff; --amb3:rgba(0,212,255,0.10);
+  --grn:#00e676; --red:#ef4444; --wrn:#ffd740; --blu:#00d4ff;
+  --ff:'Inter','Helvetica Neue',Arial,sans-serif;
+  --ff-mono:'JetBrains Mono','SF Mono','Menlo',monospace;
+  --bdr:1px solid var(--bg3);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg0);color:var(--wht);font-family:var(--ff);font-size:14px;}
+body.light-mode{--bg0:#f5f5f7;--bg1:#fff;--bg2:#fafafa;--bg3:#e0e0e3;--wht:#1a1a1c;--gry:#666;--gry2:#bbb;--gry3:#888;}
+
+/* Header */
+#hdr{display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--bg1);border-bottom:var(--bdr);flex-wrap:wrap;}
+#hdr-logo{font-family:var(--ff-mono);font-size:14px;letter-spacing:3px;color:var(--amb);font-weight:700;}
+#hdr-right{margin-left:auto;display:flex;gap:10px;align-items:center;font-family:var(--ff-mono);font-size:11px;}
+.sync-pill{padding:3px 10px;border-radius:3px;font-size:10px;letter-spacing:.5px;border:1px solid var(--gry2);color:var(--gry);}
+.sync-pill.ok{color:var(--grn);border-color:var(--grn);}
+.sync-pill.err{color:var(--red);border-color:var(--red);}
+.sync-pill.local{color:var(--wrn);border-color:var(--wrn);}
+
+/* Tabs */
+#tabs{display:flex;gap:0;background:var(--bg1);border-bottom:var(--bdr);overflow-x:auto;}
+.ntab{font-family:var(--ff-mono);font-size:12px;padding:12px 18px;background:none;border:none;color:var(--gry);cursor:pointer;letter-spacing:1px;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px;}
+.ntab.active{color:var(--amb);border-bottom-color:var(--amb);}
+.ntab:hover{color:var(--wht);}
+
+.tab-pane{display:none;padding:16px;max-width:1400px;margin:0 auto;}
+.tab-pane.active{display:block;}
+
+/* Cards */
+.card{background:var(--bg1);border:var(--bdr);border-radius:4px;margin-bottom:16px;}
+.card-hdr{padding:10px 14px;border-bottom:var(--bdr);font-family:var(--ff-mono);font-size:11px;color:var(--amb);letter-spacing:1.5px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.card-body{padding:14px;}
+
+/* Buttons */
+.btn{font-family:var(--ff-mono);font-size:11px;padding:7px 12px;background:var(--bg2);border:1px solid var(--gry2);color:var(--wht);border-radius:3px;cursor:pointer;letter-spacing:.5px;min-height:32px;}
+.btn:hover{border-color:var(--amb);color:var(--amb);}
+.btn.blu{border-color:var(--amb);color:var(--amb);}
+.btn.grn{border-color:var(--grn);color:var(--grn);}
+.btn.red{border-color:var(--red);color:var(--red);}
+.btn.wrn{border-color:var(--wrn);color:var(--wrn);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Form fields */
+input[type=text],input[type=number],input[type=date],input[type=url],select,textarea{
+  background:var(--bg2);border:var(--bdr);color:var(--wht);
+  font-family:var(--ff-mono);font-size:13px;padding:8px 10px;border-radius:3px;
+  outline:none;min-height:36px;
+}
+input:focus,select:focus{border-color:var(--amb);}
+label{display:block;font-family:var(--ff-mono);font-size:10px;color:var(--gry);letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase;}
+.field{margin-bottom:12px;}
+.field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+
+/* Cashflow grid */
+.cf-wrap{overflow:auto;border:var(--bdr);border-radius:4px;max-height:75vh;}
+.cf-table{border-collapse:separate;border-spacing:0;font-family:var(--ff-mono);font-size:11px;width:max-content;min-width:100%;}
+.cf-table th, .cf-table td{padding:7px 9px;border-bottom:1px solid var(--bg3);border-right:1px solid var(--bg3);text-align:right;white-space:nowrap;background:var(--bg1);}
+.cf-table th{position:sticky;top:0;z-index:2;background:var(--bg2);color:var(--gry);font-weight:600;font-size:10px;letter-spacing:.5px;}
+.cf-table td.cat,.cf-table th.cat{position:sticky;left:0;z-index:1;background:var(--bg2);color:var(--wht);text-align:left;border-right:2px solid var(--bg3);min-width:140px;}
+.cf-table th.cat{z-index:3;}
+.cf-table tr.deposit td{color:var(--grn);font-weight:600;}
+.cf-table tr.deposit td.cat{color:var(--grn);}
+.cf-table tr.balance td{background:var(--bg2);font-weight:700;color:var(--ambb);border-top:2px solid var(--amb);}
+.cf-table tr.balance td.cat{background:var(--bg2);}
+.cf-table tr.diff td{color:var(--gry);font-style:italic;font-size:10px;}
+.cf-table td.editable{cursor:pointer;}
+.cf-table td.editable:hover{background:var(--amb3);}
+.cf-table td.override{background:rgba(255,215,64,0.08);position:relative;}
+.cf-table td.override::after{content:'';position:absolute;top:2px;right:2px;width:4px;height:4px;background:var(--wrn);border-radius:50%;}
+.cf-table th.paycheck-monthly{color:var(--ambb);background:rgba(0,212,255,0.06);}
+.cf-table th.paycheck-weekly{color:var(--gry);}
+.cf-table td.zero{color:var(--gry3);}
+.cf-table tr.cat-bill:hover td{background:rgba(255,255,255,0.02);}
+
+/* Bills table */
+.bills-table{width:100%;border-collapse:collapse;font-family:var(--ff-mono);font-size:12px;}
+.bills-table th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--bg3);color:var(--gry);font-size:10px;letter-spacing:.5px;text-transform:uppercase;background:var(--bg2);}
+.bills-table td{padding:8px 12px;border-bottom:1px solid var(--bg3);}
+.bills-table tr.inactive{opacity:.45;}
+.bills-table input,.bills-table select{font-size:12px;padding:5px 8px;min-height:30px;width:100%;background:transparent;border:1px solid transparent;}
+.bills-table input:hover,.bills-table select:hover,.bills-table input:focus,.bills-table select:focus{background:var(--bg2);border-color:var(--bg3);}
+.bills-table .col-name{min-width:160px;}
+.bills-table .col-amt{width:90px;}
+.bills-table .col-freq{width:130px;}
+.bills-table .col-day{width:80px;}
+.bills-table .col-cat{width:110px;}
+.bills-table .col-actions{width:80px;text-align:right;}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.stat-box{background:var(--bg2);padding:12px 14px;border-radius:4px;border:var(--bdr);}
+.stat-lbl{font-family:var(--ff-mono);font-size:9px;color:var(--gry);letter-spacing:1px;text-transform:uppercase;}
+.stat-val{font-family:var(--ff-mono);font-size:20px;color:var(--wht);font-weight:700;margin-top:4px;}
+.stat-val.grn{color:var(--grn);} .stat-val.red{color:var(--red);} .stat-val.amb{color:var(--amb);}
+.stat-sub{font-family:var(--ff-mono);font-size:10px;color:var(--gry);margin-top:2px;}
+
+/* Chart */
+.chart-wrap{background:var(--bg2);border-radius:4px;padding:14px;margin-top:12px;}
+
+/* Sliders */
+.range-row{display:flex;align-items:center;gap:14px;font-family:var(--ff-mono);}
+.range-row input[type=range]{flex:1;}
+.range-val{min-width:90px;text-align:right;font-size:13px;color:var(--ambb);font-weight:700;}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);color:var(--wht);padding:12px 20px;border-radius:4px;border:1px solid var(--amb);font-family:var(--ff-mono);font-size:12px;z-index:1000;display:none;}
+#toast.show{display:block;animation:fadein .2s;}
+@keyframes fadein{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;}}
+
+/* Mobile/iPad */
+@media (max-width:768px){
+  .ntab{font-size:11px;padding:11px 12px;letter-spacing:.5px;}
+  .field-row{grid-template-columns:1fr;}
+  .tab-pane{padding:10px;}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="hdr-logo">BUDGET</div>
+  <div id="hdr-right">
+    <span id="last-sync" class="sync-pill local" title="Click to force sync">LOCAL ONLY</span>
+    <button class="btn" onclick="toggleLight()" title="Toggle theme">☀</button>
+  </div>
+</div>
+
+<div id="tabs">
+  <button class="ntab active" onclick="showTab('cashflow')">CASHFLOW</button>
+  <button class="ntab" onclick="showTab('bills')">BILLS</button>
+  <button class="ntab" onclick="showTab('mortgage')">MORTGAGE PAYOFF</button>
+  <button class="ntab" onclick="showTab('savings')">SAVINGS</button>
+  <button class="ntab" onclick="showTab('networth')">NET WORTH</button>
+  <button class="ntab" onclick="showTab('settings')">SETTINGS</button>
+</div>
+
+<!-- ─── CASHFLOW ─────────────────────────────────────────────────────── -->
+<div class="tab-pane active" id="tab-cashflow">
+  <div class="card">
+    <div class="card-hdr">
+      <span>▣ CASHFLOW — paychecks (1st of month + Thursdays) auto-distribute bills by due date</span>
+      <span style="display:flex;gap:8px;">
+        <label style="margin:0;display:flex;align-items:center;gap:6px;text-transform:none;font-size:11px;color:var(--gry);">
+          Weeks <select id="cf-weeks" onchange="renderCashflow()">
+            <option value="8">8</option><option value="13">13</option><option value="26" selected>26</option><option value="52">52</option>
+          </select>
+        </label>
+        <button class="btn" onclick="renderCashflow()">↻ REFRESH</button>
+      </span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="cf-wrap" id="cf-wrap">
+        <div style="padding:30px;color:var(--gry);text-align:center;">Loading…</div>
+      </div>
+    </div>
+  </div>
+  <div style="font-family:var(--ff-mono);font-size:10px;color:var(--gry);padding:6px 4px;line-height:1.6;">
+    • Cells with a <span style="color:var(--wrn);">●</span> dot have manual overrides (click any bill cell to edit one paycheck without touching the bill's recurring amount).<br>
+    • Click a paycheck header to edit just that paycheck's deposit.<br>
+    • <b>Running balance</b> at the bottom = previous balance + deposit − bills that week. Starts from your current PNC balance set in Settings.
+  </div>
+</div>
+
+<!-- ─── BILLS ───────────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-bills">
+  <div class="card">
+    <div class="card-hdr">
+      <span>▣ BILLS LIBRARY — recurring rules</span>
+      <button class="btn blu" onclick="addBill()">+ ADD BILL</button>
+    </div>
+    <div class="card-body" style="padding:0;overflow:auto;">
+      <table class="bills-table" id="bills-table">
+        <thead><tr>
+          <th class="col-name">NAME</th>
+          <th class="col-amt">AMOUNT</th>
+          <th class="col-freq">FREQUENCY</th>
+          <th class="col-day">DUE DAY</th>
+          <th class="col-cat">CATEGORY</th>
+          <th>ACTIVE</th>
+          <th class="col-actions"></th>
+        </tr></thead>
+        <tbody id="bills-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="font-family:var(--ff-mono);font-size:10px;color:var(--gry);padding:6px 4px;line-height:1.7;">
+    <b>FREQUENCY OPTIONS:</b><br>
+    • <b>Monthly</b>: paid on the same day every month (Due Day = 1–31).<br>
+    • <b>Weekly</b>: paid every week on a specific weekday (Due Day = 0=Sun, 1=Mon, … 6=Sat).<br>
+    • <b>Biweekly</b>: every 2 weeks from the date you set in <code>Notes</code> (or the start of the month if blank).<br>
+    • <b>Quarterly</b>: every 3 months on Due Day.<br>
+    • <b>Semi-annual</b>: every 6 months on Due Day.<br>
+    • <b>Yearly</b>: once a year on Due Day (use Notes field <code>MM</code> for the month, e.g. <code>06</code> for June).<br>
+    • <b>Once</b>: a single one-off charge (use Notes field <code>YYYY-MM-DD</code>).
+  </div>
+</div>
+
+<!-- ─── MORTGAGE PAYOFF ─────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-mortgage">
+  <div class="card">
+    <div class="card-hdr">▣ MORTGAGE PAYOFF — projected with extra weekly principal</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field"><label>Current Balance ($)</label><input id="m-balance" type="number" step="0.01" oninput="renderMortgage()"></div>
+        <div class="field"><label>APR (%)</label><input id="m-rate" type="number" step="0.001" oninput="renderMortgage()"></div>
+        <div class="field"><label>Monthly P&I ($, no escrow)</label><input id="m-pi" type="number" step="0.01" oninput="renderMortgage()"></div>
+        <div class="field"><label>Next Payment Date</label><input id="m-next" type="date" oninput="renderMortgage()"></div>
+      </div>
+      <div class="field">
+        <label>Extra principal per WEEK ($)</label>
+        <div class="range-row">
+          <input id="m-extra" type="range" min="0" max="500" step="5" value="0" oninput="onExtraInput()">
+          <input id="m-extra-num" type="number" min="0" max="5000" step="5" value="0" style="width:90px;" oninput="onExtraNumInput()">
+          <span class="range-val" id="m-extra-val">$0/wk</span>
+        </div>
+        <div style="font-family:var(--ff-mono);font-size:10px;color:var(--gry);margin-top:4px;">
+          Equivalent: <span id="m-extra-mo">$0/mo</span> extra principal applied at month-end.
+        </div>
+      </div>
+      <div class="stat-grid" style="margin-top:14px;">
+        <div class="stat-box"><div class="stat-lbl">Payoff date (no extra)</div><div class="stat-val" id="m-payoff-base">—</div><div class="stat-sub" id="m-payoff-base-sub"></div></div>
+        <div class="stat-box"><div class="stat-lbl">Payoff date (with extra)</div><div class="stat-val grn" id="m-payoff-extra">—</div><div class="stat-sub" id="m-payoff-extra-sub"></div></div>
+        <div class="stat-box"><div class="stat-lbl">Time saved</div><div class="stat-val amb" id="m-time-saved">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Interest saved</div><div class="stat-val grn" id="m-int-saved">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Total interest (no extra)</div><div class="stat-val" id="m-int-base">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Total interest (with extra)</div><div class="stat-val" id="m-int-extra">—</div></div>
+      </div>
+      <div class="chart-wrap">
+        <div id="m-chart" style="height:340px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SAVINGS ─────────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-savings">
+  <div class="card">
+    <div class="card-hdr">▣ SAVINGS CALCULATOR — future value with monthly contributions</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field"><label>Starting balance ($)</label><input id="s-start" type="number" step="100" value="10000" oninput="renderSavings()"></div>
+        <div class="field"><label>Monthly contribution ($)</label><input id="s-contrib" type="number" step="50" value="500" oninput="renderSavings()"></div>
+        <div class="field"><label>Annual return (%)</label><input id="s-rate" type="number" step="0.1" value="5" oninput="renderSavings()"></div>
+        <div class="field"><label>Years</label><input id="s-years" type="number" step="1" value="10" oninput="renderSavings()"></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-lbl">Future value</div><div class="stat-val grn" id="s-fv">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Total contributions</div><div class="stat-val" id="s-total-contrib">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Interest earned</div><div class="stat-val amb" id="s-interest">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Effective multiple</div><div class="stat-val" id="s-multiple">—</div></div>
+      </div>
+      <div class="chart-wrap"><div id="s-chart" style="height:300px;"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NET WORTH ───────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-networth">
+  <div class="card">
+    <div class="card-hdr">
+      <span>▣ NET WORTH — accounts (current snapshot)</span>
+      <span style="display:flex;gap:8px;">
+        <button class="btn" onclick="addAccount()">+ ACCOUNT</button>
+        <button class="btn blu" onclick="snapshotNetWorth()" title="Save current balances as a dated snapshot">⊕ SNAPSHOT TODAY</button>
+      </span>
+    </div>
+    <div class="card-body" style="padding:0;overflow:auto;">
+      <table class="bills-table" id="nw-table">
+        <thead><tr>
+          <th>ACCOUNT</th>
+          <th class="col-amt">BALANCE</th>
+          <th class="col-cat">TYPE</th>
+          <th class="col-cat">CATEGORY</th>
+          <th class="col-actions"></th>
+        </tr></thead>
+        <tbody id="nw-tbody"></tbody>
+        <tfoot id="nw-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">▣ HISTORY — net worth over time</div>
+    <div class="card-body">
+      <div id="nw-stats" class="stat-grid" style="margin-bottom:14px;"></div>
+      <div class="chart-wrap"><div id="nw-chart" style="height:320px;"></div></div>
+      <div style="font-family:var(--ff-mono);font-size:10px;color:var(--gry);margin-top:8px;">
+        Click <b>SNAPSHOT TODAY</b> to record the current totals as a point in history. Snapshots are timestamped and never auto-overwritten.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SETTINGS ────────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-settings">
+  <div class="card">
+    <div class="card-hdr">▣ SYNC — Google Sheets backing store</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Web app URL (Apps Script deployment)</label>
+        <input id="ss-webhook" type="url" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn blu" onclick="testSync()">TEST CONNECTION</button>
+        <button class="btn grn" onclick="saveWebhook()">SAVE</button>
+        <button class="btn" onclick="forcePull()" title="Pull latest from Google Sheet, replacing local state">↓ PULL FROM SHEET</button>
+        <button class="btn" onclick="forcePush()" title="Push local state to Google Sheet, replacing remote">↑ PUSH TO SHEET</button>
+        <button class="btn red" onclick="clearAll()" title="Clear all local data — does NOT touch the Sheet">⊘ CLEAR LOCAL</button>
+      </div>
+      <div id="ss-status" style="font-family:var(--ff-mono);font-size:11px;color:var(--gry);margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">▣ INCOME — your two paycheck rules</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field"><label>Monthly paycheck (1st of month) — gross deposit ($)</label><input id="cfg-paycheck-monthly" type="number" step="1" oninput="onCfgChange()"></div>
+        <div class="field"><label>Weekly paycheck (every Thursday) — gross deposit ($)</label><input id="cfg-paycheck-weekly" type="number" step="1" oninput="onCfgChange()"></div>
+        <div class="field"><label>Current PNC checking balance ($) — starting point for cashflow</label><input id="cfg-start-balance" type="number" step="0.01" oninput="onCfgChange()"></div>
+      </div>
+      <div style="font-family:var(--ff-mono);font-size:10px;color:var(--gry);">
+        Per-paycheck overrides go on the cashflow grid itself — click any paycheck header to set just that one.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">▣ DATA — export / import</div>
+    <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="exportJSON()">⬇ EXPORT JSON</button>
+      <button class="btn" onclick="document.getElementById('import-file').click()">⬆ IMPORT JSON</button>
+      <input id="import-file" type="file" accept=".json" style="display:none;" onchange="importJSON(event)">
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════
+const LS_KEY = 'roth_budget_state_v1';
+const LS_WEBHOOK = 'roth_budget_webhook';
+
+let S = {
+  // Income config
+  paycheckMonthly: 3750,
+  paycheckWeekly: 1597,
+  startBalance: 0,
+  startBalanceDate: null,  // ISO date for the start balance reference
+
+  // Per-paycheck deposit overrides {ISO date → amount}
+  paycheckOverrides: {},
+
+  // Bills library: [{id, name, amount, frequency, dueDay, category, active, notes}]
+  bills: [],
+
+  // Per-bill, per-paycheck-date overrides: {billId: {ISO_date: amount}}
+  billOverrides: {},
+
+  // Mortgage
+  mortgage: {
+    balance: 205032.92,
+    rate: 2.99,
+    pi: 979.12,
+    nextPayment: '2026-06-01',
+    extraWeekly: 0,
+  },
+
+  // Savings calculator config (just inputs, recomputed on render)
+  savings: { start: 10000, contrib: 500, rate: 5, years: 10 },
+
+  // Net worth
+  accounts: [],         // [{id, name, type:'asset'|'liability', category, balance}]
+  nwHistory: [],        // [{date: 'YYYY-MM-DD', total, byCategory: {...}}]
+
+  meta: { version: 1, modified: null },
+};
+
+let WEBHOOK_URL = '';
+let SYNC_STATE = 'local';  // 'local' | 'syncing' | 'ok' | 'err'
+let LAST_PULL = null;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════════
+const eid = id => document.getElementById(id);
+const fmt$ = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
+const fmt$2 = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+const isoDate = d => { const dt = (typeof d === 'string') ? new Date(d) : d; return dt.toISOString().slice(0,10); };
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth()+n); return r; };
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function toast(msg, dur=2400) {
+  const t = eid('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(b => b.classList.remove('active'));
+  eid('tab-' + name).classList.add('active');
+  // Find the matching button by onclick text
+  document.querySelectorAll('.ntab').forEach(b => {
+    if (b.getAttribute('onclick').includes("'" + name + "'")) b.classList.add('active');
+  });
+  if (name === 'cashflow') renderCashflow();
+  if (name === 'bills') renderBills();
+  if (name === 'mortgage') renderMortgage();
+  if (name === 'savings') renderSavings();
+  if (name === 'networth') renderNetWorth();
+  if (name === 'settings') renderSettings();
+}
+
+function toggleLight() { document.body.classList.toggle('light-mode'); }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PAYCHECK SCHEDULE GENERATION
+// ═══════════════════════════════════════════════════════════════════════
+
+// Generate paycheck dates for the next N weeks starting from today.
+// Two streams: monthly (1st of each month) + weekly (every Thursday).
+// Returns sorted array of {date: ISO, amount, kind: 'monthly'|'weekly'}.
+function generatePaychecks(weeks) {
+  const out = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const end = addDays(today, weeks * 7);
+
+  // Monthly: 1st of each month from current month forward
+  let m = new Date(today.getFullYear(), today.getMonth(), 1);
+  if (m < today) {
+    // If today is past the 1st of this month, the 1st-of-month paycheck for
+    // this month is in the past — start from the next month's 1st.
+    m = new Date(today.getFullYear(), today.getMonth()+1, 1);
+  }
+  while (m <= end) {
+    const iso = isoDate(m);
+    out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckMonthly, kind: 'monthly' });
+    m = addMonths(m, 1);
+  }
+
+  // Weekly: every Thursday (dow=4) starting from the next Thursday on/after today
+  let w = new Date(today);
+  const daysUntilThu = (4 - w.getDay() + 7) % 7;
+  w = addDays(w, daysUntilThu);
+  while (w <= end) {
+    const iso = isoDate(w);
+    // Skip if a monthly paycheck already falls on this exact day
+    if (!out.some(p => p.date === iso)) {
+      out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckWeekly, kind: 'weekly' });
+    }
+    w = addDays(w, 7);
+  }
+
+  out.sort((a,b) => a.date.localeCompare(b.date));
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BILL → PAYCHECK ASSIGNMENT
+// ═══════════════════════════════════════════════════════════════════════
+
+// For a given bill, generate all due dates in [from, to].
+function billDueDates(bill, from, to) {
+  const dates = [];
+  const fromY = from.getFullYear(), fromM = from.getMonth();
+
+  switch (bill.frequency) {
+    case 'monthly': {
+      // Iterate every month in range; due day clamped to month length
+      let cur = new Date(fromY, fromM, 1);
+      while (cur <= to) {
+        const dim = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+        const day = Math.min(parseInt(bill.dueDay) || 1, dim);
+        const d = new Date(cur.getFullYear(), cur.getMonth(), day);
+        if (d >= from && d <= to) dates.push(d);
+        cur = addMonths(cur, 1);
+      }
+      break;
+    }
+    case 'weekly': {
+      // dueDay is weekday 0-6 (Sun-Sat)
+      const dow = parseInt(bill.dueDay) || 0;
+      let d = new Date(from);
+      const offset = (dow - d.getDay() + 7) % 7;
+      d = addDays(d, offset);
+      while (d <= to) { dates.push(new Date(d)); d = addDays(d, 7); }
+      break;
+    }
+    case 'biweekly': {
+      // Anchor: bill.notes as YYYY-MM-DD, else first day of `from` month
+      const anchor = bill.notes && /^\d{4}-\d{2}-\d{2}$/.test(bill.notes)
+        ? parseISO(bill.notes) : new Date(fromY, fromM, 1);
+      let d = new Date(anchor);
+      // Wind d forward to the first occurrence >= from
+      while (d < from) d = addDays(d, 14);
+      while (d <= to) { dates.push(new Date(d)); d = addDays(d, 14); }
+      break;
+    }
+    case 'quarterly':
+    case 'semi':
+    case 'yearly': {
+      const stepMonths = bill.frequency === 'quarterly' ? 3
+                       : bill.frequency === 'semi' ? 6 : 12;
+      // For yearly, month from notes (MM) or January
+      let startMonth = fromM;
+      if (bill.frequency === 'yearly') {
+        const noteM = bill.notes && /^\d{1,2}$/.test(bill.notes) ? parseInt(bill.notes)-1 : 0;
+        startMonth = noteM;
+      }
+      // Iterate: starting from a date in current year, step by stepMonths
+      let cur = new Date(fromY, startMonth, parseInt(bill.dueDay) || 1);
+      // Wind back if we're past `to`, forward if before `from`
+      while (cur > to) cur = addMonths(cur, -stepMonths);
+      while (cur < from) cur = addMonths(cur, stepMonths);
+      while (cur <= to) { dates.push(new Date(cur)); cur = addMonths(cur, stepMonths); }
+      break;
+    }
+    case 'once': {
+      if (bill.notes && /^\d{4}-\d{2}-\d{2}$/.test(bill.notes)) {
+        const d = parseISO(bill.notes);
+        if (d >= from && d <= to) dates.push(d);
+      }
+      break;
+    }
+  }
+  return dates;
+}
+
+// Given paycheck dates (sorted) and a bill due date, find the paycheck whose
+// "week of responsibility" contains that due date. Rule: the paycheck PRIOR
+// to (or equal to) the due date covers it. The first paycheck covers everything
+// from today through the next paycheck.
+function paycheckCoveringDate(paychecks, dueDate) {
+  // Find the LAST paycheck whose date is <= dueDate. That paycheck covers it.
+  // Edge case: due date before any paycheck → assign to first paycheck.
+  let idx = -1;
+  for (let i = 0; i < paychecks.length; i++) {
+    if (parseISO(paychecks[i].date) <= dueDate) idx = i;
+    else break;
+  }
+  if (idx === -1) return paychecks.length ? paychecks[0].date : null;
+  return paychecks[idx].date;
+}
+
+// Build a 2D map: {paycheckDate → {billId → amount}} for the visible window.
+function buildCashflowMatrix(paychecks) {
+  const matrix = {};
+  paychecks.forEach(p => matrix[p.date] = {});
+  if (!paychecks.length) return matrix;
+  const from = parseISO(paychecks[0].date);
+  const to = addDays(parseISO(paychecks[paychecks.length-1].date), 7);
+
+  S.bills.filter(b => b.active !== false).forEach(bill => {
+    const dueDates = billDueDates(bill, from, to);
+    dueDates.forEach(due => {
+      const pcDate = paycheckCoveringDate(paychecks, due);
+      if (!pcDate) return;
+      const overrides = S.billOverrides[bill.id] || {};
+      const amt = overrides[pcDate] !== undefined ? overrides[pcDate] : Number(bill.amount) || 0;
+      matrix[pcDate][bill.id] = (matrix[pcDate][bill.id] || 0) + amt;
+    });
+  });
+
+  return matrix;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER: CASHFLOW
+// ═══════════════════════════════════════════════════════════════════════
+function renderCashflow() {
+  const wrap = eid('cf-wrap');
+  const weeks = parseInt(eid('cf-weeks').value) || 26;
+  const paychecks = generatePaychecks(weeks);
+  const matrix = buildCashflowMatrix(paychecks);
+
+  if (!paychecks.length) {
+    wrap.innerHTML = '<div style="padding:30px;color:var(--gry);text-align:center;">No paychecks in window. Set income in Settings.</div>';
+    return;
+  }
+
+  // Collect unique bill IDs that have any non-zero in the matrix, plus bills that are merely active
+  const activeBills = S.bills.filter(b => b.active !== false);
+  const visibleBills = activeBills;  // show every active bill row, even if zero in window
+
+  let h = '<table class="cf-table"><thead><tr>';
+  h += '<th class="cat">CATEGORY</th>';
+  paychecks.forEach(p => {
+    const dt = parseISO(p.date);
+    const lbl = (dt.getMonth()+1) + '/' + dt.getDate();
+    const cls = p.kind === 'monthly' ? 'paycheck-monthly' : 'paycheck-weekly';
+    h += `<th class="${cls}" onclick="editPaycheck('${p.date}')" style="cursor:pointer;" title="Click to override deposit">${lbl}<br><span style="font-size:9px;opacity:.7;">${p.kind === 'monthly' ? '1st' : 'Thu'}</span></th>`;
+  });
+  h += '</tr></thead><tbody>';
+
+  // Deposit row
+  h += '<tr class="deposit"><td class="cat">▲ DEPOSIT</td>';
+  paychecks.forEach(p => {
+    const isOverride = S.paycheckOverrides[p.date] !== undefined;
+    h += `<td class="${isOverride ? 'override' : ''}">$${(p.amount).toLocaleString()}</td>`;
+  });
+  h += '</tr>';
+
+  // Bill rows
+  visibleBills.forEach(bill => {
+    h += `<tr class="cat-bill"><td class="cat">${escHTML(bill.name)}</td>`;
+    paychecks.forEach(p => {
+      const amt = matrix[p.date][bill.id] || 0;
+      const overrides = S.billOverrides[bill.id] || {};
+      const isOverride = overrides[p.date] !== undefined;
+      const cls = (amt === 0 ? 'zero ' : '') + 'editable' + (isOverride ? ' override' : '');
+      h += `<td class="${cls}" onclick="editBillCell('${bill.id}','${p.date}')">${amt ? '$'+amt.toLocaleString() : '·'}</td>`;
+    });
+    h += '</tr>';
+  });
+
+  // Running balance + difference rows
+  let bal = Number(S.startBalance) || 0;
+  const balRow = ['<tr class="balance"><td class="cat">▣ RUNNING BALANCE</td>'];
+  const diffRow = ['<tr class="diff"><td class="cat">Δ vs prev</td>'];
+  let prevBal = bal;
+  paychecks.forEach(p => {
+    const dep = p.amount || 0;
+    let bills = 0;
+    visibleBills.forEach(b => bills += matrix[p.date][b.id] || 0);
+    bal = bal + dep - bills;
+    const cls = bal < 0 ? 'red' : '';
+    balRow.push(`<td style="color:${bal < 0 ? 'var(--red)' : 'var(--ambb)'};">$${Math.round(bal).toLocaleString()}</td>`);
+    const diff = bal - prevBal;
+    const diffCls = diff < 0 ? 'red' : (diff > 0 ? 'grn' : '');
+    diffRow.push(`<td>${diff >= 0 ? '+' : '-'}$${Math.abs(Math.round(diff)).toLocaleString()}</td>`);
+    prevBal = bal;
+  });
+  balRow.push('</tr>');
+  diffRow.push('</tr>');
+  h += balRow.join('') + diffRow.join('');
+
+  h += '</tbody></table>';
+  wrap.innerHTML = h;
+}
+
+function escHTML(s) {
+  return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function editPaycheck(date) {
+  const cur = S.paycheckOverrides[date] !== undefined
+    ? S.paycheckOverrides[date]
+    : (parseISO(date).getDate() === 1 ? S.paycheckMonthly : S.paycheckWeekly);
+  const v = prompt(`Deposit on ${date}\n(leave blank to clear override and use the default for that paycheck type)`, cur);
+  if (v === null) return;
+  if (v.trim() === '') delete S.paycheckOverrides[date];
+  else { const n = parseFloat(v); if (!isNaN(n)) S.paycheckOverrides[date] = n; }
+  saveAndRender();
+}
+
+function editBillCell(billId, date) {
+  const bill = S.bills.find(b => b.id === billId);
+  if (!bill) return;
+  const overrides = S.billOverrides[billId] || {};
+  const cur = overrides[date] !== undefined ? overrides[date] : '';
+  const v = prompt(`${bill.name} for paycheck ${date}\n` +
+                   `Recurring amount: $${bill.amount}\n` +
+                   `Leave blank to use the recurring amount, enter 0 to skip this paycheck.`,
+                   cur);
+  if (v === null) return;
+  if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
+  if (v.trim() === '') delete S.billOverrides[billId][date];
+  else { const n = parseFloat(v); if (!isNaN(n)) S.billOverrides[billId][date] = n; }
+  saveAndRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER: BILLS
+// ═══════════════════════════════════════════════════════════════════════
+function renderBills() {
+  const tbody = eid('bills-tbody');
+  if (!S.bills.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gry);">No bills yet. Click <b>+ ADD BILL</b> to start.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = S.bills.map(b => `
+    <tr class="${b.active === false ? 'inactive' : ''}" data-id="${b.id}">
+      <td class="col-name"><input type="text" value="${escHTML(b.name)}" oninput="updateBill('${b.id}','name',this.value)"></td>
+      <td class="col-amt"><input type="number" step="0.01" value="${b.amount}" oninput="updateBill('${b.id}','amount',parseFloat(this.value)||0)"></td>
+      <td class="col-freq"><select onchange="updateBill('${b.id}','frequency',this.value)">
+        ${['monthly','weekly','biweekly','quarterly','semi','yearly','once'].map(f =>
+          `<option value="${f}" ${b.frequency===f?'selected':''}>${f.toUpperCase()}</option>`).join('')}
+      </select></td>
+      <td class="col-day"><input type="number" min="0" max="31" value="${b.dueDay||1}" oninput="updateBill('${b.id}','dueDay',parseInt(this.value)||1)"></td>
+      <td class="col-cat"><input type="text" value="${escHTML(b.category||'')}" placeholder="(optional)" oninput="updateBill('${b.id}','category',this.value)"></td>
+      <td><label style="margin:0;display:inline;"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></label></td>
+      <td class="col-actions"><button class="btn red" onclick="deleteBill('${b.id}')">DELETE</button></td>
+    </tr>
+    <tr><td></td><td colspan="6" style="padding:0 12px 8px;"><input type="text" value="${escHTML(b.notes||'')}" placeholder="Notes (anchor date for biweekly, MM for yearly, YYYY-MM-DD for once)" oninput="updateBill('${b.id}','notes',this.value)" style="width:100%;font-size:11px;color:var(--gry);"></td></tr>
+  `).join('');
+}
+
+function addBill() {
+  S.bills.push({ id: uid(), name: 'New bill', amount: 0, frequency: 'monthly', dueDay: 1, category: '', active: true, notes: '' });
+  saveAndRender();
+}
+function deleteBill(id) {
+  if (!confirm('Delete this bill?')) return;
+  S.bills = S.bills.filter(b => b.id !== id);
+  delete S.billOverrides[id];
+  saveAndRender();
+}
+function updateBill(id, field, value) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return;
+  b[field] = value;
+  scheduleSave();
+  // Re-render cashflow if currently visible (don't re-render bills table, it'd lose focus)
+  if (eid('tab-cashflow').classList.contains('active')) renderCashflow();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER: MORTGAGE
+// ═══════════════════════════════════════════════════════════════════════
+function amortize(balance, annualRate, monthlyPI, extraMonthly, startDate) {
+  const r = annualRate / 100 / 12;
+  let bal = balance;
+  let totalInterest = 0;
+  let months = 0;
+  const series = [];
+  let cur = new Date(startDate);
+  while (bal > 0.01 && months < 600) {
+    const interest = bal * r;
+    let principal = monthlyPI - interest + (extraMonthly || 0);
+    if (principal > bal) principal = bal;
+    bal -= principal;
+    totalInterest += interest;
+    months++;
+    if (months % 1 === 0) series.push({ date: isoDate(cur), balance: +bal.toFixed(2), interest: +totalInterest.toFixed(2) });
+    cur = addMonths(cur, 1);
+  }
+  return { months, totalInterest, series, finalDate: cur };
+}
+
+function renderMortgage() {
+  const m = S.mortgage;
+  // Read inputs
+  const balanceI = eid('m-balance'), rateI = eid('m-rate'), piI = eid('m-pi'), nextI = eid('m-next'), extraI = eid('m-extra');
+  if (balanceI && balanceI.value !== '') m.balance = parseFloat(balanceI.value) || 0;
+  if (rateI && rateI.value !== '') m.rate = parseFloat(rateI.value) || 0;
+  if (piI && piI.value !== '') m.pi = parseFloat(piI.value) || 0;
+  if (nextI && nextI.value !== '') m.nextPayment = nextI.value;
+  if (extraI) m.extraWeekly = parseFloat(extraI.value) || 0;
+
+  // Sync the visible inputs (in case loaded from state)
+  if (balanceI) balanceI.value = m.balance;
+  if (rateI) rateI.value = m.rate;
+  if (piI) piI.value = m.pi;
+  if (nextI) nextI.value = m.nextPayment;
+  if (extraI) extraI.value = m.extraWeekly;
+  const extraNum = eid('m-extra-num'); if (extraNum) extraNum.value = m.extraWeekly;
+  eid('m-extra-val').textContent = '$' + m.extraWeekly + '/wk';
+  eid('m-extra-mo').textContent = '$' + (m.extraWeekly * 52 / 12).toFixed(0) + '/mo';
+
+  const startDate = m.nextPayment ? parseISO(m.nextPayment) : new Date();
+  const baseAm = amortize(m.balance, m.rate, m.pi, 0, startDate);
+  const extraAm = amortize(m.balance, m.rate, m.pi, m.extraWeekly * 52 / 12, startDate);
+
+  const baseDate = baseAm.finalDate;
+  const extraDate = extraAm.finalDate;
+  eid('m-payoff-base').textContent = baseDate.toLocaleString('en-US', {month:'short', year:'numeric'});
+  eid('m-payoff-base-sub').textContent = `${baseAm.months} months · ${(baseAm.months/12).toFixed(1)} years`;
+  eid('m-payoff-extra').textContent = extraDate.toLocaleString('en-US', {month:'short', year:'numeric'});
+  eid('m-payoff-extra-sub').textContent = `${extraAm.months} months · ${(extraAm.months/12).toFixed(1)} years`;
+  const monthsSaved = baseAm.months - extraAm.months;
+  eid('m-time-saved').textContent = monthsSaved + 'mo (' + (monthsSaved/12).toFixed(1) + 'yr)';
+  eid('m-int-saved').textContent = fmt$(baseAm.totalInterest - extraAm.totalInterest);
+  eid('m-int-base').textContent = fmt$(baseAm.totalInterest);
+  eid('m-int-extra').textContent = fmt$(extraAm.totalInterest);
+
+  // Chart
+  const baseSeries = baseAm.series.map(p => [p.date, p.balance]);
+  const extraSeries = extraAm.series.map(p => [p.date, p.balance]);
+  const chart = echarts.init(eid('m-chart'), 'dark');
+  chart.setOption({
+    backgroundColor: 'transparent',
+    textStyle: { fontFamily: 'JetBrains Mono, monospace', color: '#8a8a92' },
+    grid: { left: 60, right: 30, top: 30, bottom: 40 },
+    legend: { textStyle: { color: '#8a8a92' }, top: 0 },
+    xAxis: { type: 'time', axisLabel: { color: '#8a8a92' } },
+    yAxis: { type: 'value', axisLabel: { color: '#8a8a92', formatter: v => '$' + (v/1000).toFixed(0) + 'k' } },
+    tooltip: { trigger: 'axis', formatter: function(p){ return p.map(s => s.seriesName + ': $' + Math.round(s.value[1]).toLocaleString()).join('<br>') + '<br>' + p[0].value[0].slice(0,7); } },
+    series: [
+      { name: 'Baseline', type: 'line', data: baseSeries, smooth: true, showSymbol: false, lineStyle: { color: '#8a8a92', width: 2 } },
+      { name: 'With extra', type: 'line', data: extraSeries, smooth: true, showSymbol: false, lineStyle: { color: '#00e676', width: 2 } },
+    ]
+  });
+
+  scheduleSave();
+}
+
+function onExtraInput() {
+  const v = parseFloat(eid('m-extra').value) || 0;
+  eid('m-extra-num').value = v;
+  S.mortgage.extraWeekly = v;
+  renderMortgage();
+}
+function onExtraNumInput() {
+  const v = parseFloat(eid('m-extra-num').value) || 0;
+  eid('m-extra').value = Math.min(v, 500);
+  S.mortgage.extraWeekly = v;
+  renderMortgage();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER: SAVINGS
+// ═══════════════════════════════════════════════════════════════════════
+function renderSavings() {
+  const start = parseFloat(eid('s-start').value) || 0;
+  const contrib = parseFloat(eid('s-contrib').value) || 0;
+  const rate = parseFloat(eid('s-rate').value) || 0;
+  const years = parseInt(eid('s-years').value) || 1;
+  S.savings = { start, contrib, rate, years };
+
+  const r = rate/100/12;
+  const months = years * 12;
+  let bal = start;
+  const series = [{ t: 0, balance: bal, contrib: start }];
+  let totalContrib = start;
+  for (let m = 1; m <= months; m++) {
+    bal = bal * (1 + r) + contrib;
+    totalContrib += contrib;
+    if (m % 6 === 0 || m === months) series.push({ t: m, balance: bal, contrib: totalContrib });
+  }
+  const fv = bal;
+  const interest = fv - totalContrib;
+
+  eid('s-fv').textContent = fmt$(fv);
+  eid('s-total-contrib').textContent = fmt$(totalContrib);
+  eid('s-interest').textContent = fmt$(interest);
+  eid('s-multiple').textContent = (fv / Math.max(totalContrib, 1)).toFixed(2) + 'x';
+
+  const chart = echarts.init(eid('s-chart'), 'dark');
+  chart.setOption({
+    backgroundColor: 'transparent',
+    textStyle: { fontFamily: 'JetBrains Mono, monospace', color: '#8a8a92' },
+    grid: { left: 60, right: 30, top: 30, bottom: 40 },
+    legend: { textStyle: { color: '#8a8a92' }, top: 0 },
+    xAxis: { type: 'value', name: 'months', axisLabel: { color: '#8a8a92' } },
+    yAxis: { type: 'value', axisLabel: { color: '#8a8a92', formatter: v => '$' + (v/1000).toFixed(0) + 'k' } },
+    tooltip: { trigger: 'axis' },
+    series: [
+      { name: 'Contributions', type: 'line', data: series.map(s => [s.t, s.contrib]), areaStyle: { color: 'rgba(138,138,146,0.3)' }, lineStyle: { color: '#8a8a92' }, smooth: true, showSymbol: false },
+      { name: 'Balance', type: 'line', data: series.map(s => [s.t, s.balance]), areaStyle: { color: 'rgba(0,212,255,0.2)' }, lineStyle: { color: '#00d4ff', width: 2 }, smooth: true, showSymbol: false },
+    ]
+  });
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER: NET WORTH
+// ═══════════════════════════════════════════════════════════════════════
+function renderNetWorth() {
+  const tbody = eid('nw-tbody');
+  const tfoot = eid('nw-tfoot');
+  if (!S.accounts.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gry);">No accounts yet. Click <b>+ ACCOUNT</b> to add one.</td></tr>';
+    tfoot.innerHTML = '';
+  } else {
+    tbody.innerHTML = S.accounts.map(a => `
+      <tr data-id="${a.id}">
+        <td><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
+        <td><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
+        <td><select onchange="updateAccount('${a.id}','type',this.value)">
+          <option value="asset" ${a.type==='asset'?'selected':''}>ASSET</option>
+          <option value="liability" ${a.type==='liability'?'selected':''}>LIABILITY</option>
+        </select></td>
+        <td><input type="text" value="${escHTML(a.category||'')}" placeholder="cash, brokerage, retirement, real estate, mortgage, cc…" oninput="updateAccount('${a.id}','category',this.value)"></td>
+        <td class="col-actions"><button class="btn red" onclick="deleteAccount('${a.id}')">DELETE</button></td>
+      </tr>
+    `).join('');
+    let assets = 0, liab = 0;
+    S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
+    const net = assets - liab;
+    tfoot.innerHTML = `
+      <tr style="border-top:2px solid var(--bg3);"><td style="font-weight:700;">ASSETS</td><td colspan="4" style="color:var(--grn);font-weight:700;">${fmt$2(assets)}</td></tr>
+      <tr><td style="font-weight:700;">LIABILITIES</td><td colspan="4" style="color:var(--red);font-weight:700;">${fmt$2(liab)}</td></tr>
+      <tr style="background:var(--bg2);"><td style="font-weight:700;color:var(--ambb);">▣ NET WORTH</td><td colspan="4" style="color:${net>=0?'var(--ambb)':'var(--red)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+    `;
+  }
+
+  // Stats + history chart
+  const stats = eid('nw-stats');
+  if (S.nwHistory.length) {
+    const latest = S.nwHistory[S.nwHistory.length-1];
+    const oldest = S.nwHistory[0];
+    const yearAgo = S.nwHistory.find(h => daysBetween(parseISO(h.date), new Date()) <= 365 + 30) || oldest;
+    const change1y = latest.total - yearAgo.total;
+    const changeAll = latest.total - oldest.total;
+    stats.innerHTML = `
+      <div class="stat-box"><div class="stat-lbl">Latest snapshot</div><div class="stat-val amb">${fmt$(latest.total)}</div><div class="stat-sub">${latest.date}</div></div>
+      <div class="stat-box"><div class="stat-lbl">Change vs 1yr ago</div><div class="stat-val ${change1y>=0?'grn':'red'}">${change1y>=0?'+':''}${fmt$(change1y)}</div></div>
+      <div class="stat-box"><div class="stat-lbl">Change since first snapshot</div><div class="stat-val ${changeAll>=0?'grn':'red'}">${changeAll>=0?'+':''}${fmt$(changeAll)}</div><div class="stat-sub">since ${oldest.date}</div></div>
+      <div class="stat-box"><div class="stat-lbl">Snapshots</div><div class="stat-val">${S.nwHistory.length}</div></div>
+    `;
+  } else {
+    stats.innerHTML = '<div style="grid-column:1/-1;color:var(--gry);font-family:var(--ff-mono);font-size:11px;padding:14px;text-align:center;">No snapshots yet — click ⊕ SNAPSHOT TODAY to record the current totals.</div>';
+  }
+
+  const chartEl = eid('nw-chart');
+  const chart = echarts.init(chartEl, 'dark');
+  if (S.nwHistory.length) {
+    chart.setOption({
+      backgroundColor: 'transparent',
+      textStyle: { fontFamily: 'JetBrains Mono, monospace', color: '#8a8a92' },
+      grid: { left: 70, right: 30, top: 30, bottom: 40 },
+      xAxis: { type: 'time', axisLabel: { color: '#8a8a92' } },
+      yAxis: { type: 'value', axisLabel: { color: '#8a8a92', formatter: v => '$' + (v/1000).toFixed(0) + 'k' } },
+      tooltip: { trigger: 'axis', formatter: p => p[0].value[0].slice(0,10) + '<br>' + fmt$2(p[0].value[1]) },
+      series: [{ type: 'line', data: S.nwHistory.map(h => [h.date, h.total]), areaStyle: { color: 'rgba(0,212,255,0.2)' }, lineStyle: { color: '#00d4ff', width: 2 }, smooth: true, showSymbol: true, symbolSize: 8 }],
+    });
+  } else {
+    chart.clear();
+  }
+  scheduleSave();
+}
+
+function addAccount() {
+  S.accounts.push({ id: uid(), name: 'New account', balance: 0, type: 'asset', category: '' });
+  saveAndRender();
+}
+function updateAccount(id, field, value) {
+  const a = S.accounts.find(x => x.id === id);
+  if (!a) return;
+  a[field] = value;
+  scheduleSave();
+  // Update totals row only — don't re-render the editable rows or focus is lost
+  const tfoot = eid('nw-tfoot');
+  let assets = 0, liab = 0;
+  S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
+  const net = assets - liab;
+  tfoot.innerHTML = `
+    <tr style="border-top:2px solid var(--bg3);"><td style="font-weight:700;">ASSETS</td><td colspan="4" style="color:var(--grn);font-weight:700;">${fmt$2(assets)}</td></tr>
+    <tr><td style="font-weight:700;">LIABILITIES</td><td colspan="4" style="color:var(--red);font-weight:700;">${fmt$2(liab)}</td></tr>
+    <tr style="background:var(--bg2);"><td style="font-weight:700;color:var(--ambb);">▣ NET WORTH</td><td colspan="4" style="color:${net>=0?'var(--ambb)':'var(--red)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+  `;
+}
+function deleteAccount(id) {
+  if (!confirm('Delete this account? (history snapshots are NOT affected.)')) return;
+  S.accounts = S.accounts.filter(a => a.id !== id);
+  saveAndRender();
+}
+function snapshotNetWorth() {
+  let assets = 0, liab = 0; const byCategory = {};
+  S.accounts.forEach(a => {
+    const v = +a.balance || 0;
+    if (a.type === 'asset') assets += v; else liab += v;
+    const k = a.category || (a.type === 'asset' ? 'asset' : 'liability');
+    byCategory[k] = (byCategory[k] || 0) + (a.type === 'asset' ? v : -v);
+  });
+  const total = assets - liab;
+  const today = isoDate(new Date());
+  // If a snapshot already exists for today, replace it
+  S.nwHistory = S.nwHistory.filter(h => h.date !== today);
+  S.nwHistory.push({ date: today, total, assets, liabilities: liab, byCategory });
+  S.nwHistory.sort((a,b) => a.date.localeCompare(b.date));
+  toast('Net worth snapshot recorded');
+  saveAndRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SETTINGS / SYNC
+// ═══════════════════════════════════════════════════════════════════════
+function renderSettings() {
+  eid('ss-webhook').value = WEBHOOK_URL || '';
+  eid('cfg-paycheck-monthly').value = S.paycheckMonthly;
+  eid('cfg-paycheck-weekly').value = S.paycheckWeekly;
+  eid('cfg-start-balance').value = S.startBalance;
+  updateSyncPill();
+}
+function onCfgChange() {
+  S.paycheckMonthly = parseFloat(eid('cfg-paycheck-monthly').value) || 0;
+  S.paycheckWeekly = parseFloat(eid('cfg-paycheck-weekly').value) || 0;
+  S.startBalance = parseFloat(eid('cfg-start-balance').value) || 0;
+  scheduleSave();
+}
+
+function saveWebhook() {
+  WEBHOOK_URL = eid('ss-webhook').value.trim();
+  localStorage.setItem(LS_WEBHOOK, WEBHOOK_URL);
+  if (WEBHOOK_URL) {
+    setStatus('Saved. Test the connection to verify.', 'gry');
+    forcePull();
+  } else {
+    setStatus('Cleared — operating in local-only mode.', 'wrn');
+    updateSyncPill();
+  }
+}
+async function testSync() {
+  if (!WEBHOOK_URL) { setStatus('Enter a webhook URL first.', 'red'); return; }
+  setStatus('Testing…', 'gry');
+  try {
+    const r = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'ping' })
+    });
+    const j = await r.json();
+    if (j.ok) setStatus('✓ Connected. Last server time: ' + j.ts, 'grn');
+    else setStatus('Reached server but got error: ' + JSON.stringify(j), 'red');
+  } catch (e) { setStatus('✗ Failed: ' + e.message, 'red'); }
+}
+async function forcePull() {
+  if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
+  setStatus('Pulling…', 'gry');
+  try {
+    const r = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'read' })
+    });
+    const j = await r.json();
+    if (j.error) { setStatus('✗ Server error: ' + j.error, 'red'); return; }
+    if (j.data) {
+      S = Object.assign({}, S, j.data);
+      LAST_PULL = j.updated;
+      saveLocal();
+      renderAll();
+      setStatus('✓ Pulled. Last write: ' + (j.updated || 'never'), 'grn');
+    } else {
+      setStatus('Sheet is empty. Pushing local state up…', 'gry');
+      await forcePush();
+    }
+  } catch (e) { setStatus('✗ Pull failed: ' + e.message, 'red'); }
+}
+async function forcePush() {
+  if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
+  setStatus('Pushing…', 'gry');
+  try {
+    S.meta = { version: 1, modified: new Date().toISOString() };
+    const r = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'write', data: S })
+    });
+    const j = await r.json();
+    if (j.ok) { LAST_PULL = j.updated; setStatus('✓ Pushed at ' + j.updated, 'grn'); SYNC_STATE='ok'; updateSyncPill(); }
+    else setStatus('✗ Server returned: ' + JSON.stringify(j), 'red');
+  } catch (e) { setStatus('✗ Push failed: ' + e.message, 'red'); SYNC_STATE='err'; updateSyncPill(); }
+}
+function clearAll() {
+  if (!confirm('Clear ALL local data? (This does NOT delete the Google Sheet — pull again to restore.)')) return;
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+function setStatus(msg, color) {
+  const el = eid('ss-status'); if (!el) return;
+  const c = ({grn:'var(--grn)', red:'var(--red)', wrn:'var(--wrn)', gry:'var(--gry)'})[color] || 'var(--gry)';
+  el.style.color = c;
+  el.textContent = msg;
+}
+function updateSyncPill() {
+  const p = eid('last-sync');
+  if (!WEBHOOK_URL) { p.className = 'sync-pill local'; p.textContent = 'LOCAL ONLY'; p.title='Set webhook in Settings to sync with Google Sheets'; return; }
+  if (SYNC_STATE === 'ok') { p.className = 'sync-pill ok'; p.textContent = 'SYNCED'; p.title='Last sync: ' + (LAST_PULL || 'never'); return; }
+  if (SYNC_STATE === 'err') { p.className = 'sync-pill err'; p.textContent = 'ERROR'; return; }
+  p.className = 'sync-pill'; p.textContent = 'IDLE'; p.title='';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════════════
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'budget-' + isoDate(new Date()) + '.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSON(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!confirm('Import will REPLACE all current data. Continue?')) return;
+      S = Object.assign({}, S, data);
+      saveLocal();
+      renderAll();
+      toast('Imported');
+    } catch (err) { alert('Invalid JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════════
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveLocal();
+    if (WEBHOOK_URL) backgroundPush();
+  }, 800);
+}
+function saveAndRender() {
+  saveLocal();
+  if (WEBHOOK_URL) backgroundPush();
+  renderAll();
+}
+function saveLocal() {
+  S.meta = S.meta || {};
+  S.meta.modified = new Date().toISOString();
+  localStorage.setItem(LS_KEY, JSON.stringify(S));
+}
+async function backgroundPush() {
+  SYNC_STATE = 'syncing'; updateSyncPill();
+  try {
+    const r = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'write', data: S })
+    });
+    const j = await r.json();
+    SYNC_STATE = j.ok ? 'ok' : 'err';
+    if (j.ok) LAST_PULL = j.updated;
+  } catch { SYNC_STATE = 'err'; }
+  updateSyncPill();
+}
+function loadLocal() {
+  const raw = localStorage.getItem(LS_KEY);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      S = Object.assign({}, S, data);
+    } catch {}
+  }
+  WEBHOOK_URL = localStorage.getItem(LS_WEBHOOK) || '';
+}
+function renderAll() {
+  if (eid('tab-cashflow').classList.contains('active')) renderCashflow();
+  if (eid('tab-bills').classList.contains('active')) renderBills();
+  if (eid('tab-mortgage').classList.contains('active')) renderMortgage();
+  if (eid('tab-savings').classList.contains('active')) renderSavings();
+  if (eid('tab-networth').classList.contains('active')) renderNetWorth();
+  if (eid('tab-settings').classList.contains('active')) renderSettings();
+  updateSyncPill();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SEED — first-run defaults from your Budget-2.xlsx
+// ═══════════════════════════════════════════════════════════════════════
+function seedIfEmpty() {
+  if (S.bills.length === 0 && S.accounts.length === 0) {
+    S.bills = [
+      { id: uid(), name: 'Mortgage',      amount: 1585.93, frequency: 'monthly', dueDay: 1,  category: 'housing',  active: true,  notes: '' },
+      { id: uid(), name: 'AT&T',          amount: 81,      frequency: 'monthly', dueDay: 1,  category: 'utilities',active: true,  notes: '' },
+      { id: uid(), name: 'HOA',           amount: 113.58,  frequency: 'monthly', dueDay: 1,  category: 'housing',  active: true,  notes: '' },
+      { id: uid(), name: 'Low T',         amount: 108.83,  frequency: 'biweekly',dueDay: 1,  category: 'health',   active: true,  notes: '' },
+      { id: uid(), name: 'TV',            amount: 98,      frequency: 'monthly', dueDay: 11, category: 'subscriptions', active: true, notes: '' },
+      { id: uid(), name: 'Electric',      amount: 200,     frequency: 'monthly', dueDay: 25, category: 'utilities',active: true,  notes: '' },
+      { id: uid(), name: 'T-Mobile',      amount: 248,     frequency: 'monthly', dueDay: 14, category: 'utilities',active: true,  notes: '' },
+      { id: uid(), name: 'YouTube',       amount: 20,      frequency: 'monthly', dueDay: 7,  category: 'subscriptions', active: true, notes: '' },
+      { id: uid(), name: 'Water',         amount: 50,      frequency: 'monthly', dueDay: 28, category: 'utilities',active: true,  notes: '' },
+      { id: uid(), name: 'Aptive',        amount: 112.58,  frequency: 'quarterly',dueDay: 1, category: 'home',     active: true,  notes: '' },
+      { id: uid(), name: 'Trash',         amount: 126,     frequency: 'quarterly',dueDay: 1, category: 'utilities',active: true,  notes: '' },
+      { id: uid(), name: 'Groceries',     amount: 200,     frequency: 'weekly',  dueDay: 4,  category: 'food',     active: true,  notes: '' },  // Thursday
+      { id: uid(), name: 'Gas',           amount: 100,     frequency: 'weekly',  dueDay: 4,  category: 'transport',active: true,  notes: '' },
+      { id: uid(), name: 'Daycare',       amount: 201.40,  frequency: 'weekly',  dueDay: 4,  category: 'kids',     active: true,  notes: '' },
+      { id: uid(), name: 'Bianca',        amount: 250,     frequency: 'biweekly',dueDay: 1,  category: 'family',   active: true,  notes: '' },
+      { id: uid(), name: 'Emergency Fund',amount: 500,     frequency: 'weekly',  dueDay: 4,  category: 'savings',  active: true,  notes: '' },
+    ];
+    S.accounts = [
+      { id: uid(), name: 'PNC Checking',     balance: 0,         type: 'asset',     category: 'cash' },
+      { id: uid(), name: 'PNC Savings',      balance: 0,         type: 'asset',     category: 'cash' },
+      { id: uid(), name: 'Joint Robinhood',  balance: 0,         type: 'asset',     category: 'brokerage' },
+      { id: uid(), name: 'Hood Trading',     balance: 0,         type: 'asset',     category: 'brokerage' },
+      { id: uid(), name: 'Bianca Individual',balance: 0,         type: 'asset',     category: 'brokerage' },
+      { id: uid(), name: 'Alex Roth IRA',    balance: 0,         type: 'asset',     category: 'retirement' },
+      { id: uid(), name: 'Bianca Roth IRA',  balance: 0,         type: 'asset',     category: 'retirement' },
+      { id: uid(), name: '529',              balance: 0,         type: 'asset',     category: 'kids' },
+      { id: uid(), name: 'Home (est. value)',balance: 0,         type: 'asset',     category: 'real estate' },
+      { id: uid(), name: 'Mortgage',         balance: 205032.92, type: 'liability', category: 'mortgage' },
+      { id: uid(), name: 'Coin CC',          balance: 0,         type: 'liability', category: 'credit card' },
+      { id: uid(), name: 'Gold CC',          balance: 488,       type: 'liability', category: 'credit card' },
+      { id: uid(), name: 'Amazon CC',        balance: 10,        type: 'liability', category: 'credit card' },
+      { id: uid(), name: 'Ross CC',          balance: 0,         type: 'liability', category: 'credit card' },
+    ];
+    saveLocal();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════════
+function boot() {
+  loadLocal();
+  seedIfEmpty();
+  renderCashflow();   // default tab
+  updateSyncPill();
+  // Auto-pull on load if webhook is set
+  if (WEBHOOK_URL) forcePull();
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
