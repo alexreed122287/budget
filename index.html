@@ -1788,31 +1788,54 @@ function savePhotos(photos) {
   try { localStorage.setItem(LS_PHOTOS, JSON.stringify(photos)); }
   catch (e) { alert('Photo storage full. Remove some photos and try again.\n\n' + e.message); }
 }
+// Max dimension and JPEG quality for stored photos. Smaller numbers =
+// more photos fit in localStorage. Splash + 7%-opacity background don't
+// need high resolution.
+const PHOTO_MAX_DIM = 900;
+const PHOTO_QUALITY = 0.72;
+
 function uploadPhotos(ev) {
   const files = Array.from(ev.target.files || []);
   if (!files.length) return;
+
+  // Load the existing array ONCE, accumulate every new photo into it,
+  // and write back ONCE at the end. This avoids a race where each
+  // async FileReader.onload would loadPhotos()→push→savePhotos() in
+  // parallel and clobber each other (which made it look like only one
+  // photo got saved when you selected multiple).
+  const photos = loadPhotos();
+  const startCount = photos.length;
   let pending = files.length;
+  let failed = 0;
+
+  function done() {
+    pending -= 1;
+    if (pending > 0) return;
+    try {
+      savePhotos(photos);
+    } catch (e) {
+      alert('Storage is full — drop a few photos and try again.\n\n' + e.message);
+    }
+    renderPhotoThumbs();
+    renderBgPhotos();
+    const added = photos.length - startCount;
+    toast(added + ' photo' + (added!==1?'s':'') + ' added' + (failed?' ('+failed+' failed)':''));
+  }
+
   files.forEach(file => {
     const reader = new FileReader();
+    reader.onerror = () => { failed++; done(); };
     reader.onload = e => {
       const img = new Image();
+      img.onerror = () => { failed++; done(); };
       img.onload = () => {
+        const scale = Math.min(PHOTO_MAX_DIM / Math.max(img.width, img.height), 1);
         const canvas = document.createElement('canvas');
-        const maxW = 1200;
-        const scale = Math.min(maxW / img.width, 1);
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        const photos = loadPhotos();
-        photos.push(dataUrl);
-        savePhotos(photos);
-        pending -= 1;
-        if (pending === 0) {
-          renderPhotoThumbs();
-          renderBgPhotos();
-          toast(files.length + ' photo' + (files.length>1?'s':'') + ' added');
-        }
+        photos.push(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+        done();
       };
       img.src = e.target.result;
     };
@@ -1838,10 +1861,21 @@ function deletePhotoAt(idx) {
 function renderPhotoThumbs() {
   const host = eid('photo-thumbs'); if (!host) return;
   const photos = loadPhotos();
-  if (!photos.length) { host.innerHTML = ''; return; }
-  host.innerHTML = photos.map((p, i) =>
-    `<div class="photo-thumb"><img src="${p}" alt="photo ${i+1}"><button onclick="deletePhotoAt(${i})" title="Remove">×</button></div>`
-  ).join('');
+  const sizeKB = Math.round((localStorage.getItem(LS_PHOTOS) || '').length / 1024);
+  // localStorage typical ~5MB on iOS Safari; show a usage hint.
+  const cap = 5120;
+  const pct = Math.min(100, Math.round(sizeKB / cap * 100));
+  if (!photos.length) {
+    host.innerHTML = '<div style="font-size:12px;color:var(--text-muted);margin-top:8px;">No photos yet.</div>';
+    return;
+  }
+  host.innerHTML =
+    '<div style="font-size:11px;color:var(--text-muted);width:100%;margin-bottom:6px;">' +
+      photos.length + ' photo' + (photos.length!==1?'s':'') + ' · ' + sizeKB + ' KB used · ~' + pct + '% of typical browser quota' +
+    '</div>' +
+    photos.map((p, i) =>
+      `<div class="photo-thumb"><img src="${p}" alt="photo ${i+1}"><button onclick="deletePhotoAt(${i})" title="Remove">×</button></div>`
+    ).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════════
