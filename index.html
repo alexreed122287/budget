@@ -141,22 +141,45 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 
 /* Cells */
 .budget-table td.editable{cursor:cell;}
-.budget-table td.editable:focus{outline:2px solid var(--accent);outline-offset:-2px;}
+.budget-table td.editable:focus{outline:1px solid var(--accent);outline-offset:-1px;}
 .budget-table td.editable.zero{color:var(--text-light);}
 .budget-table td.editable.override{background:var(--highlight) !important;}
 .budget-table td.bill-cell.has-value{cursor:grab;}
 .budget-table td.cell-dragging{opacity:.4;}
-.budget-table td.cell-drag-over{outline:2px dashed var(--accent);outline-offset:-2px;}
+.budget-table td.cell-drag-over{outline:1px dashed var(--accent);outline-offset:-1px;}
 .budget-table td.adhoc-cell{color:var(--accent-dim);font-weight:600;}
 
+/* When editing, the cell stays exactly the same size. The input overlays the
+   cell absolutely; the original text is hidden via color:transparent so the
+   cell's intrinsic height/width are preserved. */
+.budget-table td.editing{position:relative;color:transparent;}
 .cell-edit{
-  width:100%;border:none;background:var(--accent-soft);color:var(--text);
+  position:absolute;inset:0;width:100%;height:100%;
+  border:none;background:var(--accent-soft);color:var(--text);
   font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
-  padding:6px 12px;text-align:right;
-  outline:2px solid var(--accent);outline-offset:-2px;border-radius:0;
-  box-shadow:none;
+  padding:10px 14px;margin:0;text-align:right;
+  outline:1.5px solid var(--accent);outline-offset:-1.5px;
+  box-sizing:border-box;-moz-appearance:textfield;
 }
-.cell-edit:focus{box-shadow:none;}
+.cell-edit::-webkit-outer-spin-button,
+.cell-edit::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+
+/* Inline input next to a cat-cell label (e.g. Savings current balance) */
+.cat-input{
+  width:90px;font:inherit;font-size:12px;font-variant-numeric:tabular-nums;
+  padding:3px 8px;margin-left:8px;
+  border:1px solid var(--border-strong);border-radius:5px;
+  text-align:right;background:var(--bg);color:var(--accent-dim);
+  -moz-appearance:textfield;min-height:0;
+}
+.cat-input::-webkit-outer-spin-button,
+.cat-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.cat-input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft);}
+
+/* Hide spinner arrows on every numeric input across the app */
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
 /* Adhoc column header */
 .adhoc-controls{display:inline-flex;gap:4px;margin-left:6px;}
@@ -339,6 +362,8 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
           <th class="col-amt">Balance</th>
           <th class="col-cat">Type</th>
           <th class="col-cat">Category</th>
+          <th class="col-amt" title="Auto-applied to balance each cadence">Auto +$</th>
+          <th class="col-cat">Cadence</th>
           <th class="col-actions"></th>
         </tr></thead>
         <tbody id="nw-tbody"></tbody>
@@ -406,6 +431,8 @@ let S = {
   paycheckMonthly: 3750,
   paycheckWeekly: 1597,
   currentBalance: 0,
+  savingsBalance: 0,
+  savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
   bills: [],
   billOverrides: {},
@@ -606,7 +633,59 @@ function colCoveringDate(cols, due) {
   return cols[cols.length-1].date;
 }
 
+// Auto-advance the savings balance: walk all savings-category bill due-dates
+// strictly after `savingsLastApplied` and on/before today, sum them, and add
+// to `savingsBalance`. Idempotent within a single calendar day.
+function autoAdvanceSavings() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (!S.savingsLastApplied) { S.savingsLastApplied = isoDate(today); return; }
+  const last = parseISO(S.savingsLastApplied); last.setHours(0,0,0,0);
+  if (today <= last) return;
+  let added = 0;
+  S.bills.filter(b => b.active !== false && (b.category || '').toLowerCase() === 'savings').forEach(bill => {
+    const due = billDueDates(bill, last, today);
+    due.forEach(d => {
+      if (d > last && d <= today) {
+        const overrides = S.billOverrides[bill.id] || {};
+        const isoD = isoDate(d);
+        const amt = overrides[isoD] !== undefined ? overrides[isoD] : (Number(bill.amount) || 0);
+        added += amt;
+      }
+    });
+  });
+  if (added > 0) S.savingsBalance = (Number(S.savingsBalance) || 0) + added;
+  S.savingsLastApplied = isoDate(today);
+}
+
+// Auto-advance every account that has a recurring contribution rule:
+// counts how many cadence cycles have passed since contribLastApplied and
+// applies (count × amount) to balance. Sign flips for liabilities so that
+// 'paying down a loan' reads as a positive contribution.
+function autoAdvanceAccounts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  S.accounts.forEach(a => {
+    const freq = a.contribFrequency || 'none';
+    const amt = Number(a.contribAmount) || 0;
+    if (freq === 'none' || amt === 0) return;
+    if (!a.contribLastApplied) { a.contribLastApplied = isoDate(today); return; }
+    const last = parseISO(a.contribLastApplied); last.setHours(0,0,0,0);
+    if (today <= last) return;
+    let count = 0;
+    if (freq === 'weekly')        { let d = addDays(last, 7);   while (d <= today) { count++; d = addDays(d, 7); } }
+    else if (freq === 'biweekly') { let d = addDays(last, 14);  while (d <= today) { count++; d = addDays(d, 14); } }
+    else if (freq === 'monthly')  { let d = addMonths(last, 1); while (d <= today) { count++; d = addMonths(d, 1); } }
+    else if (freq === 'quarterly'){ let d = addMonths(last, 3); while (d <= today) { count++; d = addMonths(d, 3); } }
+    else if (freq === 'yearly')   { let d = addMonths(last, 12);while (d <= today) { count++; d = addMonths(d, 12); } }
+    if (count > 0) {
+      const sign = a.type === 'liability' ? -1 : 1;
+      a.balance = (Number(a.balance) || 0) + sign * count * amt;
+      a.contribLastApplied = isoDate(today);
+    }
+  });
+}
+
 function buildBudget(weeks) {
+  autoAdvanceSavings();
   const today = new Date(); today.setHours(0,0,0,0);
   const todayISO = isoDate(today);
   const future = generatePaychecks(weeks);
@@ -645,9 +724,10 @@ function buildBudget(weeks) {
     });
   });
 
-  // Compute Remainder + cumulative Savings per column
+  // Compute Remainder + projected Savings balance per column.
+  // Savings = current actual savings balance + cumulative future contributions.
   let bal = Number(S.currentBalance) || 0;
-  let savings = 0;
+  let savingsRunning = Number(S.savingsBalance) || 0;
   let prevBal = bal;
   cols.forEach((c, i) => {
     let billsTotal = 0;
@@ -662,15 +742,19 @@ function buildBudget(weeks) {
 
     if (c.isCurrent) {
       bal = (Number(S.currentBalance) || 0) - billsTotal;
+      // Current shows just the existing savings balance — additions haven't happened yet.
+      c.savingsTotal = savingsRunning;
     } else if (c.isAdhoc) {
       const sign = c.adhocType === 'expense' ? -1 : 1;
       bal = bal + (sign * c.amount) - billsTotal;
+      savingsRunning += savingsThis;
+      c.savingsTotal = savingsRunning;
     } else {
       bal = bal + (Number(c.amount) || 0) - billsTotal;
+      savingsRunning += savingsThis;
+      c.savingsTotal = savingsRunning;
     }
-    savings += savingsThis;
     c.remainder = bal;
-    c.savingsCum = savings;
     c.diff = (i === 0) ? null : bal - prevBal;
     prevBal = bal;
   });
@@ -756,8 +840,12 @@ function renderBudget() {
   });
   h += '</tr>';
 
-  h += '<tr class="savings"><td class="cat">Savings</td>';
-  cols.forEach(c => h += `<td>${fmt$(c.savingsCum)}</td>`);
+  h += '<tr class="savings"><td class="cat">Savings ' +
+       `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
+       `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
+       `title="Current savings account balance — auto-grows as scheduled savings contributions pass">` +
+       '</td>';
+  cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
   h += '</tfoot></table>';
 
@@ -841,12 +929,15 @@ function enterCellEdit(td) {
     if (a) curVal = a.amount;
   }
 
+  // Overlay the input absolutely on top of the cell — original text stays in
+  // place (color:transparent via .editing) so the cell never resizes.
   const inp = document.createElement('input');
   inp.type = 'number'; inp.step = '0.01'; inp.inputMode = 'decimal';
   inp.value = curVal === '' ? '' : curVal;
   inp.placeholder = placeholder;
   inp.className = 'cell-edit';
-  td.innerHTML = ''; td.appendChild(inp);
+  td.appendChild(inp);
+  td.classList.add('editing');
   inp.focus(); inp.select();
   inp.addEventListener('keydown', onCellKey);
   inp.addEventListener('blur', () => {
@@ -857,7 +948,7 @@ function enterCellEdit(td) {
 
 function commitCellEdit(opts = {}) {
   if (!activeCell) return;
-  const { type, billId, adhocId, date, inp, originalValue } = activeCell;
+  const { td, type, billId, adhocId, date, inp, originalValue } = activeCell;
   const raw = inp.value.trim();
 
   if (type === 'bill') {
@@ -914,14 +1005,25 @@ function commitCellEdit(opts = {}) {
     if (a && !isNaN(n)) a.amount = Math.abs(n);
   }
 
+  // Clear activeCell BEFORE removing the input — `inp.remove()` synchronously
+  // fires blur, which would otherwise re-enter commitCellEdit.
   activeCell = null;
+  if (td) {
+    td.classList.remove('editing');
+    if (inp && inp.parentNode) inp.parentNode.removeChild(inp);
+  }
   scheduleSave();
   if (!opts.silent) renderBudget();
 }
 
 function cancelCellEdit() {
   if (!activeCell) return;
+  const { td, inp } = activeCell;
   activeCell = null;
+  if (td) {
+    td.classList.remove('editing');
+    if (inp && inp.parentNode) inp.parentNode.removeChild(inp);
+  }
   renderBudget();
 }
 
@@ -1060,6 +1162,37 @@ function shiftBillCadence(billId, fromDate, toDate) {
 // ═══════════════════════════════════════════════════════════════════
 //  AD-HOC ONE-TIME COLUMNS
 // ═══════════════════════════════════════════════════════════════════
+function updateSavingsBalance(value) {
+  maybeSnapshot();
+  S.savingsBalance = Number(value) || 0;
+  S.savingsLastApplied = isoDate(new Date());
+  scheduleSave();
+  // Update visible savings cells without re-rendering the whole table (so the
+  // text input the user is typing in keeps focus).
+  const wrap = eid('budget-scroll'); if (!wrap) return;
+  const tds = wrap.querySelectorAll('tfoot tr.savings td:not(.cat)');
+  // Recompute by walking columns from the new balance
+  let running = Number(S.savingsBalance) || 0;
+  const headers = wrap.querySelectorAll('thead tr.dates th:not(.cat)');
+  headers.forEach((th, i) => {
+    if (!tds[i]) return;
+    if (i === 0) { tds[i].textContent = fmt$(running); return; }
+    // Sum savings bills whose due-cells in this column have a value
+    const billRows = wrap.querySelectorAll('tbody tr.bill');
+    let savingsThis = 0;
+    billRows.forEach(tr => {
+      const billId = tr.dataset.billId;
+      const bill = S.bills.find(b => b.id === billId);
+      if (!bill || (bill.category || '').toLowerCase() !== 'savings') return;
+      const cell = tr.children[i + 1]; // +1 because of cat cell
+      const txt = (cell.textContent || '').replace(/[^\d.-]/g, '');
+      const amt = parseFloat(txt); if (!isNaN(amt) && amt > 0) savingsThis += amt;
+    });
+    running += savingsThis;
+    tds[i].textContent = fmt$(running);
+  });
+}
+
 function addAdhocColumn() {
   const dateStr = prompt('Date for one-time entry (YYYY-MM-DD):', isoDate(addDays(new Date(), 7)));
   if (!dateStr) return;
@@ -1241,8 +1374,9 @@ function onExtraNumInput() { const v = parseFloat(eid('m-extra-num').value)||0; 
 //  NET WORTH
 // ═══════════════════════════════════════════════════════════════════
 function renderNetWorth() {
+  autoAdvanceAccounts();
   const tbody = eid('nw-tbody'), tfoot = eid('nw-tfoot');
-  if (!S.accounts.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No accounts yet.</td></tr>'; tfoot.innerHTML = ''; }
+  if (!S.accounts.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No accounts yet.</td></tr>'; tfoot.innerHTML = ''; }
   else {
     tbody.innerHTML = S.accounts.map(a => `
       <tr data-id="${a.id}" draggable="true">
@@ -1254,6 +1388,10 @@ function renderNetWorth() {
           <option value="liability" ${a.type==='liability'?'selected':''}>Liability</option>
         </select></td>
         <td><input type="text" value="${escHTML(a.category||'')}" placeholder="cash, brokerage, retirement, mortgage…" oninput="updateAccount('${a.id}','category',this.value)"></td>
+        <td><input type="number" step="0.01" value="${a.contribAmount||0}" placeholder="0" oninput="updateAccount('${a.id}','contribAmount',parseFloat(this.value)||0)" title="Amount auto-added to balance each cadence (assets +, liabilities −)"></td>
+        <td><select onchange="updateAccount('${a.id}','contribFrequency',this.value)" title="How often to apply the contribution">
+          ${['none','weekly','biweekly','monthly','quarterly','yearly'].map(f => `<option value="${f}" ${ (a.contribFrequency||'none')===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
+        </select></td>
         <td class="col-actions"><button class="btn danger" onclick="deleteAccount('${a.id}')">Delete</button></td>
       </tr>
     `).join('');
@@ -1261,9 +1399,9 @@ function renderNetWorth() {
     S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
     const net = assets - liab;
     tfoot.innerHTML = `
-      <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
-      <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="4" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
-      <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="4" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+      <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="6" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
+      <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="6" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
+      <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="6" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
     `;
     attachListDrag(tbody, 'accounts', () => saveAndRender());
   }
@@ -1304,9 +1442,9 @@ function updateAccount(id, field, value) {
   S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
   const net = assets - liab;
   eid('nw-tfoot').innerHTML = `
-    <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
-    <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="4" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
-    <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="4" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+    <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="6" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
+    <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="6" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
+    <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="6" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
   `;
 }
 function deleteAccount(id) { if (!confirm('Delete this account?')) return; snapshot(); S.accounts = S.accounts.filter(a => a.id !== id); saveAndRender(); }
