@@ -4,98 +4,85 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#ffffff">
-<title>Budget</title>
+<title>Reed Family Budget</title>
 <style>
 :root{
   --bg:#ffffff;
-  --bg-soft:#f8fafc;
-  --bg-hover:#f1f5f9;
-  --bg-row:#fafbfc;
-  --bg-strong:#eef2f6;
-  --border:#e5e7eb;
-  --border-soft:#f1f3f5;
-  --border-strong:#cbd5e1;
-  --text:#111827;
+  --bg-soft:#fafbfc;
+  --bg-strong:#f7f8fa;
+  --border:#f0f1f4;
+  --border-strong:#e5e6eb;
+  --text:#0f1011;
   --text-muted:#6b7280;
   --text-light:#9ca3af;
-  --accent:#2563eb;
-  --accent-soft:#eff6ff;
-  --positive:#15803d;
-  --positive-soft:#f0fdf4;
-  --negative:#b91c1c;
-  --negative-soft:#fef2f2;
+  --accent:#00c805;
+  --accent-dim:#00a004;
+  --accent-soft:#e6f9e8;
+  --negative:#f44336;
+  --negative-soft:#fde8e6;
   --warn:#b45309;
-  --highlight:#fef9c3;
-  --ff:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
-  --bdr:1px solid var(--border);
-  --shadow-sm:0 1px 2px rgba(0,0,0,0.04);
-  --shadow:0 1px 3px rgba(0,0,0,0.05),0 1px 2px rgba(0,0,0,0.03);
+  --highlight:#fffbe6;
+  --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--ff);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 
 /* ─── Header ─── */
-#hdr{display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--bg);border-bottom:var(--bdr);}
-#hdr-title{font-size:18px;font-weight:600;letter-spacing:-0.01em;color:var(--text);}
-#hdr-right{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;}
-.sync-pill{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;letter-spacing:.02em;border:1px solid var(--border);color:var(--text-muted);background:var(--bg-soft);}
-.sync-pill.ok{color:var(--positive);border-color:#86efac;background:var(--positive-soft);}
-.sync-pill.err{color:var(--negative);border-color:#fca5a5;background:var(--negative-soft);}
-.sync-pill.local{color:var(--warn);border-color:#fcd34d;background:#fffbeb;}
+#hdr{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--bg);}
+#hdr-title{font-size:17px;font-weight:600;letter-spacing:-0.01em;color:var(--text);}
+#hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.sync-pill{padding:5px 11px;border-radius:999px;font-size:11px;font-weight:600;color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.04em;}
+.sync-pill.ok{color:var(--accent-dim);background:var(--accent-soft);}
+.sync-pill.err{color:var(--negative);background:var(--negative-soft);}
+.sync-pill.local{color:var(--warn);background:#fffbeb;}
 
 /* ─── Tabs ─── */
-#tabs{display:flex;gap:0;background:var(--bg);border-bottom:var(--bdr);padding:0 20px;overflow-x:auto;}
-.ntab{font-size:13px;font-weight:500;padding:14px 20px;background:none;border:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;}
-.ntab.active{color:var(--accent);border-bottom-color:var(--accent);}
+#tabs{display:flex;gap:0;background:var(--bg);padding:0 24px;border-bottom:1px solid var(--border);overflow-x:auto;}
+.ntab{font-family:inherit;font-size:14px;font-weight:500;padding:14px 18px;background:none;border:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .12s,border-color .12s;}
+.ntab.active{color:var(--text);border-bottom-color:var(--text);}
 .ntab:hover{color:var(--text);}
 
-.tab-pane{display:none;padding:20px;max-width:1500px;margin:0 auto;}
+.tab-pane{display:none;padding:20px 24px;max-width:1500px;margin:0 auto;}
 .tab-pane.active{display:flex;flex-direction:column;}
 #tab-budget.active{padding-bottom:0;}
 
 /* ─── Cards ─── */
-.card{background:var(--bg);border:var(--bdr);border-radius:8px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
-.card-hdr{padding:14px 18px;border-bottom:var(--bdr);font-size:13px;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;letter-spacing:-0.005em;}
-.card-body{padding:18px;}
+.card{background:var(--bg);margin-bottom:20px;}
+.card-hdr{padding:16px 0 12px;font-size:15px;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;letter-spacing:-0.01em;}
+.card-body{padding:0;}
 
 /* ─── Buttons ─── */
-.btn{font-family:inherit;font-size:13px;font-weight:500;padding:8px 14px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;transition:background .12s,border-color .12s,color .12s;}
-.btn:hover{background:var(--bg-soft);border-color:var(--border-strong);}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
-.btn.primary:hover{background:#1d4ed8;border-color:#1d4ed8;}
-.btn.subtle{color:var(--text-muted);border-color:var(--border);}
+.btn{font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;background:var(--bg);border:1px solid var(--border-strong);color:var(--text);border-radius:6px;cursor:pointer;transition:background .12s,border-color .12s;letter-spacing:0;}
+.btn:hover{background:var(--bg-soft);}
+.btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+.btn.primary:hover{background:#000;border-color:#000;}
+.btn.green{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn.green:hover{background:var(--accent-dim);border-color:var(--accent-dim);}
+.btn.subtle{color:var(--text-muted);border-color:var(--border);background:var(--bg);}
+.btn.subtle:hover{color:var(--text);background:var(--bg-soft);}
 .btn.danger{color:var(--negative);border-color:var(--border);}
-.btn.danger:hover{background:var(--negative-soft);border-color:#fca5a5;}
-.btn.success{color:var(--positive);border-color:var(--border);}
-.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn.danger:hover{background:var(--negative-soft);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.icon{padding:6px 10px;font-size:14px;}
 
 /* ─── Form fields ─── */
 input[type=text],input[type=number],input[type=date],input[type=url],select,textarea{
-  font-family:inherit;font-size:13px;padding:8px 12px;
-  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  font-family:inherit;font-size:14px;padding:8px 12px;
+  background:var(--bg);border:1px solid var(--border-strong);color:var(--text);
   border-radius:6px;outline:none;transition:border-color .12s,box-shadow .12s;
   min-height:36px;
 }
-input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+input:focus,select:focus,textarea:focus{border-color:var(--text);box-shadow:0 0 0 3px rgba(0,0,0,0.04);}
 label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:6px;text-transform:uppercase;}
 .field{margin-bottom:14px;}
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
 
 /* ─── Budget table ─── */
 .budget-wrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-  overflow:hidden;
-  border:var(--bdr);border-radius:8px;background:var(--bg);box-shadow:var(--shadow-sm);
+  flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  border:1px solid var(--border);border-radius:10px;background:var(--bg);
 }
-.budget-scroll{
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  flex:1;
-  min-height:0;
-}
+.budget-scroll{overflow:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;}
 .budget-table{
   border-collapse:separate;border-spacing:0;
   table-layout:fixed;width:max-content;min-width:100%;
@@ -105,26 +92,30 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table col.col-data{width:118px;}
 
 .budget-table th, .budget-table td{
-  padding:9px 12px;
-  border-bottom:1px solid var(--border-soft);
-  border-right:1px solid var(--border-soft);
-  text-align:right;font-size:13px;background:var(--bg);
+  padding:10px 14px;
+  border-bottom:1px solid var(--border);
+  text-align:right;font-size:13px;background:var(--bg);color:var(--text);
 }
 .budget-table th{
-  background:var(--bg-soft);color:var(--text-muted);
+  background:var(--bg);color:var(--text-muted);
   font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
 }
-.budget-table th .sub{display:block;font-size:9px;color:var(--text-light);margin-top:2px;font-weight:500;letter-spacing:.05em;}
-.budget-table th.current-col{color:var(--accent);background:var(--accent-soft);}
-.budget-table th.current-col .sub{color:var(--accent);}
+.budget-table th .sub{display:block;font-size:9px;color:var(--text-light);margin-top:3px;font-weight:600;letter-spacing:.06em;}
+.budget-table th.current-col{color:var(--text);}
+.budget-table th.current-col .sub{color:var(--accent-dim);}
+.budget-table th.adhoc-col{color:var(--accent-dim);}
+.budget-table th.adhoc-col .sub{color:var(--accent-dim);}
 
 /* Sticky top: 2 header rows */
-.budget-table thead tr.dates th{position:sticky;top:0;z-index:3;}
-.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:36px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);}
+.budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
+.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:38px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
 
-/* Sticky bottom: 2 footer rows */
-.budget-table tfoot tr.savings td{position:sticky;bottom:0;z-index:3;background:var(--accent-soft);font-weight:600;color:var(--accent);}
-.budget-table tfoot tr.balance td{position:sticky;bottom:36px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);border-top:2px solid var(--accent);}
+/* Sticky bottom: 3 footer rows (savings, diff, remainder) */
+.budget-table tfoot tr.savings td{position:sticky;bottom:0;z-index:3;background:var(--bg);color:var(--accent-dim);font-weight:600;}
+.budget-table tfoot tr.diff td{position:sticky;bottom:38px;z-index:3;background:var(--bg);color:var(--text-muted);font-size:12px;font-style:italic;}
+.budget-table tfoot tr.diff td.pos{color:var(--accent-dim);}
+.budget-table tfoot tr.diff td.neg{color:var(--negative);}
+.budget-table tfoot tr.balance td{position:sticky;bottom:76px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 
 /* Sticky left: category column */
@@ -134,101 +125,112 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   text-align:left;font-weight:500;color:var(--text);
   border-right:1px solid var(--border);
 }
-.budget-table thead tr.dates th.cat{z-index:5;background:var(--bg-soft);}
-.budget-table thead tr.paycheck th.cat{z-index:5;background:var(--bg-strong);}
-.budget-table tfoot tr.balance td.cat{z-index:5;background:var(--bg-strong);}
-.budget-table tfoot tr.savings td.cat{z-index:5;background:var(--accent-soft);}
+.budget-table thead tr.dates th.cat{z-index:5;background:var(--bg);}
+.budget-table thead tr.paycheck th.cat{z-index:5;background:var(--bg-strong);font-size:11px;color:var(--text-muted);font-weight:600;}
+.budget-table tfoot tr.balance td.cat{z-index:5;background:var(--bg-strong);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+.budget-table tfoot tr.diff td.cat{z-index:5;background:var(--bg);font-size:11px;color:var(--text-light);font-style:normal;text-transform:uppercase;letter-spacing:.04em;font-weight:500;}
+.budget-table tfoot tr.savings td.cat{z-index:5;background:var(--bg);font-size:11px;color:var(--accent-dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
 
 /* Bill rows */
 .budget-table tr.bill td.cat{cursor:grab;user-select:none;}
-.budget-table tr.bill:hover td{background:var(--bg-row);}
-.budget-table tr.bill:hover td.cat{background:var(--bg-row);}
+.budget-table tr.bill:hover td{background:var(--bg-soft);}
+.budget-table tr.bill:hover td.cat{background:var(--bg-soft);}
 .budget-table tr.bill.dragging{opacity:0.4;}
 .budget-table tr.bill.drag-over td{border-top:2px solid var(--accent);}
-.drag-handle{display:inline-block;width:16px;color:var(--text-light);font-size:14px;margin-right:4px;line-height:1;}
+.drag-handle{display:inline-block;width:14px;color:var(--text-light);font-size:13px;margin-right:6px;line-height:1;}
 
-/* Cell editing */
+/* Cells */
 .budget-table td.editable{cursor:cell;}
 .budget-table td.editable:focus{outline:2px solid var(--accent);outline-offset:-2px;}
 .budget-table td.editable.zero{color:var(--text-light);}
-.budget-table td.editable.override{background:var(--highlight);}
-.budget-table td.editable.override.current-col-cell{background:var(--highlight);}
-.budget-table td.current-col-cell{background:#f8fbff;}
+.budget-table td.editable.override{background:var(--highlight) !important;}
+.budget-table td.bill-cell.has-value{cursor:grab;}
+.budget-table td.cell-dragging{opacity:.4;}
+.budget-table td.cell-drag-over{outline:2px dashed var(--accent);outline-offset:-2px;}
+.budget-table td.adhoc-cell{color:var(--accent-dim);font-weight:600;}
 
 .cell-edit{
   width:100%;border:none;background:var(--accent-soft);color:var(--text);
   font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
-  padding:6px 10px;text-align:right;
+  padding:6px 12px;text-align:right;
   outline:2px solid var(--accent);outline-offset:-2px;border-radius:0;
   box-shadow:none;
 }
 .cell-edit:focus{box-shadow:none;}
 
+/* Adhoc column header */
+.adhoc-controls{display:inline-flex;gap:4px;margin-left:6px;}
+.adhoc-controls button{font-size:10px;padding:2px 6px;background:transparent;border:1px solid var(--border-strong);color:var(--text-muted);border-radius:4px;cursor:pointer;}
+.adhoc-controls button:hover{color:var(--text);}
+
 /* ─── Budget bottom controls ─── */
 .budget-controls{
   display:flex;justify-content:space-between;align-items:center;gap:12px;
-  padding:10px 0;flex-wrap:wrap;
+  padding:14px 0 4px;flex-wrap:wrap;
 }
 .budget-controls .ctrl-group{display:flex;gap:10px;align-items:center;}
-.budget-controls label{margin:0;text-transform:none;font-size:11px;font-weight:500;letter-spacing:.02em;}
 
-/* ─── Bills / Net Worth tables (editable lists) ─── */
+/* ─── List tables ─── */
 .list-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--bg);}
-.list-table th{text-align:left;padding:10px 12px;border-bottom:var(--bdr);color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:var(--bg-soft);}
-.list-table td{padding:8px 12px;border-bottom:1px solid var(--border-soft);background:var(--bg);}
-.list-table tr.inactive td{opacity:.55;}
+.list-table th{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:var(--bg);}
+.list-table td{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg);}
+.list-table tr:hover td{background:var(--bg-soft);}
+.list-table tr.inactive td{opacity:.45;}
 .list-table tr.dragging{opacity:0.4;}
 .list-table tr.drag-over td{border-top:2px solid var(--accent);}
 .list-table input,.list-table select{font-size:13px;padding:6px 10px;min-height:32px;width:100%;background:var(--bg);border:1px solid transparent;}
-.list-table input:hover,.list-table select:hover,.list-table input:focus,.list-table select:focus{background:var(--bg);border-color:var(--border);}
+.list-table input:hover,.list-table select:hover,.list-table input:focus,.list-table select:focus{border-color:var(--border-strong);}
 .list-table .col-name{min-width:160px;}
-.list-table .col-amt{width:110px;}
+.list-table .col-amt{width:120px;}
 .list-table .col-freq{width:130px;}
 .list-table .col-day{width:80px;}
 .list-table .col-cat{width:130px;}
 .list-table .col-actions{width:90px;text-align:right;}
-.list-table td.drag-cell{width:24px;text-align:center;cursor:grab;color:var(--text-light);user-select:none;font-size:14px;line-height:1;padding-left:14px;}
-.list-table tr td.drag-cell:hover{color:var(--text-muted);}
+.list-table td.drag-cell{width:24px;text-align:center;cursor:grab;color:var(--text-light);user-select:none;font-size:14px;line-height:1;padding:10px 6px;}
 
 /* ─── Stats ─── */
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
-.stat-box{background:var(--bg);padding:14px 16px;border-radius:8px;border:var(--bdr);box-shadow:var(--shadow-sm);}
-.stat-lbl{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:.04em;text-transform:uppercase;}
-.stat-val{font-size:22px;color:var(--text);font-weight:600;margin-top:6px;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
-.stat-val.pos{color:var(--positive);} .stat-val.neg{color:var(--negative);} .stat-val.acc{color:var(--accent);}
-.stat-sub{font-size:11px;color:var(--text-muted);margin-top:3px;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+.stat-box{background:var(--bg-soft);padding:18px;border-radius:10px;}
+.stat-lbl{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+.stat-val{font-size:24px;color:var(--text);font-weight:700;margin-top:8px;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
+.stat-val.pos{color:var(--accent-dim);} .stat-val.neg{color:var(--negative);} .stat-val.acc{color:var(--text);}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:4px;}
 
 /* ─── Chart ─── */
-.chart-wrap{background:var(--bg);border:var(--bdr);border-radius:8px;padding:16px;margin-top:14px;}
+.chart-wrap{background:var(--bg-soft);border-radius:10px;padding:18px;margin-top:14px;}
 
 /* ─── Sliders ─── */
 .range-row{display:flex;align-items:center;gap:14px;}
 .range-row input[type=range]{flex:1;accent-color:var(--accent);}
-.range-val{min-width:90px;text-align:right;font-size:14px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums;}
+.range-val{min-width:90px;text-align:right;font-size:14px;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;}
 
 /* ─── Toast ─── */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:1000;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.15);}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:1000;display:none;}
 #toast.show{display:block;animation:fadein .2s;}
 @keyframes fadein{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;}}
 
 /* ─── Mobile ─── */
 @media (max-width:768px){
-  .ntab{font-size:12px;padding:12px 14px;}
+  .ntab{font-size:13px;padding:12px 14px;}
   .field-row{grid-template-columns:1fr;}
   .tab-pane{padding:14px;}
+  #hdr{padding:12px 14px;}
 }
 
-/* Tab pane height: full viewport minus header + tabs + budget-controls */
-#tab-budget{height:calc(100vh - 180px);min-height:500px;}
+/* Tab pane height for sticky top + bottom */
+#tab-budget{height:calc(100vh - 140px);min-height:520px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 </head>
 <body>
 
 <div id="hdr">
-  <div id="hdr-title">Budget</div>
+  <div id="hdr-title">Reed Family Budget</div>
   <div id="hdr-right">
-    <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL ONLY</span>
+    <button class="btn subtle" id="btn-undo" onclick="undo()" title="Undo (⌘Z)">↶ Undo</button>
+    <button class="btn subtle" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)">↷ Redo</button>
+    <button class="btn green" onclick="saveNow()" title="Save now (⌘S)">Save</button>
+    <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
   </div>
 </div>
 
@@ -240,7 +242,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   <button class="ntab" onclick="showTab('settings')">Settings</button>
 </div>
 
-<!-- ─── BUDGET ───────────────────────────────────────────────────────── -->
+<!-- ─── BUDGET ─────────────────────────────────────────────────────── -->
 <div class="tab-pane active" id="tab-budget">
   <div class="budget-wrap">
     <div class="budget-scroll" id="budget-scroll">
@@ -249,13 +251,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   </div>
   <div class="budget-controls">
     <div class="ctrl-group">
-      <label for="budget-weeks">Weeks ahead</label>
-      <select id="budget-weeks" onchange="renderBudget()">
-        <option value="8">8</option>
-        <option value="13">13</option>
-        <option value="26" selected>26</option>
-        <option value="52">52</option>
-      </select>
+      <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
     </div>
     <div class="ctrl-group">
       <button class="btn" onclick="renderBudget()">↻ Refresh</button>
@@ -263,14 +259,14 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   </div>
 </div>
 
-<!-- ─── BILLS ───────────────────────────────────────────────────────── -->
+<!-- ─── BILLS ──────────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-bills">
   <div class="card">
     <div class="card-hdr">
-      <span>Bills library</span>
+      <span>Bills</span>
       <button class="btn primary" onclick="addBill()">+ Add bill</button>
     </div>
-    <div class="card-body" style="padding:0;overflow:auto;">
+    <div class="card-body" style="overflow:auto;">
       <table class="list-table" id="bills-table">
         <thead><tr>
           <th class="col-actions" style="width:24px;"></th>
@@ -288,7 +284,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   </div>
 </div>
 
-<!-- ─── MORTGAGE ────────────────────────────────────────────────────── -->
+<!-- ─── MORTGAGE ───────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-mortgage">
   <div class="card">
     <div class="card-hdr">Mortgage payoff</div>
@@ -296,28 +292,26 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
       <div class="field-row">
         <div class="field"><label>Current balance ($)</label><input id="m-balance" type="number" step="0.01" oninput="renderMortgage()"></div>
         <div class="field"><label>APR (%)</label><input id="m-rate" type="number" step="0.001" oninput="renderMortgage()"></div>
-        <div class="field"><label>Monthly P&I ($, no escrow)</label><input id="m-pi" type="number" step="0.01" oninput="renderMortgage()"></div>
+        <div class="field"><label>Monthly P&I ($)</label><input id="m-pi" type="number" step="0.01" oninput="renderMortgage()"></div>
         <div class="field"><label>Next payment date</label><input id="m-next" type="date" oninput="renderMortgage()"></div>
       </div>
-      <div class="field">
-        <label>Extra principal — recurring weekly ($)</label>
+      <div class="field" style="margin-top:8px;">
+        <label>Recurring weekly extra principal ($)</label>
         <div class="range-row">
           <input id="m-extra" type="range" min="0" max="500" step="5" value="0" oninput="onExtraInput()">
           <input id="m-extra-num" type="number" min="0" max="5000" step="5" value="0" style="width:90px;" oninput="onExtraNumInput()">
           <span class="range-val" id="m-extra-val">$0/wk</span>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-          Equivalent: <span id="m-extra-mo">$0/mo</span> applied at month-end.
-        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">≈ <span id="m-extra-mo">$0/mo</span> applied month-end.</div>
       </div>
       <div class="field-row" style="margin-top:8px;">
         <div class="field"><label>One-time extra principal ($)</label><input id="m-once-amt" type="number" step="100" value="0" oninput="renderMortgage()"></div>
         <div class="field"><label>Apply on date</label><input id="m-once-date" type="date" oninput="renderMortgage()"></div>
       </div>
-      <div class="stat-grid" style="margin-top:14px;">
+      <div class="stat-grid" style="margin-top:18px;">
         <div class="stat-box"><div class="stat-lbl">Payoff (no extra)</div><div class="stat-val" id="m-payoff-base">—</div><div class="stat-sub" id="m-payoff-base-sub"></div></div>
         <div class="stat-box"><div class="stat-lbl">Payoff (with extra)</div><div class="stat-val pos" id="m-payoff-extra">—</div><div class="stat-sub" id="m-payoff-extra-sub"></div></div>
-        <div class="stat-box"><div class="stat-lbl">Time saved</div><div class="stat-val acc" id="m-time-saved">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Time saved</div><div class="stat-val" id="m-time-saved">—</div></div>
         <div class="stat-box"><div class="stat-lbl">Interest saved</div><div class="stat-val pos" id="m-int-saved">—</div></div>
         <div class="stat-box"><div class="stat-lbl">Total interest (no extra)</div><div class="stat-val" id="m-int-base">—</div></div>
         <div class="stat-box"><div class="stat-lbl">Total interest (with extra)</div><div class="stat-val" id="m-int-extra">—</div></div>
@@ -327,7 +321,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   </div>
 </div>
 
-<!-- ─── NET WORTH ───────────────────────────────────────────────────── -->
+<!-- ─── NET WORTH ──────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-networth">
   <div class="card">
     <div class="card-hdr">
@@ -337,7 +331,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
         <button class="btn primary" onclick="snapshotNetWorth()">⊕ Snapshot today</button>
       </span>
     </div>
-    <div class="card-body" style="padding:0;overflow:auto;">
+    <div class="card-body" style="overflow:auto;">
       <table class="list-table" id="nw-table">
         <thead><tr>
           <th class="col-actions" style="width:24px;"></th>
@@ -361,18 +355,15 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   </div>
 </div>
 
-<!-- ─── SETTINGS ────────────────────────────────────────────────────── -->
+<!-- ─── SETTINGS ───────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-settings">
   <div class="card">
-    <div class="card-hdr">Sync — Google Sheets</div>
+    <div class="card-hdr">Sync</div>
     <div class="card-body">
-      <div class="field">
-        <label>Web app URL</label>
-        <input id="ss-webhook" type="url" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
-      </div>
+      <div class="field"><label>Web app URL</label><input id="ss-webhook" type="url" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn primary" onclick="testSync()">Test connection</button>
-        <button class="btn success" onclick="saveWebhook()">Save</button>
+        <button class="btn green" onclick="saveWebhook()">Save</button>
         <button class="btn" onclick="forcePull()">↓ Pull from Sheet</button>
         <button class="btn" onclick="forcePush()">↑ Push to Sheet</button>
         <button class="btn danger" onclick="clearAll()">⊘ Clear local</button>
@@ -385,8 +376,8 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
     <div class="card-hdr">Income</div>
     <div class="card-body">
       <div class="field-row">
-        <div class="field"><label>Monthly paycheck (1st of month) — $</label><input id="cfg-paycheck-monthly" type="number" step="1" oninput="onCfgChange()"></div>
-        <div class="field"><label>Weekly paycheck (every Thursday) — $</label><input id="cfg-paycheck-weekly" type="number" step="1" oninput="onCfgChange()"></div>
+        <div class="field"><label>Monthly paycheck (1st) — $</label><input id="cfg-paycheck-monthly" type="number" step="1" oninput="onCfgChange()"></div>
+        <div class="field"><label>Weekly paycheck (Thu) — $</label><input id="cfg-paycheck-weekly" type="number" step="1" oninput="onCfgChange()"></div>
       </div>
     </div>
   </div>
@@ -404,57 +395,49 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  STATE
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 const LS_KEY = 'roth_budget_state_v1';
 const LS_WEBHOOK = 'roth_budget_webhook';
+const BUDGET_WEEKS = 52;
 
 let S = {
   paycheckMonthly: 3750,
   paycheckWeekly: 1597,
-  currentBalance: 0,            // user-entered live bank balance, anchors the Current column
+  currentBalance: 0,
   paycheckOverrides: {},
   bills: [],
   billOverrides: {},
-  mortgage: {
-    balance: 205032.92,
-    rate: 2.99,
-    pi: 979.12,
-    nextPayment: '2026-06-01',
-    extraWeekly: 0,
-    onceAmount: 0,
-    onceDate: '',
-  },
+  adhocColumns: [],   // [{id, date, amount, label, type:'income'|'expense'}]
+  mortgage: { balance:205032.92, rate:2.99, pi:979.12, nextPayment:'2026-06-01', extraWeekly:0, onceAmount:0, onceDate:'' },
   accounts: [],
   nwHistory: [],
-  meta: { version: 1, modified: null },
+  meta: { version:1, modified:null },
 };
 
 let WEBHOOK_URL = '';
 let SYNC_STATE = 'local';
 let LAST_PULL = null;
 
-// ═══════════════════════════════════════════════════════════════════════
-//  UTILITIES
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  UTIL
+// ═══════════════════════════════════════════════════════════════════
 const eid = id => document.getElementById(id);
 const fmt$ = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
-const fmt$2 = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmt$2 = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const isoDate = d => { const dt = (typeof d === 'string') ? new Date(d) : d; return dt.toISOString().slice(0,10); };
-const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
-const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth()+n); return r; };
-const daysBetween = (a, b) => Math.round((b - a) / 86400000);
-const uid = () => Math.random().toString(36).slice(2, 9);
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+const addMonths = (d,n) => { const r = new Date(d); r.setMonth(r.getMonth()+n); return r; };
+const daysBetween = (a,b) => Math.round((b-a) / 86400000);
+const uid = () => Math.random().toString(36).slice(2,9);
 
-function toast(msg, dur=2400) {
+function toast(msg, dur=2200) {
   const t = eid('toast'); t.textContent = msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), dur);
 }
-function escHTML(s) {
-  return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-}
+function escHTML(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -470,15 +453,62 @@ function showTab(name) {
   if (name === 'settings') renderSettings();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  PAYCHECK SCHEDULE
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  UNDO / REDO
+// ═══════════════════════════════════════════════════════════════════
+const UNDO_STACK = [];
+const REDO_STACK = [];
+const MAX_UNDO = 80;
+let lastSnapshotMs = 0;
+
+function snapshot() {
+  UNDO_STACK.push(JSON.stringify(S));
+  if (UNDO_STACK.length > MAX_UNDO) UNDO_STACK.shift();
+  REDO_STACK.length = 0;
+  lastSnapshotMs = Date.now();
+}
+// Use this for keystroke-storm sources (typing in bill name, etc.) — coalesces.
+function maybeSnapshot() {
+  if (Date.now() - lastSnapshotMs > 1500) snapshot();
+}
+function undo() {
+  if (!UNDO_STACK.length) { toast('Nothing to undo'); return; }
+  REDO_STACK.push(JSON.stringify(S));
+  S = JSON.parse(UNDO_STACK.pop());
+  saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll();
+  toast('Undo');
+}
+function redo() {
+  if (!REDO_STACK.length) { toast('Nothing to redo'); return; }
+  UNDO_STACK.push(JSON.stringify(S));
+  S = JSON.parse(REDO_STACK.pop());
+  saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll();
+  toast('Redo');
+}
+window.addEventListener('keydown', (e) => {
+  const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey && !isInput) { e.preventDefault(); undo(); return; }
+  if ((e.metaKey || e.ctrlKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y') && !isInput) { e.preventDefault(); redo(); return; }
+});
+
+function saveNow() {
+  saveLocal();
+  if (WEBHOOK_URL) {
+    forcePush().then(()=>toast('Saved'));
+  } else {
+    toast('Saved locally (no Sheet configured)');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PAYCHECK + AD-HOC SCHEDULE
+// ═══════════════════════════════════════════════════════════════════
 function generatePaychecks(weeks) {
   const out = [];
   const today = new Date(); today.setHours(0,0,0,0);
   const end = addDays(today, weeks * 7);
 
-  // Monthly: 1st of each future month
   let m = new Date(today.getFullYear(), today.getMonth(), 1);
   if (m <= today) m = new Date(today.getFullYear(), today.getMonth()+1, 1);
   while (m <= end) {
@@ -487,15 +517,12 @@ function generatePaychecks(weeks) {
     m = addMonths(m, 1);
   }
 
-  // Weekly Thursdays AFTER today
   let w = new Date(today);
   const daysUntilThu = (4 - w.getDay() + 7) % 7;
-  w = addDays(w, daysUntilThu === 0 ? 7 : daysUntilThu);  // skip today; first Thursday is in the future
+  w = addDays(w, daysUntilThu === 0 ? 7 : daysUntilThu);
   while (w <= end) {
     const iso = isoDate(w);
-    if (!out.some(p => p.date === iso)) {
-      out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckWeekly, kind: 'weekly' });
-    }
+    if (!out.some(p => p.date === iso)) out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckWeekly, kind: 'weekly' });
     w = addDays(w, 7);
   }
 
@@ -503,13 +530,20 @@ function generatePaychecks(weeks) {
   return out;
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  BILL → COLUMN ASSIGNMENT
-// ═══════════════════════════════════════════════════════════════════════
+// Most recent paycheck day on/before today (used for the look-back window so
+// bills due since the last paycheck still show in Current).
+function mostRecentPaycheckBefore(today) {
+  // Last Thursday strictly before today (if today is Thu, that's 7 days ago)
+  let daysBack = (today.getDay() - 4 + 7) % 7;
+  if (daysBack === 0) daysBack = 7;
+  const lastThu = addDays(today, -daysBack);
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  return lastThu > firstOfMonth ? lastThu : firstOfMonth;
+}
+
 function billDueDates(bill, from, to) {
   const dates = [];
   const fromY = from.getFullYear(), fromM = from.getMonth();
-
   switch (bill.frequency) {
     case 'monthly': {
       let cur = new Date(fromY, fromM, 1);
@@ -564,43 +598,44 @@ function billDueDates(bill, from, to) {
   return dates;
 }
 
-// Find the column whose period covers a given due date.
-// Period of column C = (date of C-1, date of C].
-// So a due date <= column.date assigns to that column (the LAST one that's >=).
+// First column whose date >= due. Bills due before any column collapse into Current.
 function colCoveringDate(cols, due) {
-  let chosen = cols[0].date;
   for (const c of cols) {
     if (parseISO(c.date) >= due) return c.date;
-    chosen = c.date;
   }
-  // due is past the last column — assign to last
-  return chosen;
+  return cols[cols.length-1].date;
 }
 
-// Build a complete budget: columns + matrix + running balances + savings cumulative
 function buildBudget(weeks) {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayISO = isoDate(today);
-
   const future = generatePaychecks(weeks);
 
-  // Column 0 = "Current" anchor: today's date, paycheck cell holds the user's
-  // live bank balance (manually entered, not a paycheck amount).
-  const cols = [{
-    date: todayISO,
-    kind: 'current',
-    isCurrent: true,
-    label: 'CURRENT',
+  const baseCols = [{
+    date: todayISO, kind: 'current', isCurrent: true, label: 'CURRENT',
     amount: Number(S.currentBalance) || 0,
   }, ...future];
 
-  // Build matrix: {colDate: {billId: amount}}
-  const matrix = {};
-  cols.forEach(c => matrix[c.date] = {});
+  // Insert ad-hoc one-time columns sorted by date
+  const adhoc = (S.adhocColumns || [])
+    .filter(a => a && a.date)
+    .map(a => ({
+      date: a.date, kind: 'adhoc', isAdhoc: true,
+      adhocId: a.id, adhocType: a.type || 'income',
+      label: a.label || (a.type === 'expense' ? 'Expense' : 'Income'),
+      amount: Number(a.amount) || 0,
+    }));
+  let cols = baseCols.concat(adhoc).sort((a,b) => a.date.localeCompare(b.date));
+
+  // Look-back window so bills due since last paycheck still appear in Current
+  const lookbackFrom = mostRecentPaycheckBefore(today);
   const lastDate = parseISO(cols[cols.length-1].date);
 
+  const matrix = {};
+  cols.forEach(c => matrix[c.date] = {});
+
   S.bills.filter(b => b.active !== false).forEach(bill => {
-    const due = billDueDates(bill, today, lastDate);
+    const due = billDueDates(bill, lookbackFrom, lastDate);
     due.forEach(d => {
       const colDate = colCoveringDate(cols, d);
       if (!colDate) return;
@@ -610,10 +645,11 @@ function buildBudget(weeks) {
     });
   });
 
-  // Compute running balance + cumulative savings per column
+  // Compute Remainder + cumulative Savings per column
   let bal = Number(S.currentBalance) || 0;
   let savings = 0;
-  cols.forEach(c => {
+  let prevBal = bal;
+  cols.forEach((c, i) => {
     let billsTotal = 0;
     let savingsThis = 0;
     S.bills.forEach(b => {
@@ -623,64 +659,68 @@ function buildBudget(weeks) {
         if ((b.category || '').toLowerCase() === 'savings') savingsThis += amt;
       }
     });
+
     if (c.isCurrent) {
       bal = (Number(S.currentBalance) || 0) - billsTotal;
+    } else if (c.isAdhoc) {
+      const sign = c.adhocType === 'expense' ? -1 : 1;
+      bal = bal + (sign * c.amount) - billsTotal;
     } else {
       bal = bal + (Number(c.amount) || 0) - billsTotal;
     }
     savings += savingsThis;
-    c.runningBalance = bal;
+    c.remainder = bal;
     c.savingsCum = savings;
-    c.savingsThis = savingsThis;
+    c.diff = (i === 0) ? null : bal - prevBal;
+    prevBal = bal;
   });
 
   return { cols, matrix };
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  BUDGET RENDER
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderBudget() {
   const wrap = eid('budget-scroll');
   if (!wrap) return;
-  const weeks = parseInt(eid('budget-weeks').value) || 26;
-  const { cols, matrix } = buildBudget(weeks);
-
+  const { cols, matrix } = buildBudget(BUDGET_WEEKS);
   if (!cols.length) { wrap.innerHTML = '<div style="padding:30px;color:var(--text-muted);text-align:center;">No data</div>'; return; }
 
   const visibleBills = S.bills.filter(b => b.active !== false);
 
-  let h = '<table class="budget-table">';
-  h += '<colgroup><col class="col-cat">';
+  let h = '<table class="budget-table"><colgroup><col class="col-cat">';
   cols.forEach(() => h += '<col class="col-data">');
   h += '</colgroup>';
 
   // Header rows
-  h += '<thead>';
-  h += '<tr class="dates">';
-  h += '<th class="cat">Category</th>';
+  h += '<thead><tr class="dates"><th class="cat">Category</th>';
   cols.forEach(c => {
     const dt = parseISO(c.date);
     const lbl = (dt.getMonth()+1) + '/' + dt.getDate();
-    const sub = c.isCurrent ? 'CURRENT' : (c.kind === 'monthly' ? '1st' : 'Thu');
-    const cls = c.isCurrent ? 'current-col' : '';
-    h += `<th class="${cls}">${lbl}<span class="sub">${sub}</span></th>`;
+    let sub, cls = '';
+    if (c.isCurrent) { sub = 'CURRENT'; cls = 'current-col'; }
+    else if (c.isAdhoc) { sub = (c.adhocType === 'expense' ? '−' : '+') + ' ' + (c.label || ''); cls = 'adhoc-col'; }
+    else { sub = c.kind === 'monthly' ? '1st' : 'Thu'; }
+    const adhocBtn = c.isAdhoc ? `<span class="adhoc-controls"><button onclick="editAdhocColumn('${c.adhocId}')" title="Edit">✎</button><button onclick="deleteAdhocColumn('${c.adhocId}')" title="Delete">✕</button></span>` : '';
+    h += `<th class="${cls}">${lbl}<span class="sub">${escHTML(sub)}</span>${adhocBtn}</th>`;
   });
   h += '</tr>';
 
-  h += '<tr class="paycheck">';
-  h += '<th class="cat">Paycheck</th>';
+  h += '<tr class="paycheck"><th class="cat">Paycheck</th>';
   cols.forEach((c, ci) => {
-    const isOverride = !c.isCurrent && S.paycheckOverrides[c.date] !== undefined;
-    const cellType = c.isCurrent ? 'current-balance' : 'paycheck';
-    const cls = (isOverride ? 'override ' : '') + 'editable' + (c.isCurrent ? ' current-col-cell' : '');
-    const amt = c.isCurrent ? (Number(S.currentBalance) || 0) : (c.amount || 0);
-    h += `<td class="${cls}" data-cell-type="${cellType}" data-date="${c.date}" data-r="0" data-c="${ci}" tabindex="0">$${amt.toLocaleString()}</td>`;
+    const isOverride = !c.isCurrent && !c.isAdhoc && S.paycheckOverrides[c.date] !== undefined;
+    let cellType, amt, cls;
+    if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; }
+    else if (c.isAdhoc) { cellType = 'adhoc'; amt = c.amount * (c.adhocType === 'expense' ? -1 : 1); cls = 'editable adhoc-cell'; }
+    else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : ''); }
+    const dataAdhoc = c.isAdhoc ? ` data-adhoc-id="${c.adhocId}"` : '';
+    const display = (amt < 0 ? '-$' : '$') + Math.abs(amt).toLocaleString();
+    h += `<td class="${cls}" data-cell-type="${cellType}" data-date="${c.date}" data-r="0" data-c="${ci}"${dataAdhoc} tabindex="0">${display}</td>`;
   });
-  h += '</tr>';
-  h += '</thead>';
+  h += '</tr></thead>';
 
-  // Bill rows (scrollable middle)
+  // Bill rows
   h += '<tbody class="bills-body" id="budget-bills">';
   visibleBills.forEach((bill, bi) => {
     h += `<tr class="bill" draggable="true" data-bill-id="${bill.id}" data-bi="${bi}">`;
@@ -689,34 +729,41 @@ function renderBudget() {
       const amt = matrix[c.date][bill.id] || 0;
       const overrides = S.billOverrides[bill.id] || {};
       const isOverride = overrides[c.date] !== undefined;
-      const cls = (amt === 0 ? 'zero ' : '') + 'editable' + (isOverride ? ' override' : '') + (c.isCurrent ? ' current-col-cell' : '');
-      const display = amt ? '$' + amt.toLocaleString() : '·';
-      h += `<td class="${cls}" data-cell-type="bill" data-bill-id="${bill.id}" data-date="${c.date}" data-r="${bi+1}" data-c="${ci}" tabindex="0">${display}</td>`;
+      const hasValue = amt > 0;
+      const cls = 'bill-cell ' + (amt === 0 ? 'zero ' : 'has-value ') + 'editable' + (isOverride ? ' override' : '');
+      const display = hasValue ? '$' + amt.toLocaleString() : '·';
+      const dragAttr = hasValue ? ' draggable="true"' : '';
+      h += `<td class="${cls}" data-cell-type="bill" data-bill-id="${bill.id}" data-date="${c.date}" data-r="${bi+1}" data-c="${ci}" tabindex="0"${dragAttr}>${display}</td>`;
     });
     h += '</tr>';
   });
   h += '</tbody>';
 
-  // Footer rows: balance (sticky bottom) + savings (sticky bottom-most)
+  // Footer rows: balance, diff, savings (sticky bottom in this stacking order)
   h += '<tfoot>';
-  h += '<tr class="balance">';
-  h += '<td class="cat">Running balance</td>';
-  cols.forEach(c => {
-    const cls = c.runningBalance < 0 ? 'neg' : '';
-    h += `<td class="${cls}">${fmt$(c.runningBalance)}</td>`;
+  h += '<tr class="balance"><td class="cat">Remainder</td>';
+  cols.forEach(c => h += `<td class="${c.remainder < 0 ? 'neg' : ''}">${fmt$(c.remainder)}</td>`);
+  h += '</tr>';
+
+  h += '<tr class="diff"><td class="cat">Difference</td>';
+  cols.forEach((c, i) => {
+    if (i === 0 || c.diff === null || c.diff === undefined) { h += '<td>—</td>'; }
+    else {
+      const cls = c.diff > 0 ? 'pos' : c.diff < 0 ? 'neg' : '';
+      const sign = c.diff > 0 ? '+' : '';
+      h += `<td class="${cls}">${sign}${fmt$(c.diff)}</td>`;
+    }
   });
   h += '</tr>';
-  h += '<tr class="savings">';
-  h += '<td class="cat">Savings</td>';
+
+  h += '<tr class="savings"><td class="cat">Savings</td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsCum)}</td>`);
   h += '</tr>';
-  h += '</tfoot>';
+  h += '</tfoot></table>';
 
-  h += '</table>';
   wrap.innerHTML = h;
-
-  // Wire interactions
   wireBudgetInteractions();
+
   if (pendingFocus) {
     const { r, c, edit } = pendingFocus;
     pendingFocus = null;
@@ -725,9 +772,9 @@ function renderBudget() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  CELL EDITING (Tab/arrow nav, like Sheets)
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  CELL EDITING
+// ═══════════════════════════════════════════════════════════════════
 let activeCell = null;
 let pendingFocus = null;
 
@@ -735,13 +782,27 @@ function wireBudgetInteractions() {
   const wrap = eid('budget-scroll');
   if (!wrap) return;
   wrap.onclick = onBudgetClick;
-  // Drag-drop for bill rows
+  // Row drag (reorder)
   wrap.querySelectorAll('tr.bill').forEach(tr => {
-    tr.addEventListener('dragstart', onBillDragStart);
-    tr.addEventListener('dragover', onBillDragOver);
-    tr.addEventListener('dragleave', onBillDragLeave);
-    tr.addEventListener('drop', onBillDrop);
-    tr.addEventListener('dragend', onBillDragEnd);
+    tr.addEventListener('dragstart', onBillRowDragStart);
+    tr.addEventListener('dragover', onBillRowDragOver);
+    tr.addEventListener('dragleave', onBillRowDragLeave);
+    tr.addEventListener('drop', onBillRowDrop);
+    tr.addEventListener('dragend', onBillRowDragEnd);
+  });
+  // Cell drag (shift cadence) — only on cells with values
+  wrap.querySelectorAll('td.bill-cell.has-value').forEach(td => {
+    td.addEventListener('dragstart', onCellDragStart);
+    td.addEventListener('dragover', onCellDragOver);
+    td.addEventListener('dragleave', onCellDragLeave);
+    td.addEventListener('drop', onCellDrop);
+    td.addEventListener('dragend', onCellDragEnd);
+  });
+  // Empty bill cells should also accept cell drops
+  wrap.querySelectorAll('td.bill-cell.zero').forEach(td => {
+    td.addEventListener('dragover', onCellDragOver);
+    td.addEventListener('dragleave', onCellDragLeave);
+    td.addEventListener('drop', onCellDrop);
   });
 }
 
@@ -754,64 +815,103 @@ function onBudgetClick(ev) {
 
 function enterCellEdit(td) {
   if (activeCell) commitCellEdit({ silent: true });
-
   const type = td.dataset.cellType;
   const date = td.dataset.date;
   const billId = td.dataset.billId;
+  const adhocId = td.dataset.adhocId;
   const r = +td.dataset.r;
   const c = +td.dataset.c;
 
-  let curVal = '';
-  let placeholder = '';
+  let curVal = '', placeholder = '';
   if (type === 'bill') {
     const overrides = S.billOverrides[billId] || {};
-    if (overrides[date] !== undefined) curVal = overrides[date];
     const bill = S.bills.find(b => b.id === billId);
-    placeholder = bill ? String(bill.amount) : '';
+    if (overrides[date] !== undefined) curVal = overrides[date];
+    else if (bill && (bill.amount || 0) > 0) {
+      // Show recurring as placeholder (so blank input means "use recurring")
+      placeholder = String(bill.amount);
+    }
   } else if (type === 'paycheck') {
     if (S.paycheckOverrides[date] !== undefined) curVal = S.paycheckOverrides[date];
     placeholder = String(parseISO(date).getDate() === 1 ? S.paycheckMonthly : S.paycheckWeekly);
   } else if (type === 'current-balance') {
-    curVal = S.currentBalance || '';
-    placeholder = '0';
+    curVal = S.currentBalance || ''; placeholder = '0';
+  } else if (type === 'adhoc') {
+    const a = (S.adhocColumns || []).find(x => x.id === adhocId);
+    if (a) curVal = a.amount;
   }
 
   const inp = document.createElement('input');
-  inp.type = 'number';
-  inp.step = '0.01';
-  inp.inputMode = 'decimal';
+  inp.type = 'number'; inp.step = '0.01'; inp.inputMode = 'decimal';
   inp.value = curVal === '' ? '' : curVal;
   inp.placeholder = placeholder;
   inp.className = 'cell-edit';
-
-  td.innerHTML = '';
-  td.appendChild(inp);
-  inp.focus();
-  inp.select();
-
+  td.innerHTML = ''; td.appendChild(inp);
+  inp.focus(); inp.select();
   inp.addEventListener('keydown', onCellKey);
   inp.addEventListener('blur', () => {
     if (activeCell && activeCell.td === td) commitCellEdit({ silent: false });
   });
-
-  activeCell = { td, type, billId, date, r, c, inp };
+  activeCell = { td, type, billId, adhocId, date, r, c, inp, originalValue: curVal };
 }
 
 function commitCellEdit(opts = {}) {
   if (!activeCell) return;
-  const { type, billId, date, inp } = activeCell;
+  const { type, billId, adhocId, date, inp, originalValue } = activeCell;
   const raw = inp.value.trim();
 
   if (type === 'bill') {
-    if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
-    if (raw === '') delete S.billOverrides[billId][date];
-    else { const n = parseFloat(raw); if (!isNaN(n)) S.billOverrides[billId][date] = n; }
+    const bill = S.bills.find(b => b.id === billId);
+    if (!bill) { activeCell = null; return; }
+    if (raw === '') {
+      // Clear override → revert to recurring
+      snapshot();
+      if (S.billOverrides[billId]) delete S.billOverrides[billId][date];
+    } else {
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n !== originalValue) {
+        // If different from recurring AND no current override, ask one-time vs apply-all
+        const hasOverride = S.billOverrides[billId] && S.billOverrides[billId][date] !== undefined;
+        if (!hasOverride && n !== (Number(bill.amount) || 0)) {
+          const applyAll = confirm(
+            `Apply $${n} to all future "${bill.name}" payments?\n\n` +
+            `OK = update the recurring amount (every future occurrence)\n` +
+            `Cancel = one-time change for ${date} only`
+          );
+          snapshot();
+          if (applyAll) {
+            bill.amount = n;
+            if (S.billOverrides[billId]) delete S.billOverrides[billId][date];
+          } else {
+            if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
+            S.billOverrides[billId][date] = n;
+          }
+        } else {
+          // Already has override OR value equals recurring → just store override
+          snapshot();
+          if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
+          if (n === (Number(bill.amount) || 0)) {
+            // Same as recurring — clear override
+            delete S.billOverrides[billId][date];
+          } else {
+            S.billOverrides[billId][date] = n;
+          }
+        }
+      }
+    }
   } else if (type === 'paycheck') {
+    snapshot();
     if (raw === '') delete S.paycheckOverrides[date];
     else { const n = parseFloat(raw); if (!isNaN(n)) S.paycheckOverrides[date] = n; }
   } else if (type === 'current-balance') {
+    snapshot();
     const n = parseFloat(raw);
     S.currentBalance = isNaN(n) ? 0 : n;
+  } else if (type === 'adhoc') {
+    snapshot();
+    const n = parseFloat(raw);
+    const a = (S.adhocColumns || []).find(x => x.id === adhocId);
+    if (a && !isNaN(n)) a.amount = Math.abs(n);
   }
 
   activeCell = null;
@@ -829,89 +929,195 @@ function navigateCell(dir) {
   if (!activeCell) return;
   const { r, c } = activeCell;
   let nr = r, nc = c;
-  if (dir === 'right') nc++;
-  else if (dir === 'left') nc--;
-  else if (dir === 'up') nr--;
-  else if (dir === 'down') nr++;
+  if (dir === 'right') nc++; else if (dir === 'left') nc--;
+  else if (dir === 'up') nr--; else if (dir === 'down') nr++;
   pendingFocus = { r: nr, c: nc, edit: true };
   commitCellEdit({ silent: false });
 }
 
 function onCellKey(e) {
-  if (e.key === 'Tab')        { e.preventDefault(); navigateCell(e.shiftKey ? 'left' : 'right'); }
+  if (e.key === 'Tab') { e.preventDefault(); navigateCell(e.shiftKey ? 'left' : 'right'); }
   else if (e.key === 'Enter') { e.preventDefault(); navigateCell('down'); }
-  else if (e.key === 'Escape'){ e.preventDefault(); cancelCellEdit(); }
+  else if (e.key === 'Escape') { e.preventDefault(); cancelCellEdit(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navigateCell('right'); }
-  else if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateCell('left'); }
-  else if (e.key === 'ArrowUp')    { e.preventDefault(); navigateCell('up'); }
-  else if (e.key === 'ArrowDown')  { e.preventDefault(); navigateCell('down'); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateCell('left'); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); navigateCell('up'); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); navigateCell('down'); }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  DRAG-DROP REORDER
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  ROW REORDER (BUDGET BILLS)
+// ═══════════════════════════════════════════════════════════════════
 let dragSrcId = null;
-let dragMode = null;  // 'budget-bill' | 'bills-list' | 'accounts'
+let dragMode = null;
 
-function onBillDragStart(ev) {
-  dragSrcId = ev.currentTarget.dataset.billId;
-  dragMode = 'budget-bill';
+function onBillRowDragStart(ev) {
+  // Only initiate row drag when the drag began on the cat cell (drag handle)
+  const startTd = ev.target.closest('td');
+  if (!startTd || !startTd.classList.contains('cat')) { ev.preventDefault(); return; }
+  dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
   ev.currentTarget.classList.add('dragging');
 }
-function onBillDragOver(ev) {
+function onBillRowDragOver(ev) {
   if (dragMode !== 'budget-bill') return;
-  ev.preventDefault();
-  ev.dataTransfer.dropEffect = 'move';
+  ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
   ev.currentTarget.classList.add('drag-over');
 }
-function onBillDragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
-function onBillDrop(ev) {
+function onBillRowDragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
+function onBillRowDrop(ev) {
   if (dragMode !== 'budget-bill') return;
   ev.preventDefault();
   ev.currentTarget.classList.remove('drag-over');
   const tgtId = ev.currentTarget.dataset.billId;
   if (!dragSrcId || dragSrcId === tgtId) return;
-  reorderBill(dragSrcId, tgtId);
+  snapshot();
+  const srcIdx = S.bills.findIndex(b => b.id === dragSrcId);
+  const [moved] = S.bills.splice(srcIdx, 1);
+  const tgtIdx = S.bills.findIndex(b => b.id === tgtId);
+  S.bills.splice(tgtIdx, 0, moved);
+  saveAndRender();
 }
-function onBillDragEnd(ev) {
+function onBillRowDragEnd(ev) {
   ev.currentTarget.classList.remove('dragging');
   document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
   dragSrcId = null; dragMode = null;
 }
 
-function reorderBill(srcId, tgtId) {
-  const srcIdx = S.bills.findIndex(b => b.id === srcId);
-  const tgtIdx = S.bills.findIndex(b => b.id === tgtId);
-  if (srcIdx < 0 || tgtIdx < 0) return;
-  const [moved] = S.bills.splice(srcIdx, 1);
-  const newTgtIdx = S.bills.findIndex(b => b.id === tgtId);
-  S.bills.splice(newTgtIdx, 0, moved);
+// ═══════════════════════════════════════════════════════════════════
+//  CELL DRAG (SHIFT BILL CADENCE)
+// ═══════════════════════════════════════════════════════════════════
+let cellDrag = null;
+
+function onCellDragStart(ev) {
+  const td = ev.currentTarget;
+  if (td.dataset.cellType !== 'bill') return;
+  cellDrag = { billId: td.dataset.billId, fromDate: td.dataset.date };
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/x-bill-shift', JSON.stringify(cellDrag));
+  ev.stopPropagation();
+  td.classList.add('cell-dragging');
+  dragMode = 'cell-shift';
+}
+function onCellDragOver(ev) {
+  if (dragMode !== 'cell-shift' || !cellDrag) return;
+  const td = ev.currentTarget;
+  if (td.dataset.cellType !== 'bill') return;
+  if (td.dataset.billId !== cellDrag.billId) return;
+  ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+  td.classList.add('cell-drag-over');
+}
+function onCellDragLeave(ev) { ev.currentTarget.classList.remove('cell-drag-over'); }
+function onCellDrop(ev) {
+  if (dragMode !== 'cell-shift' || !cellDrag) return;
+  const td = ev.currentTarget;
+  if (td.dataset.cellType !== 'bill') return;
+  if (td.dataset.billId !== cellDrag.billId) return;
+  if (td.dataset.date === cellDrag.fromDate) return;
+  ev.preventDefault();
+  td.classList.remove('cell-drag-over');
+  shiftBillCadence(cellDrag.billId, cellDrag.fromDate, td.dataset.date);
+}
+function onCellDragEnd(ev) {
+  ev.currentTarget.classList.remove('cell-dragging');
+  document.querySelectorAll('.cell-drag-over').forEach(el => el.classList.remove('cell-drag-over'));
+  cellDrag = null; dragMode = null;
+}
+
+function shiftBillCadence(billId, fromDate, toDate) {
+  const bill = S.bills.find(b => b.id === billId);
+  if (!bill) return;
+  snapshot();
+  const newDate = parseISO(toDate);
+  switch (bill.frequency) {
+    case 'monthly': case 'quarterly': case 'semi':
+      bill.dueDay = newDate.getDate();
+      break;
+    case 'yearly':
+      bill.dueDay = newDate.getDate();
+      bill.notes = String(newDate.getMonth() + 1);
+      break;
+    case 'weekly':
+      bill.dueDay = newDate.getDay();
+      break;
+    case 'biweekly':
+      bill.notes = isoDate(newDate);
+      break;
+    case 'once':
+      bill.notes = isoDate(newDate);
+      break;
+  }
+  // Move any existing override at fromDate to toDate
+  if (S.billOverrides[billId] && S.billOverrides[billId][fromDate] !== undefined) {
+    S.billOverrides[billId][toDate] = S.billOverrides[billId][fromDate];
+    delete S.billOverrides[billId][fromDate];
+  }
+  toast(`${bill.name} cadence shifted — all subsequent occurrences moved`);
   saveAndRender();
 }
 
-// Generic drag-drop for list tables (bills tab + accounts tab)
+// ═══════════════════════════════════════════════════════════════════
+//  AD-HOC ONE-TIME COLUMNS
+// ═══════════════════════════════════════════════════════════════════
+function addAdhocColumn() {
+  const dateStr = prompt('Date for one-time entry (YYYY-MM-DD):', isoDate(addDays(new Date(), 7)));
+  if (!dateStr) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) { alert('Invalid date format. Use YYYY-MM-DD.'); return; }
+  const label = prompt('Label (e.g. "Tax refund", "Wedding gift"):', '') || '';
+  const typeAns = prompt('Type — type "income" or "expense":', 'income');
+  const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
+  const amtStr = prompt('Amount ($):', '500');
+  const amt = parseFloat(amtStr); if (isNaN(amt) || amt <= 0) return;
+  snapshot();
+  S.adhocColumns = S.adhocColumns || [];
+  S.adhocColumns.push({ id: uid(), date: dateStr, amount: amt, label, type });
+  saveAndRender();
+  toast('One-time entry added');
+}
+function editAdhocColumn(id) {
+  const a = (S.adhocColumns || []).find(x => x.id === id);
+  if (!a) return;
+  const dateStr = prompt('Date (YYYY-MM-DD):', a.date);
+  if (!dateStr) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) { alert('Invalid date format.'); return; }
+  const label = prompt('Label:', a.label || '');
+  const typeAns = prompt('Type — "income" or "expense":', a.type || 'income');
+  const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
+  const amtStr = prompt('Amount ($):', String(a.amount));
+  const amt = parseFloat(amtStr); if (isNaN(amt)) return;
+  snapshot();
+  a.date = dateStr; a.label = label || ''; a.type = type; a.amount = Math.abs(amt);
+  saveAndRender();
+}
+function deleteAdhocColumn(id) {
+  if (!confirm('Delete this one-time entry?')) return;
+  snapshot();
+  S.adhocColumns = (S.adhocColumns || []).filter(x => x.id !== id);
+  saveAndRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GENERIC LIST DRAG (Bills tab + Net Worth tab)
+// ═══════════════════════════════════════════════════════════════════
 function attachListDrag(tbody, arrayName, onComplete) {
   tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+    if (!tr.draggable) return;
     tr.addEventListener('dragstart', e => {
       dragSrcId = tr.dataset.id; dragMode = arrayName;
-      e.dataTransfer.effectAllowed = 'move';
-      tr.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move'; tr.classList.add('dragging');
     });
     tr.addEventListener('dragover', e => {
       if (dragMode !== arrayName) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      tr.classList.add('drag-over');
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move'; tr.classList.add('drag-over');
     });
-    tr.addEventListener('dragleave', e => tr.classList.remove('drag-over'));
+    tr.addEventListener('dragleave', () => tr.classList.remove('drag-over'));
     tr.addEventListener('drop', e => {
       if (dragMode !== arrayName) return;
-      e.preventDefault();
-      tr.classList.remove('drag-over');
+      e.preventDefault(); tr.classList.remove('drag-over');
       const tgtId = tr.dataset.id;
       if (!dragSrcId || dragSrcId === tgtId) return;
+      snapshot();
       const arr = S[arrayName];
       const srcIdx = arr.findIndex(x => x.id === dragSrcId);
       if (srcIdx < 0) return;
@@ -920,7 +1126,7 @@ function attachListDrag(tbody, arrayName, onComplete) {
       arr.splice(tgtIdx, 0, moved);
       onComplete();
     });
-    tr.addEventListener('dragend', e => {
+    tr.addEventListener('dragend', () => {
       tr.classList.remove('dragging');
       document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
       dragSrcId = null; dragMode = null;
@@ -928,84 +1134,61 @@ function attachListDrag(tbody, arrayName, onComplete) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  BILLS LIST RENDER
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  BILLS TAB
+// ═══════════════════════════════════════════════════════════════════
 function renderBills() {
   const tbody = eid('bills-tbody');
-  if (!S.bills.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No bills yet. Click <b>+ Add bill</b> to start.</td></tr>';
-    return;
-  }
+  if (!S.bills.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No bills yet.</td></tr>'; return; }
   tbody.innerHTML = S.bills.map(b => `
     <tr class="${b.active === false ? 'inactive' : ''}" data-id="${b.id}" draggable="true">
-      <td class="drag-cell" title="Drag to reorder">⋮⋮</td>
+      <td class="drag-cell">⋮⋮</td>
       <td class="col-name"><input type="text" value="${escHTML(b.name)}" oninput="updateBill('${b.id}','name',this.value)"></td>
       <td class="col-amt"><input type="number" step="0.01" value="${b.amount}" oninput="updateBill('${b.id}','amount',parseFloat(this.value)||0)"></td>
       <td class="col-freq"><select onchange="updateBill('${b.id}','frequency',this.value)">
-        ${['monthly','weekly','biweekly','quarterly','semi','yearly','once'].map(f =>
-          `<option value="${f}" ${b.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
+        ${['monthly','weekly','biweekly','quarterly','semi','yearly','once'].map(f => `<option value="${f}" ${b.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
       </select></td>
       <td class="col-day"><input type="number" min="0" max="31" value="${b.dueDay||1}" oninput="updateBill('${b.id}','dueDay',parseInt(this.value)||1)"></td>
       <td class="col-cat"><input type="text" value="${escHTML(b.category||'')}" placeholder="(optional)" oninput="updateBill('${b.id}','category',this.value)"></td>
       <td><label style="margin:0;display:inline;"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></label></td>
       <td class="col-actions"><button class="btn danger" onclick="deleteBill('${b.id}')">Delete</button></td>
     </tr>
-    <tr data-id="${b.id}-notes"><td></td><td colspan="7" style="padding:0 12px 8px;background:var(--bg);"><input type="text" value="${escHTML(b.notes||'')}" placeholder="Notes (anchor date for biweekly, MM for yearly, YYYY-MM-DD for once)" oninput="updateBill('${b.id}','notes',this.value)" style="font-size:12px;color:var(--text-muted);"></td></tr>
+    <tr data-id="${b.id}-notes"><td></td><td colspan="7" style="padding:0 14px 8px;"><input type="text" value="${escHTML(b.notes||'')}" placeholder="Notes (anchor date for biweekly, MM for yearly, YYYY-MM-DD for once)" oninput="updateBill('${b.id}','notes',this.value)" style="font-size:12px;color:var(--text-muted);"></td></tr>
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
 }
-
-function addBill() {
-  S.bills.push({ id: uid(), name: 'New bill', amount: 0, frequency: 'monthly', dueDay: 1, category: '', active: true, notes: '' });
-  saveAndRender();
-}
-function deleteBill(id) {
-  if (!confirm('Delete this bill?')) return;
-  S.bills = S.bills.filter(b => b.id !== id);
-  delete S.billOverrides[id];
-  saveAndRender();
-}
+function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, notes:'' }); saveAndRender(); }
+function deleteBill(id) { if (!confirm('Delete this bill?')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; saveAndRender(); }
 function updateBill(id, field, value) {
-  const b = S.bills.find(x => x.id === id);
-  if (!b) return;
+  const b = S.bills.find(x => x.id === id); if (!b) return;
+  maybeSnapshot();
   b[field] = value;
   scheduleSave();
   if (eid('tab-budget').classList.contains('active')) renderBudget();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  MORTGAGE
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function amortize(balance, annualRate, monthlyPI, extraMonthly, startDate, oncePay) {
-  const r = annualRate / 100 / 12;
-  let bal = balance;
-  let totalInterest = 0;
-  let months = 0;
-  const series = [];
-  let cur = new Date(startDate);
+  const r = annualRate/100/12;
+  let bal = balance, totalInterest = 0, months = 0;
+  const series = []; let cur = new Date(startDate);
   while (bal > 0.01 && months < 600) {
     const interest = bal * r;
     let principal = monthlyPI - interest + (extraMonthly || 0);
-    // Apply one-time extra if it falls within this month
     if (oncePay && oncePay.amount > 0 && oncePay.date) {
-      const oneTimeDate = parseISO(oncePay.date);
+      const d = parseISO(oncePay.date);
       const monthEnd = new Date(cur.getFullYear(), cur.getMonth()+1, 0);
-      if (oneTimeDate >= cur && oneTimeDate <= monthEnd) {
-        principal += oncePay.amount;
-        oncePay.applied = true;
-      }
+      if (d >= cur && d <= monthEnd) { principal += oncePay.amount; oncePay.applied = true; }
     }
     if (principal > bal) principal = bal;
-    bal -= principal;
-    totalInterest += interest;
-    months++;
-    series.push({ date: isoDate(cur), balance: +bal.toFixed(2), interest: +totalInterest.toFixed(2) });
+    bal -= principal; totalInterest += interest; months++;
+    series.push({ date: isoDate(cur), balance: +bal.toFixed(2) });
     cur = addMonths(cur, 1);
   }
   return { months, totalInterest, series, finalDate: cur };
 }
-
 function renderMortgage() {
   const m = S.mortgage;
   const balanceI = eid('m-balance'), rateI = eid('m-rate'), piI = eid('m-pi'), nextI = eid('m-next'), extraI = eid('m-extra');
@@ -1017,80 +1200,53 @@ function renderMortgage() {
   m.extraWeekly = parseFloat(extraI.value) || 0;
   m.onceAmount = parseFloat(onceA.value) || 0;
   m.onceDate = onceD.value || '';
-
-  // Sync visible inputs
-  balanceI.value = m.balance;
-  rateI.value = m.rate;
-  piI.value = m.pi;
-  nextI.value = m.nextPayment;
-  extraI.value = m.extraWeekly;
-  eid('m-extra-num').value = m.extraWeekly;
-  onceA.value = m.onceAmount;
-  onceD.value = m.onceDate;
+  balanceI.value = m.balance; rateI.value = m.rate; piI.value = m.pi; nextI.value = m.nextPayment;
+  extraI.value = m.extraWeekly; eid('m-extra-num').value = m.extraWeekly;
+  onceA.value = m.onceAmount; onceD.value = m.onceDate;
   eid('m-extra-val').textContent = '$' + m.extraWeekly + '/wk';
   eid('m-extra-mo').textContent = '$' + (m.extraWeekly * 52 / 12).toFixed(0) + '/mo';
-
   const startDate = m.nextPayment ? parseISO(m.nextPayment) : new Date();
   const baseAm = amortize(m.balance, m.rate, m.pi, 0, startDate, null);
-  const extraAm = amortize(m.balance, m.rate, m.pi, m.extraWeekly * 52 / 12, startDate,
+  const extraAm = amortize(m.balance, m.rate, m.pi, m.extraWeekly*52/12, startDate,
     (m.onceAmount > 0 && m.onceDate) ? { amount: m.onceAmount, date: m.onceDate } : null);
-
-  eid('m-payoff-base').textContent = baseAm.finalDate.toLocaleString('en-US', {month:'short', year:'numeric'});
-  eid('m-payoff-base-sub').textContent = `${baseAm.months} months · ${(baseAm.months/12).toFixed(1)} years`;
-  eid('m-payoff-extra').textContent = extraAm.finalDate.toLocaleString('en-US', {month:'short', year:'numeric'});
-  eid('m-payoff-extra-sub').textContent = `${extraAm.months} months · ${(extraAm.months/12).toFixed(1)} years`;
+  eid('m-payoff-base').textContent = baseAm.finalDate.toLocaleString('en-US',{month:'short',year:'numeric'});
+  eid('m-payoff-base-sub').textContent = `${baseAm.months} mo · ${(baseAm.months/12).toFixed(1)} yr`;
+  eid('m-payoff-extra').textContent = extraAm.finalDate.toLocaleString('en-US',{month:'short',year:'numeric'});
+  eid('m-payoff-extra-sub').textContent = `${extraAm.months} mo · ${(extraAm.months/12).toFixed(1)} yr`;
   const monthsSaved = baseAm.months - extraAm.months;
   eid('m-time-saved').textContent = monthsSaved + 'mo (' + (monthsSaved/12).toFixed(1) + 'yr)';
   eid('m-int-saved').textContent = fmt$(baseAm.totalInterest - extraAm.totalInterest);
   eid('m-int-base').textContent = fmt$(baseAm.totalInterest);
   eid('m-int-extra').textContent = fmt$(extraAm.totalInterest);
-
-  const baseSeries = baseAm.series.map(p => [p.date, p.balance]);
-  const extraSeries = extraAm.series.map(p => [p.date, p.balance]);
   const chart = echarts.init(eid('m-chart'), null, { renderer: 'svg' });
   chart.setOption({
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: 'Inter, sans-serif', color: '#6b7280', fontSize: 12 },
+    textStyle: { fontFamily: 'inherit', color: '#6b7280', fontSize: 12 },
     grid: { left: 64, right: 24, top: 28, bottom: 36 },
     legend: { textStyle: { color: '#6b7280' }, top: 0 },
-    xAxis: { type: 'time', axisLabel: { color: '#6b7280' }, axisLine: { lineStyle: { color: '#e5e7eb' } }, splitLine: { show: false } },
-    yAxis: { type: 'value', axisLabel: { color: '#6b7280', formatter: v => '$' + (v/1000).toFixed(0) + 'k' }, axisLine: { show: false }, splitLine: { lineStyle: { color: '#f1f3f5' } } },
+    xAxis: { type: 'time', axisLabel: { color: '#6b7280' }, axisLine: { lineStyle: { color: '#e5e6eb' } }, splitLine: { show: false } },
+    yAxis: { type: 'value', axisLabel: { color: '#6b7280', formatter: v => '$' + (v/1000).toFixed(0) + 'k' }, axisLine: { show: false }, splitLine: { lineStyle: { color: '#f0f1f4' } } },
     tooltip: { trigger: 'axis', formatter: function(p){ return p.map(s => s.seriesName + ': $' + Math.round(s.value[1]).toLocaleString()).join('<br>') + '<br>' + p[0].value[0].slice(0,7); } },
     series: [
-      { name: 'Baseline', type: 'line', data: baseSeries, smooth: true, showSymbol: false, lineStyle: { color: '#9ca3af', width: 2 } },
-      { name: 'With extra', type: 'line', data: extraSeries, smooth: true, showSymbol: false, lineStyle: { color: '#15803d', width: 2 } },
+      { name: 'Baseline', type: 'line', data: baseAm.series.map(p => [p.date, p.balance]), smooth: true, showSymbol: false, lineStyle: { color: '#9ca3af', width: 2 } },
+      { name: 'With extra', type: 'line', data: extraAm.series.map(p => [p.date, p.balance]), smooth: true, showSymbol: false, lineStyle: { color: '#00c805', width: 2 } },
     ]
   });
-
   scheduleSave();
 }
+function onExtraInput() { const v = parseFloat(eid('m-extra').value)||0; eid('m-extra-num').value = v; S.mortgage.extraWeekly = v; renderMortgage(); }
+function onExtraNumInput() { const v = parseFloat(eid('m-extra-num').value)||0; eid('m-extra').value = Math.min(v,500); S.mortgage.extraWeekly = v; renderMortgage(); }
 
-function onExtraInput() {
-  const v = parseFloat(eid('m-extra').value) || 0;
-  eid('m-extra-num').value = v;
-  S.mortgage.extraWeekly = v;
-  renderMortgage();
-}
-function onExtraNumInput() {
-  const v = parseFloat(eid('m-extra-num').value) || 0;
-  eid('m-extra').value = Math.min(v, 500);
-  S.mortgage.extraWeekly = v;
-  renderMortgage();
-}
-
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  NET WORTH
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderNetWorth() {
-  const tbody = eid('nw-tbody');
-  const tfoot = eid('nw-tfoot');
-  if (!S.accounts.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No accounts yet.</td></tr>';
-    tfoot.innerHTML = '';
-  } else {
+  const tbody = eid('nw-tbody'), tfoot = eid('nw-tfoot');
+  if (!S.accounts.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No accounts yet.</td></tr>'; tfoot.innerHTML = ''; }
+  else {
     tbody.innerHTML = S.accounts.map(a => `
       <tr data-id="${a.id}" draggable="true">
-        <td class="drag-cell" title="Drag to reorder">⋮⋮</td>
+        <td class="drag-cell">⋮⋮</td>
         <td><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
         <td><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
         <td><select onchange="updateAccount('${a.id}','type',this.value)">
@@ -1105,13 +1261,12 @@ function renderNetWorth() {
     S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
     const net = assets - liab;
     tfoot.innerHTML = `
-      <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--positive);font-weight:600;">${fmt$2(assets)}</td></tr>
+      <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
       <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="4" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
-      <tr><td></td><td style="font-weight:700;color:var(--accent);">Net worth</td><td colspan="4" style="color:${net>=0?'var(--accent)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+      <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="4" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
     `;
     attachListDrag(tbody, 'accounts', () => saveAndRender());
   }
-
   const stats = eid('nw-stats');
   if (S.nwHistory.length) {
     const latest = S.nwHistory[S.nwHistory.length-1];
@@ -1120,54 +1275,41 @@ function renderNetWorth() {
     const change1y = latest.total - yearAgo.total;
     const changeAll = latest.total - oldest.total;
     stats.innerHTML = `
-      <div class="stat-box"><div class="stat-lbl">Latest</div><div class="stat-val acc">${fmt$(latest.total)}</div><div class="stat-sub">${latest.date}</div></div>
+      <div class="stat-box"><div class="stat-lbl">Latest</div><div class="stat-val">${fmt$(latest.total)}</div><div class="stat-sub">${latest.date}</div></div>
       <div class="stat-box"><div class="stat-lbl">Δ 1yr</div><div class="stat-val ${change1y>=0?'pos':'neg'}">${change1y>=0?'+':''}${fmt$(change1y)}</div></div>
       <div class="stat-box"><div class="stat-lbl">Δ since first</div><div class="stat-val ${changeAll>=0?'pos':'neg'}">${changeAll>=0?'+':''}${fmt$(changeAll)}</div><div class="stat-sub">since ${oldest.date}</div></div>
       <div class="stat-box"><div class="stat-lbl">Snapshots</div><div class="stat-val">${S.nwHistory.length}</div></div>
     `;
-  } else {
-    stats.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);font-size:12px;padding:10px;text-align:center;">No snapshots yet — click <b>⊕ Snapshot today</b>.</div>';
-  }
-
+  } else { stats.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);font-size:12px;padding:10px;text-align:center;">No snapshots yet.</div>'; }
   const chart = echarts.init(eid('nw-chart'), null, { renderer: 'svg' });
   if (S.nwHistory.length) {
     chart.setOption({
       backgroundColor: 'transparent',
-      textStyle: { fontFamily: 'Inter, sans-serif', color: '#6b7280', fontSize: 12 },
+      textStyle: { fontFamily: 'inherit', color: '#6b7280', fontSize: 12 },
       grid: { left: 70, right: 24, top: 24, bottom: 36 },
-      xAxis: { type: 'time', axisLabel: { color: '#6b7280' }, axisLine: { lineStyle: { color: '#e5e7eb' } }, splitLine: { show: false } },
-      yAxis: { type: 'value', axisLabel: { color: '#6b7280', formatter: v => '$' + (v/1000).toFixed(0) + 'k' }, axisLine: { show: false }, splitLine: { lineStyle: { color: '#f1f3f5' } } },
+      xAxis: { type: 'time', axisLabel: { color: '#6b7280' }, axisLine: { lineStyle: { color: '#e5e6eb' } }, splitLine: { show: false } },
+      yAxis: { type: 'value', axisLabel: { color: '#6b7280', formatter: v => '$' + (v/1000).toFixed(0) + 'k' }, axisLine: { show: false }, splitLine: { lineStyle: { color: '#f0f1f4' } } },
       tooltip: { trigger: 'axis', formatter: p => p[0].value[0].slice(0,10) + '<br>' + fmt$2(p[0].value[1]) },
-      series: [{ type: 'line', data: S.nwHistory.map(h => [h.date, h.total]), areaStyle: { color: 'rgba(37,99,235,0.10)' }, lineStyle: { color: '#2563eb', width: 2 }, smooth: true, showSymbol: true, symbolSize: 7 }],
+      series: [{ type: 'line', data: S.nwHistory.map(h => [h.date, h.total]), areaStyle: { color: 'rgba(0,200,5,0.10)' }, lineStyle: { color: '#00c805', width: 2 }, smooth: true, showSymbol: true, symbolSize: 6 }],
     });
   } else { chart.clear(); }
   scheduleSave();
 }
-
-function addAccount() {
-  S.accounts.push({ id: uid(), name: 'New account', balance: 0, type: 'asset', category: '' });
-  saveAndRender();
-}
+function addAccount() { snapshot(); S.accounts.push({ id: uid(), name:'New account', balance:0, type:'asset', category:'' }); saveAndRender(); }
 function updateAccount(id, field, value) {
-  const a = S.accounts.find(x => x.id === id);
-  if (!a) return;
-  a[field] = value;
-  scheduleSave();
-  // Refresh totals only — don't re-render the whole table or focus is lost
+  const a = S.accounts.find(x => x.id === id); if (!a) return;
+  maybeSnapshot();
+  a[field] = value; scheduleSave();
   let assets = 0, liab = 0;
   S.accounts.forEach(a => { if (a.type === 'asset') assets += +a.balance||0; else liab += +a.balance||0; });
   const net = assets - liab;
   eid('nw-tfoot').innerHTML = `
-    <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--positive);font-weight:600;">${fmt$2(assets)}</td></tr>
+    <tr><td></td><td style="font-weight:600;">Assets</td><td colspan="4" style="color:var(--accent-dim);font-weight:600;">${fmt$2(assets)}</td></tr>
     <tr><td></td><td style="font-weight:600;">Liabilities</td><td colspan="4" style="color:var(--negative);font-weight:600;">${fmt$2(liab)}</td></tr>
-    <tr><td></td><td style="font-weight:700;color:var(--accent);">Net worth</td><td colspan="4" style="color:${net>=0?'var(--accent)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
+    <tr><td></td><td style="font-weight:700;">Net worth</td><td colspan="4" style="color:${net>=0?'var(--text)':'var(--negative)'};font-weight:700;font-size:16px;">${fmt$2(net)}</td></tr>
   `;
 }
-function deleteAccount(id) {
-  if (!confirm('Delete this account?')) return;
-  S.accounts = S.accounts.filter(a => a.id !== id);
-  saveAndRender();
-}
+function deleteAccount(id) { if (!confirm('Delete this account?')) return; snapshot(); S.accounts = S.accounts.filter(a => a.id !== id); saveAndRender(); }
 function snapshotNetWorth() {
   let assets = 0, liab = 0; const byCategory = {};
   S.accounts.forEach(a => {
@@ -1178,16 +1320,16 @@ function snapshotNetWorth() {
   });
   const total = assets - liab;
   const today = isoDate(new Date());
+  snapshot();
   S.nwHistory = S.nwHistory.filter(h => h.date !== today);
   S.nwHistory.push({ date: today, total, assets, liabilities: liab, byCategory });
   S.nwHistory.sort((a,b) => a.date.localeCompare(b.date));
-  toast('Snapshot recorded');
-  saveAndRender();
+  toast('Snapshot recorded'); saveAndRender();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  SETTINGS / SYNC
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderSettings() {
   eid('ss-webhook').value = WEBHOOK_URL || '';
   eid('cfg-paycheck-monthly').value = S.paycheckMonthly;
@@ -1195,6 +1337,7 @@ function renderSettings() {
   updateSyncPill();
 }
 function onCfgChange() {
+  maybeSnapshot();
   S.paycheckMonthly = parseFloat(eid('cfg-paycheck-monthly').value) || 0;
   S.paycheckWeekly = parseFloat(eid('cfg-paycheck-weekly').value) || 0;
   scheduleSave();
@@ -1202,14 +1345,14 @@ function onCfgChange() {
 function saveWebhook() {
   WEBHOOK_URL = eid('ss-webhook').value.trim();
   localStorage.setItem(LS_WEBHOOK, WEBHOOK_URL);
-  if (WEBHOOK_URL) { setStatus('Saved. Test the connection to verify.', 'gry'); forcePull(); }
-  else { setStatus('Cleared — local-only mode.', 'wrn'); updateSyncPill(); }
+  if (WEBHOOK_URL) { setStatus('Saved. Test the connection.', 'gry'); forcePull(); }
+  else { setStatus('Cleared — local only.', 'wrn'); updateSyncPill(); }
 }
 async function testSync() {
   if (!WEBHOOK_URL) { setStatus('Enter a webhook URL first.', 'red'); return; }
   setStatus('Testing…', 'gry');
   try {
-    const r = await fetch(WEBHOOK_URL, { method: 'POST', headers: {'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action: 'ping' }) });
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'ping' }) });
     const j = await r.json();
     if (j.ok) setStatus('✓ Connected. Server time: ' + j.ts, 'grn');
     else setStatus('Server returned: ' + JSON.stringify(j), 'red');
@@ -1219,26 +1362,23 @@ async function forcePull() {
   if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
   setStatus('Pulling…', 'gry');
   try {
-    const r = await fetch(WEBHOOK_URL, { method: 'POST', headers: {'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action: 'read' }) });
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'read' }) });
     const j = await r.json();
     if (j.error) { setStatus('Server error: ' + j.error, 'red'); return; }
     if (j.data) {
       S = Object.assign({}, S, j.data);
-      LAST_PULL = j.updated;
-      saveLocal(); renderAll();
+      S.adhocColumns = S.adhocColumns || [];
+      LAST_PULL = j.updated; saveLocal(); renderAll();
       setStatus('✓ Pulled. Last write: ' + (j.updated || 'never'), 'grn');
-    } else {
-      setStatus('Sheet empty. Pushing local…', 'gry');
-      await forcePush();
-    }
+    } else { setStatus('Sheet empty. Pushing local…', 'gry'); await forcePush(); }
   } catch (e) { setStatus('✗ Pull failed: ' + e.message, 'red'); }
 }
 async function forcePush() {
   if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
   setStatus('Pushing…', 'gry');
   try {
-    S.meta = { version: 1, modified: new Date().toISOString() };
-    const r = await fetch(WEBHOOK_URL, { method: 'POST', headers: {'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action: 'write', data: S }) });
+    S.meta = { version:1, modified: new Date().toISOString() };
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'write', data: S }) });
     const j = await r.json();
     if (j.ok) { LAST_PULL = j.updated; setStatus('✓ Pushed at ' + j.updated, 'grn'); SYNC_STATE='ok'; updateSyncPill(); }
     else setStatus('Server returned: ' + JSON.stringify(j), 'red');
@@ -1246,27 +1386,26 @@ async function forcePush() {
 }
 function clearAll() {
   if (!confirm('Clear ALL local data? (Sheet not affected.)')) return;
-  localStorage.removeItem(LS_KEY);
-  location.reload();
+  localStorage.removeItem(LS_KEY); location.reload();
 }
 function setStatus(msg, color) {
   const el = eid('ss-status'); if (!el) return;
-  const c = ({grn:'var(--positive)', red:'var(--negative)', wrn:'var(--warn)', gry:'var(--text-muted)'})[color] || 'var(--text-muted)';
+  const c = ({grn:'var(--accent-dim)', red:'var(--negative)', wrn:'var(--warn)', gry:'var(--text-muted)'})[color] || 'var(--text-muted)';
   el.style.color = c; el.textContent = msg;
 }
 function updateSyncPill() {
   const p = eid('last-sync');
-  if (!WEBHOOK_URL) { p.className = 'sync-pill local'; p.textContent = 'LOCAL ONLY'; p.title='Set webhook in Settings to sync'; return; }
+  if (!WEBHOOK_URL) { p.className = 'sync-pill local'; p.textContent = 'LOCAL'; p.title='Set webhook in Settings to sync'; return; }
   if (SYNC_STATE === 'ok') { p.className = 'sync-pill ok'; p.textContent = 'SYNCED'; p.title='Last sync: ' + (LAST_PULL || 'never'); return; }
   if (SYNC_STATE === 'err') { p.className = 'sync-pill err'; p.textContent = 'ERROR'; return; }
   p.className = 'sync-pill'; p.textContent = 'IDLE'; p.title='';
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  EXPORT / IMPORT
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function exportJSON() {
-  const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'budget-' + isoDate(new Date()) + '.json'; a.click();
@@ -1279,24 +1418,23 @@ function importJSON(ev) {
     try {
       const data = JSON.parse(e.target.result);
       if (!confirm('Import will REPLACE all current data. Continue?')) return;
-      S = Object.assign({}, S, data);
+      snapshot();
+      S = Object.assign({}, S, data); S.adhocColumns = S.adhocColumns || [];
       saveLocal(); renderAll(); toast('Imported');
     } catch (err) { alert('Invalid JSON: ' + err.message); }
   };
   reader.readAsText(file);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  PERSISTENCE
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let saveTimer = null;
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { saveLocal(); if (WEBHOOK_URL) backgroundPush(); }, 800);
 }
-function saveAndRender() {
-  saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll();
-}
+function saveAndRender() { saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll(); }
 function saveLocal() {
   S.meta = S.meta || {};
   S.meta.modified = new Date().toISOString();
@@ -1305,7 +1443,7 @@ function saveLocal() {
 async function backgroundPush() {
   SYNC_STATE = 'syncing'; updateSyncPill();
   try {
-    const r = await fetch(WEBHOOK_URL, { method: 'POST', headers: {'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action: 'write', data: S }) });
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'write', data: S }) });
     const j = await r.json();
     SYNC_STATE = j.ok ? 'ok' : 'err';
     if (j.ok) LAST_PULL = j.updated;
@@ -1315,6 +1453,7 @@ async function backgroundPush() {
 function loadLocal() {
   const raw = localStorage.getItem(LS_KEY);
   if (raw) { try { const data = JSON.parse(raw); S = Object.assign({}, S, data); } catch {} }
+  S.adhocColumns = S.adhocColumns || [];
   WEBHOOK_URL = localStorage.getItem(LS_WEBHOOK) || '';
 }
 function renderAll() {
@@ -1326,52 +1465,52 @@ function renderAll() {
   updateSyncPill();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  SEED
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function seedIfEmpty() {
   if (S.bills.length === 0 && S.accounts.length === 0) {
     S.bills = [
-      { id: uid(), name: 'Mortgage',      amount: 1585.93, frequency: 'monthly',  dueDay: 1,  category: 'housing',     active: true, notes: '' },
-      { id: uid(), name: 'AT&T',          amount: 81,      frequency: 'monthly',  dueDay: 1,  category: 'utilities',   active: true, notes: '' },
-      { id: uid(), name: 'HOA',           amount: 113.58,  frequency: 'monthly',  dueDay: 1,  category: 'housing',     active: true, notes: '' },
-      { id: uid(), name: 'Low T',         amount: 108.83,  frequency: 'biweekly', dueDay: 1,  category: 'health',      active: true, notes: '' },
-      { id: uid(), name: 'TV',            amount: 98,      frequency: 'monthly',  dueDay: 11, category: 'subscriptions',active:true, notes: '' },
-      { id: uid(), name: 'Electric',      amount: 200,     frequency: 'monthly',  dueDay: 25, category: 'utilities',   active: true, notes: '' },
-      { id: uid(), name: 'T-Mobile',      amount: 248,     frequency: 'monthly',  dueDay: 14, category: 'utilities',   active: true, notes: '' },
-      { id: uid(), name: 'YouTube',       amount: 20,      frequency: 'monthly',  dueDay: 7,  category: 'subscriptions',active:true, notes: '' },
-      { id: uid(), name: 'Water',         amount: 50,      frequency: 'monthly',  dueDay: 28, category: 'utilities',   active: true, notes: '' },
-      { id: uid(), name: 'Aptive',        amount: 112.58,  frequency: 'quarterly',dueDay: 1,  category: 'home',        active: true, notes: '' },
-      { id: uid(), name: 'Trash',         amount: 126,     frequency: 'quarterly',dueDay: 1,  category: 'utilities',   active: true, notes: '' },
-      { id: uid(), name: 'Groceries',     amount: 200,     frequency: 'weekly',   dueDay: 4,  category: 'food',        active: true, notes: '' },
-      { id: uid(), name: 'Gas',           amount: 100,     frequency: 'weekly',   dueDay: 4,  category: 'transport',   active: true, notes: '' },
-      { id: uid(), name: 'Daycare',       amount: 201.40,  frequency: 'weekly',   dueDay: 4,  category: 'kids',        active: true, notes: '' },
-      { id: uid(), name: 'Bianca',        amount: 250,     frequency: 'biweekly', dueDay: 1,  category: 'family',      active: true, notes: '' },
-      { id: uid(), name: 'Emergency Fund',amount: 500,     frequency: 'weekly',   dueDay: 4,  category: 'savings',     active: true, notes: '' },
+      { id: uid(), name:'Mortgage',      amount:1585.93, frequency:'monthly',  dueDay:1,  category:'housing',     active:true, notes:'' },
+      { id: uid(), name:'AT&T',          amount:81,      frequency:'monthly',  dueDay:1,  category:'utilities',   active:true, notes:'' },
+      { id: uid(), name:'HOA',           amount:113.58,  frequency:'monthly',  dueDay:1,  category:'housing',     active:true, notes:'' },
+      { id: uid(), name:'Low T',         amount:108.83,  frequency:'biweekly', dueDay:1,  category:'health',      active:true, notes:'' },
+      { id: uid(), name:'TV',            amount:98,      frequency:'monthly',  dueDay:11, category:'subscriptions',active:true, notes:'' },
+      { id: uid(), name:'Electric',      amount:200,     frequency:'monthly',  dueDay:25, category:'utilities',   active:true, notes:'' },
+      { id: uid(), name:'T-Mobile',      amount:248,     frequency:'monthly',  dueDay:14, category:'utilities',   active:true, notes:'' },
+      { id: uid(), name:'YouTube',       amount:20,      frequency:'monthly',  dueDay:7,  category:'subscriptions',active:true, notes:'' },
+      { id: uid(), name:'Water',         amount:50,      frequency:'monthly',  dueDay:28, category:'utilities',   active:true, notes:'' },
+      { id: uid(), name:'Aptive',        amount:112.58,  frequency:'quarterly',dueDay:1,  category:'home',        active:true, notes:'' },
+      { id: uid(), name:'Trash',         amount:126,     frequency:'quarterly',dueDay:1,  category:'utilities',   active:true, notes:'' },
+      { id: uid(), name:'Groceries',     amount:200,     frequency:'weekly',   dueDay:4,  category:'food',        active:true, notes:'' },
+      { id: uid(), name:'Gas',           amount:100,     frequency:'weekly',   dueDay:4,  category:'transport',   active:true, notes:'' },
+      { id: uid(), name:'Daycare',       amount:201.40,  frequency:'weekly',   dueDay:4,  category:'kids',        active:true, notes:'' },
+      { id: uid(), name:'Bianca',        amount:250,     frequency:'biweekly', dueDay:1,  category:'family',      active:true, notes:'' },
+      { id: uid(), name:'Emergency Fund',amount:500,     frequency:'weekly',   dueDay:4,  category:'savings',     active:true, notes:'' },
     ];
     S.accounts = [
-      { id: uid(), name: 'PNC Checking',     balance: 0,         type: 'asset',     category: 'cash' },
-      { id: uid(), name: 'PNC Savings',      balance: 0,         type: 'asset',     category: 'cash' },
-      { id: uid(), name: 'Joint Robinhood',  balance: 0,         type: 'asset',     category: 'brokerage' },
-      { id: uid(), name: 'Hood Trading',     balance: 0,         type: 'asset',     category: 'brokerage' },
-      { id: uid(), name: 'Bianca Individual',balance: 0,         type: 'asset',     category: 'brokerage' },
-      { id: uid(), name: 'Alex Roth IRA',    balance: 0,         type: 'asset',     category: 'retirement' },
-      { id: uid(), name: 'Bianca Roth IRA',  balance: 0,         type: 'asset',     category: 'retirement' },
-      { id: uid(), name: '529',              balance: 0,         type: 'asset',     category: 'kids' },
-      { id: uid(), name: 'Home (est.)',      balance: 0,         type: 'asset',     category: 'real estate' },
-      { id: uid(), name: 'Mortgage',         balance: 205032.92, type: 'liability', category: 'mortgage' },
-      { id: uid(), name: 'Coin CC',          balance: 0,         type: 'liability', category: 'credit card' },
-      { id: uid(), name: 'Gold CC',          balance: 488,       type: 'liability', category: 'credit card' },
-      { id: uid(), name: 'Amazon CC',        balance: 10,        type: 'liability', category: 'credit card' },
-      { id: uid(), name: 'Ross CC',          balance: 0,         type: 'liability', category: 'credit card' },
+      { id: uid(), name:'PNC Checking',     balance:0,         type:'asset',     category:'cash' },
+      { id: uid(), name:'PNC Savings',      balance:0,         type:'asset',     category:'cash' },
+      { id: uid(), name:'Joint Robinhood',  balance:0,         type:'asset',     category:'brokerage' },
+      { id: uid(), name:'Hood Trading',     balance:0,         type:'asset',     category:'brokerage' },
+      { id: uid(), name:'Bianca Individual',balance:0,         type:'asset',     category:'brokerage' },
+      { id: uid(), name:'Alex Roth IRA',    balance:0,         type:'asset',     category:'retirement' },
+      { id: uid(), name:'Bianca Roth IRA',  balance:0,         type:'asset',     category:'retirement' },
+      { id: uid(), name:'529',              balance:0,         type:'asset',     category:'kids' },
+      { id: uid(), name:'Home (est.)',      balance:0,         type:'asset',     category:'real estate' },
+      { id: uid(), name:'Mortgage',         balance:205032.92, type:'liability', category:'mortgage' },
+      { id: uid(), name:'Coin CC',          balance:0,         type:'liability', category:'credit card' },
+      { id: uid(), name:'Gold CC',          balance:488,       type:'liability', category:'credit card' },
+      { id: uid(), name:'Amazon CC',        balance:10,        type:'liability', category:'credit card' },
+      { id: uid(), name:'Ross CC',          balance:0,         type:'liability', category:'credit card' },
     ];
     saveLocal();
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 //  BOOT
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function boot() {
   loadLocal();
   seedIfEmpty();
