@@ -214,6 +214,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .list-table .col-cat{width:130px;}
 .list-table .col-actions{width:90px;text-align:right;}
 .list-table td.drag-cell{width:24px;text-align:center;cursor:grab;color:var(--text-light);user-select:none;font-size:14px;line-height:1;padding:10px 6px;}
+/* Up/Down move buttons — tiny inline pair next to Delete in row actions */
+.row-move{display:inline-flex;gap:4px;margin-right:8px;vertical-align:middle;}
+.row-move button{font-family:inherit;font-size:14px;width:28px;height:28px;line-height:1;padding:0;background:var(--bg);border:1px solid var(--border-strong);color:var(--text-muted);border-radius:6px;cursor:pointer;}
+.row-move button:hover{color:var(--text);background:var(--bg-soft);}
+.row-move button:disabled{opacity:.35;cursor:not-allowed;}
 
 /* ─── Stats ─── */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
@@ -370,6 +375,59 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 #tab-budget{height:calc(100dvh - 140px);min-height:520px;}
 @supports not (height: 100dvh) {
   #tab-budget{height:calc(100vh - 140px);}
+}
+
+/* ─── Stacked card layout for tabular forms on phones ─── */
+@media (max-width:560px){
+  /* Bills + Net Worth list tables */
+  .list-table, .list-table tbody, .list-table tr, .list-table td{display:block;width:auto;}
+  .list-table thead{display:none;}
+  .list-table tr{padding:14px 14px 10px;border-bottom:1px solid var(--border);position:relative;}
+  .list-table tr:hover td{background:var(--bg);}
+  .list-table td{padding:6px 0;border:none;width:auto !important;}
+  .list-table td.drag-cell{display:none;}
+  .list-table td input,.list-table td select{width:100%;min-height:40px;font-size:16px;border:1px solid var(--border-strong);padding:8px 12px;}
+  .list-table td:before{
+    content:attr(data-label);display:block;font-size:10px;color:var(--text-muted);
+    font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;
+  }
+  .list-table td.col-actions{padding-top:10px;text-align:right;}
+  .list-table td.col-actions:before{display:none;}
+  .list-table td[data-label="Active"]{display:flex;align-items:center;gap:8px;}
+  .list-table td[data-label="Active"]:before{margin:0;}
+  .list-table td[data-label="Active"] input{width:auto;min-height:0;}
+  .list-table tfoot{display:block;padding:10px 14px 0;}
+  .list-table tfoot tr{display:flex;justify-content:space-between;padding:6px 0;border:none;}
+  .list-table tfoot td{padding:0;display:inline;}
+  .list-table tfoot td:first-child{display:none;}
+  .list-table tfoot td:before{display:none;}
+
+  /* Vacation item rows */
+  .vac-items, .vac-items thead, .vac-items tbody, .vac-items tr, .vac-items td{display:block;width:auto;}
+  .vac-items thead{display:none;}
+  .vac-items tr{padding:12px 0 8px;border-bottom:1px solid var(--border);position:relative;}
+  .vac-items td{padding:5px 0;border:none;width:auto !important;}
+  .vac-items td.drag-c{display:none;}
+  .vac-items td input,.vac-items td select{width:100%;min-height:38px;font-size:16px;border:1px solid var(--border-strong);padding:7px 10px;}
+  .vac-items td:before{
+    content:attr(data-label);display:block;font-size:10px;color:var(--text-muted);
+    font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;
+  }
+  .vac-items td.paid{display:flex;align-items:center;gap:8px;}
+  .vac-items td.paid:before{margin:0;display:inline;}
+  .vac-items td.paid input{width:auto;min-height:0;}
+  .vac-items td.del{padding-top:8px;text-align:right;}
+  .vac-items td.del:before{display:none;}
+
+  /* Vacation card header — name input gets full width on its own line */
+  .vac-name{flex:1 1 100%;order:1;}
+  .vac-pct{order:2;}
+  .vac-date{order:3;}
+  .vac-toggle{order:4;}
+  .vac-prog-wrap{order:5;flex-basis:100%;}
+
+  /* Mortgage / Settings field rows */
+  .field-row{grid-template-columns:1fr;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
@@ -1404,6 +1462,33 @@ function deleteAdhocColumn(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  ↑/↓ MOVE HELPERS — work on touch where HTML5 drag-drop doesn't
+// ═══════════════════════════════════════════════════════════════════
+function moveItem(arrayName, id, delta) {
+  const arr = S[arrayName] || [];
+  const idx = arr.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const newIdx = Math.max(0, Math.min(arr.length - 1, idx + delta));
+  if (newIdx === idx) return;
+  snapshot();
+  const [moved] = arr.splice(idx, 1);
+  arr.splice(newIdx, 0, moved);
+  saveAndRender();
+}
+function moveVacItemDir(vid, iid, delta) {
+  const v = (S.vacations || []).find(x => x.id === vid); if (!v) return;
+  const arr = v.items || [];
+  const idx = arr.findIndex(x => x.id === iid);
+  if (idx < 0) return;
+  const newIdx = Math.max(0, Math.min(arr.length - 1, idx + delta));
+  if (newIdx === idx) return;
+  snapshot();
+  const [moved] = arr.splice(idx, 1);
+  arr.splice(newIdx, 0, moved);
+  saveAndRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  GENERIC LIST DRAG (Bills tab + Net Worth tab)
 // ═══════════════════════════════════════════════════════════════════
 function attachListDrag(tbody, arrayName, onComplete) {
@@ -1446,18 +1531,24 @@ function attachListDrag(tbody, arrayName, onComplete) {
 function renderBills() {
   const tbody = eid('bills-tbody');
   if (!S.bills.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No bills yet.</td></tr>'; return; }
-  tbody.innerHTML = S.bills.map(b => `
+  tbody.innerHTML = S.bills.map((b, i) => `
     <tr class="${b.active === false ? 'inactive' : ''}" data-id="${b.id}" draggable="true">
       <td class="drag-cell">⋮⋮</td>
-      <td class="col-name"><input type="text" value="${escHTML(b.name)}" oninput="updateBill('${b.id}','name',this.value)"></td>
-      <td class="col-amt"><input type="number" step="0.01" value="${b.amount}" oninput="updateBill('${b.id}','amount',parseFloat(this.value)||0)"></td>
-      <td class="col-freq"><select onchange="updateBill('${b.id}','frequency',this.value)">
+      <td class="col-name" data-label="Name"><input type="text" value="${escHTML(b.name)}" oninput="updateBill('${b.id}','name',this.value)"></td>
+      <td class="col-amt" data-label="Amount"><input type="number" step="0.01" value="${b.amount}" oninput="updateBill('${b.id}','amount',parseFloat(this.value)||0)"></td>
+      <td class="col-freq" data-label="Frequency"><select onchange="updateBill('${b.id}','frequency',this.value)">
         ${['monthly','weekly','biweekly','quarterly','semi','yearly','once'].map(f => `<option value="${f}" ${b.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
       </select></td>
-      <td class="col-day"><input type="number" min="0" max="31" value="${b.dueDay||1}" oninput="updateBill('${b.id}','dueDay',parseInt(this.value)||1)"></td>
-      <td class="col-cat"><input type="text" value="${escHTML(b.category||'')}" placeholder="(optional)" oninput="updateBill('${b.id}','category',this.value)"></td>
-      <td><label style="margin:0;display:inline;"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></label></td>
-      <td class="col-actions"><button class="btn danger" onclick="deleteBill('${b.id}')">Delete</button></td>
+      <td class="col-day" data-label="Due day"><input type="number" min="0" max="31" value="${b.dueDay||1}" oninput="updateBill('${b.id}','dueDay',parseInt(this.value)||1)"></td>
+      <td class="col-cat" data-label="Category"><input type="text" value="${escHTML(b.category||'')}" placeholder="(optional)" oninput="updateBill('${b.id}','category',this.value)"></td>
+      <td data-label="Active"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></td>
+      <td class="col-actions">
+        <span class="row-move">
+          <button onclick="moveItem('bills','${b.id}',-1)" ${i===0?'disabled':''} title="Move up">↑</button>
+          <button onclick="moveItem('bills','${b.id}',1)" ${i===S.bills.length-1?'disabled':''} title="Move down">↓</button>
+        </span>
+        <button class="btn danger" onclick="deleteBill('${b.id}')">Delete</button>
+      </td>
     </tr>
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
@@ -1550,21 +1641,27 @@ function renderNetWorth() {
   const tbody = eid('nw-tbody'), tfoot = eid('nw-tfoot');
   if (!S.accounts.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No accounts yet.</td></tr>'; tfoot.innerHTML = ''; }
   else {
-    tbody.innerHTML = S.accounts.map(a => `
+    tbody.innerHTML = S.accounts.map((a, i) => `
       <tr data-id="${a.id}" draggable="true">
         <td class="drag-cell">⋮⋮</td>
-        <td><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
-        <td><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
-        <td><select onchange="updateAccount('${a.id}','type',this.value)">
+        <td data-label="Account"><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
+        <td data-label="Balance"><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
+        <td data-label="Type"><select onchange="updateAccount('${a.id}','type',this.value)">
           <option value="asset" ${a.type==='asset'?'selected':''}>Asset</option>
           <option value="liability" ${a.type==='liability'?'selected':''}>Liability</option>
         </select></td>
-        <td><input type="text" value="${escHTML(a.category||'')}" placeholder="cash, brokerage, retirement, mortgage…" oninput="updateAccount('${a.id}','category',this.value)"></td>
-        <td><input type="number" step="0.01" value="${a.contribAmount||0}" placeholder="0" oninput="updateAccount('${a.id}','contribAmount',parseFloat(this.value)||0)" title="Amount auto-added to balance each cadence (assets +, liabilities −)"></td>
-        <td><select onchange="updateAccount('${a.id}','contribFrequency',this.value)" title="How often to apply the contribution">
+        <td data-label="Category"><input type="text" value="${escHTML(a.category||'')}" placeholder="cash, brokerage, retirement, mortgage…" oninput="updateAccount('${a.id}','category',this.value)"></td>
+        <td data-label="Auto +$"><input type="number" step="0.01" value="${a.contribAmount||0}" placeholder="0" oninput="updateAccount('${a.id}','contribAmount',parseFloat(this.value)||0)" title="Amount auto-added each cadence"></td>
+        <td data-label="Cadence"><select onchange="updateAccount('${a.id}','contribFrequency',this.value)">
           ${['none','weekly','biweekly','monthly','quarterly','yearly'].map(f => `<option value="${f}" ${ (a.contribFrequency||'none')===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
         </select></td>
-        <td class="col-actions"><button class="btn danger" onclick="deleteAccount('${a.id}')">Delete</button></td>
+        <td class="col-actions">
+          <span class="row-move">
+            <button onclick="moveItem('accounts','${a.id}',-1)" ${i===0?'disabled':''} title="Move up">↑</button>
+            <button onclick="moveItem('accounts','${a.id}',1)" ${i===S.accounts.length-1?'disabled':''} title="Move down">↓</button>
+          </span>
+          <button class="btn danger" onclick="deleteAccount('${a.id}')">Delete</button>
+        </td>
       </tr>
     `).join('');
     let assets = 0, liab = 0;
@@ -1967,14 +2064,20 @@ function renderVacations() {
     const daysOut = v.targetDate ? daysBetween(new Date(), parseISO(v.targetDate)) : null;
     const daysLbl = (daysOut !== null) ? (daysOut > 0 ? daysOut + ' days out' : daysOut === 0 ? 'today' : Math.abs(daysOut) + ' days ago') : '';
 
-    const itemsHTML = items.map(it => `
+    const itemsHTML = items.map((it, ii) => `
       <tr data-id="${it.id}" draggable="true" class="${it.paid?'vac-paid':''}">
         <td class="drag-c">⋮⋮</td>
-        <td><input type="text" value="${escHTML(it.name||'')}" placeholder="Item name" oninput="updateVacItem('${v.id}','${it.id}','name',this.value)"></td>
-        <td class="cat"><select onchange="updateVacItem('${v.id}','${it.id}','category',this.value)">${VAC_CATEGORIES.map(c => `<option value="${c}" ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
-        <td class="amt"><input type="number" step="0.01" value="${it.amount||0}" placeholder="0" oninput="updateVacItem('${v.id}','${it.id}','amount',parseFloat(this.value)||0)"></td>
-        <td class="paid"><input type="checkbox" ${it.paid?'checked':''} onchange="updateVacItem('${v.id}','${it.id}','paid',this.checked)" title="Paid"></td>
-        <td class="del"><button class="btn danger" style="padding:4px 8px;font-size:11px;" onclick="deleteVacItem('${v.id}','${it.id}')">×</button></td>
+        <td data-label="Item"><input type="text" value="${escHTML(it.name||'')}" placeholder="Item name" oninput="updateVacItem('${v.id}','${it.id}','name',this.value)"></td>
+        <td class="cat" data-label="Category"><select onchange="updateVacItem('${v.id}','${it.id}','category',this.value)">${VAC_CATEGORIES.map(c => `<option value="${c}" ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
+        <td class="amt" data-label="Amount"><input type="number" step="0.01" value="${it.amount||0}" placeholder="0" oninput="updateVacItem('${v.id}','${it.id}','amount',parseFloat(this.value)||0)"></td>
+        <td class="paid" data-label="Paid"><input type="checkbox" ${it.paid?'checked':''} onchange="updateVacItem('${v.id}','${it.id}','paid',this.checked)"></td>
+        <td class="del">
+          <span class="row-move">
+            <button onclick="moveVacItemDir('${v.id}','${it.id}',-1)" ${ii===0?'disabled':''} title="Move up">↑</button>
+            <button onclick="moveVacItemDir('${v.id}','${it.id}',1)" ${ii===items.length-1?'disabled':''} title="Move down">↓</button>
+          </span>
+          <button class="btn danger" style="padding:4px 8px;font-size:11px;" onclick="deleteVacItem('${v.id}','${it.id}')">×</button>
+        </td>
       </tr>
     `).join('');
 
@@ -2009,6 +2112,10 @@ function renderVacations() {
             <div><span class="lbl">Gap to target: </span><span class="val ${saved>=target?'':''}" style="color:${saved>=target?'var(--accent-dim)':'var(--negative)'};">${saved>=target?'Funded ✓':fmt$(target - saved) + ' to save'}</span></div>
           </div>
           <button class="btn vac-add-btn" onclick="addVacItem('${v.id}')">+ Add item</button>
+          <span class="row-move" style="margin-left:8px;">
+            <button onclick="moveItem('vacations','${v.id}',-1)" title="Move vacation up">↑</button>
+            <button onclick="moveItem('vacations','${v.id}',1)" title="Move vacation down">↓</button>
+          </span>
           <button class="btn danger vac-add-btn" onclick="deleteVacation('${v.id}')" style="float:right;">Delete vacation</button>
         </div>
       </div>
