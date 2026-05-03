@@ -231,6 +231,83 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .range-row input[type=range]{flex:1;accent-color:var(--accent);}
 .range-val{min-width:90px;text-align:right;font-size:14px;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;}
 
+/* ─── Splash homepage ─── */
+#splash{position:fixed;inset:0;z-index:5000;background:#0a0a0a;cursor:pointer;overflow:hidden;}
+.splash-photos{position:absolute;inset:0;}
+.splash-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease-in-out;}
+.splash-img.active{opacity:1;}
+.splash-vignette{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);pointer-events:none;}
+.splash-overlay{position:absolute;bottom:8vh;left:0;right:0;text-align:center;color:#fff;pointer-events:none;}
+.splash-overlay h1{font-size:clamp(28px,6vw,48px);margin:0 0 10px;letter-spacing:-0.02em;font-weight:700;text-shadow:0 4px 20px rgba(0,0,0,0.6);}
+.splash-overlay p{font-size:14px;margin:0;opacity:0.85;letter-spacing:.05em;text-transform:uppercase;font-weight:500;text-shadow:0 2px 8px rgba(0,0,0,0.6);}
+.splash-dots{display:flex;gap:6px;justify-content:center;margin-top:18px;}
+.splash-dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);transition:background .3s;}
+.splash-dots span.active{background:#fff;}
+#splash.fade-out{opacity:0;transition:opacity 0.45s ease-out;pointer-events:none;}
+
+/* ─── Background photos behind tables ─── */
+#bg-photos{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+.bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.5s ease-in-out;filter:blur(14px) brightness(1.15) saturate(0.7);}
+.bg-img.active{opacity:0.07;}
+body.bg-active{background:transparent;}
+body.bg-active #hdr,body.bg-active #tabs{background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);}
+body.bg-active .card{background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);}
+body.bg-active .budget-wrap{background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);}
+body.bg-active .budget-table th,body.bg-active .budget-table td{background:rgba(255,255,255,0.85);}
+body.bg-active .budget-table thead tr.paycheck th,body.bg-active .budget-table thead tr.paycheck td,body.bg-active .budget-table tfoot tr.balance td{background:rgba(247,248,250,0.95);}
+body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table tfoot tr td.cat{background:rgba(255,255,255,0.95);}
+
+/* ─── Vacation cards ─── */
+.vac-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;}
+.vac-card.dragging{opacity:0.4;}
+.vac-card.drag-over{border-top:2px solid var(--accent);}
+.vac-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;}
+.vac-hdr:hover{background:var(--bg-soft);}
+.vac-handle{color:var(--text-light);font-size:14px;cursor:grab;}
+.vac-name{flex:1;font-size:15px;font-weight:600;color:var(--text);}
+.vac-name input{background:transparent;border:none;font:inherit;font-size:15px;font-weight:600;width:100%;padding:0;}
+.vac-name input:focus{outline:1px solid var(--border-strong);border-radius:4px;}
+.vac-date{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.vac-prog-wrap{flex:1;max-width:240px;display:flex;flex-direction:column;gap:4px;}
+.vac-prog-bar{height:6px;background:var(--bg-strong);border-radius:3px;overflow:hidden;}
+.vac-prog-fill{height:100%;background:var(--accent);transition:width .35s ease;}
+.vac-prog-text{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;text-align:right;}
+.vac-pct{font-size:13px;font-weight:600;color:var(--accent-dim);font-variant-numeric:tabular-nums;min-width:48px;text-align:right;}
+.vac-toggle{color:var(--text-muted);font-size:12px;width:24px;text-align:center;transition:transform .2s;}
+.vac-card.expanded .vac-toggle{transform:rotate(90deg);}
+.vac-body{display:none;border-top:1px solid var(--border);padding:14px 16px;}
+.vac-card.expanded .vac-body{display:block;}
+.vac-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;}
+.vac-fields label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;}
+.vac-fields input{width:100%;}
+.vac-items{width:100%;border-collapse:separate;border-spacing:0;}
+.vac-items th{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+.vac-items td{padding:8px 10px;border-bottom:1px solid var(--border);}
+.vac-items tr.dragging{opacity:0.4;}
+.vac-items tr.drag-over td{border-top:2px solid var(--accent);}
+.vac-items input,.vac-items select{width:100%;background:var(--bg);border:1px solid transparent;font:inherit;font-size:13px;padding:5px 8px;}
+.vac-items input:hover,.vac-items input:focus,.vac-items select:hover,.vac-items select:focus{border-color:var(--border-strong);}
+.vac-items td.drag-c{width:24px;cursor:grab;color:var(--text-light);text-align:center;font-size:13px;}
+.vac-items td.amt{width:120px;}
+.vac-items td.cat{width:120px;}
+.vac-items td.paid{width:60px;text-align:center;}
+.vac-items td.del{width:60px;text-align:right;}
+.vac-totals{display:flex;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;flex-wrap:wrap;gap:8px;}
+.vac-totals .lbl{color:var(--text-muted);}
+.vac-totals .val{font-weight:600;font-variant-numeric:tabular-nums;}
+.vac-add-btn{margin-top:10px;}
+.vac-paid{text-decoration:line-through;color:var(--text-light);}
+@media (max-width:560px){
+  .vac-hdr{flex-wrap:wrap;}
+  .vac-prog-wrap{order:3;width:100%;max-width:none;flex-basis:100%;}
+}
+
+/* Photo uploader preview */
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.photo-thumb{position:relative;width:90px;height:60px;border-radius:6px;overflow:hidden;background:var(--bg-strong);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb button{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;padding:0;}
+
 /* ─── Toast ─── */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:1000;display:none;}
 #toast.show{display:block;animation:fadein .2s;}
@@ -309,10 +386,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   </div>
 </div>
 
+<div id="bg-photos"></div>
 <div id="tabs">
   <button class="ntab active" onclick="showTab('budget')">Budget</button>
   <button class="ntab" onclick="showTab('bills')">Bills</button>
   <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
+  <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
   <button class="ntab" onclick="showTab('networth')">Net Worth</button>
   <button class="ntab" onclick="showTab('settings')">Settings</button>
 </div>
@@ -396,6 +475,19 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   </div>
 </div>
 
+<!-- ─── VACATION PLANNER ───────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-vacation">
+  <div class="card">
+    <div class="card-hdr">
+      <span>Vacation Planner</span>
+      <button class="btn primary" onclick="addVacation()">+ New vacation</button>
+    </div>
+    <div class="card-body" id="vac-list">
+      <div style="color:var(--text-muted);padding:30px;text-align:center;font-size:13px;">No vacations yet — click <b>+ New vacation</b>.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── NET WORTH ──────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-networth">
   <div class="card">
@@ -460,6 +552,24 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   </div>
 
   <div class="card">
+    <div class="card-hdr">Family photos</div>
+    <div class="card-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
+        Add family photos to use as your homepage splash and as a soft background behind the budget.
+        Photos are stored locally in your browser only — they don't sync to the Google Sheet, so each
+        device has its own set. Resized to 1200&nbsp;px / JPEG to keep things snappy.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn primary" onclick="document.getElementById('photo-upload').click()">+ Add photos</button>
+        <input id="photo-upload" type="file" accept="image/*" multiple style="display:none;" onchange="uploadPhotos(event)">
+        <button class="btn" onclick="showSplashAgain()">Replay homepage</button>
+        <button class="btn danger" onclick="clearPhotos()">Clear all</button>
+      </div>
+      <div class="photo-thumbs" id="photo-thumbs"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-hdr">Data</div>
     <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="exportJSON()">⬇ Export JSON</button>
@@ -492,8 +602,12 @@ let S = {
   mortgage: { balance:205032.92, rate:2.99, pi:979.12, nextPayment:'2026-06-01', extraWeekly:0, onceAmount:0, onceDate:'' },
   accounts: [],
   nwHistory: [],
+  vacations: [],      // [{id, name, targetAmount, targetDate, savedAmount, notes, expanded, items:[{id,name,category,amount,paid}]}]
   meta: { version:1, modified:null },
 };
+
+const LS_PHOTOS = 'roth_budget_photos';
+const PHOTO_ROTATE_MS = 4500;
 
 let WEBHOOK_URL = '';
 let SYNC_STATE = 'local';
@@ -528,6 +642,7 @@ function showTab(name) {
   if (name === 'budget') renderBudget();
   if (name === 'bills') renderBills();
   if (name === 'mortgage') renderMortgage();
+  if (name === 'vacation') renderVacations();
   if (name === 'networth') renderNetWorth();
   if (name === 'settings') renderSettings();
 }
@@ -1529,6 +1644,7 @@ function renderSettings() {
   eid('ss-webhook').value = WEBHOOK_URL || '';
   eid('cfg-paycheck-monthly').value = S.paycheckMonthly;
   eid('cfg-paycheck-weekly').value = S.paycheckWeekly;
+  renderPhotoThumbs();
   updateSyncPill();
 }
 function onCfgChange() {
@@ -1655,9 +1771,330 @@ function renderAll() {
   if (eid('tab-budget').classList.contains('active')) renderBudget();
   if (eid('tab-bills').classList.contains('active')) renderBills();
   if (eid('tab-mortgage').classList.contains('active')) renderMortgage();
+  if (eid('tab-vacation').classList.contains('active')) renderVacations();
   if (eid('tab-networth').classList.contains('active')) renderNetWorth();
   if (eid('tab-settings').classList.contains('active')) renderSettings();
   updateSyncPill();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PHOTOS — local-only (not synced to Sheet to keep cell size sane)
+// ═══════════════════════════════════════════════════════════════════
+function loadPhotos() {
+  try { return JSON.parse(localStorage.getItem(LS_PHOTOS) || '[]'); }
+  catch { return []; }
+}
+function savePhotos(photos) {
+  try { localStorage.setItem(LS_PHOTOS, JSON.stringify(photos)); }
+  catch (e) { alert('Photo storage full. Remove some photos and try again.\n\n' + e.message); }
+}
+function uploadPhotos(ev) {
+  const files = Array.from(ev.target.files || []);
+  if (!files.length) return;
+  let pending = files.length;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 1200;
+        const scale = Math.min(maxW / img.width, 1);
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const photos = loadPhotos();
+        photos.push(dataUrl);
+        savePhotos(photos);
+        pending -= 1;
+        if (pending === 0) {
+          renderPhotoThumbs();
+          renderBgPhotos();
+          toast(files.length + ' photo' + (files.length>1?'s':'') + ' added');
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  ev.target.value = '';
+}
+function clearPhotos() {
+  if (!confirm('Remove all family photos?')) return;
+  localStorage.removeItem(LS_PHOTOS);
+  renderPhotoThumbs();
+  renderBgPhotos();
+  document.body.classList.remove('bg-active');
+}
+function deletePhotoAt(idx) {
+  const photos = loadPhotos();
+  photos.splice(idx, 1);
+  savePhotos(photos);
+  renderPhotoThumbs();
+  renderBgPhotos();
+  if (photos.length === 0) document.body.classList.remove('bg-active');
+}
+function renderPhotoThumbs() {
+  const host = eid('photo-thumbs'); if (!host) return;
+  const photos = loadPhotos();
+  if (!photos.length) { host.innerHTML = ''; return; }
+  host.innerHTML = photos.map((p, i) =>
+    `<div class="photo-thumb"><img src="${p}" alt="photo ${i+1}"><button onclick="deletePhotoAt(${i})" title="Remove">×</button></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SPLASH HOMEPAGE
+// ═══════════════════════════════════════════════════════════════════
+let splashRotateTimer = null;
+function showSplash() {
+  const photos = loadPhotos();
+  if (!photos.length) return;
+  if (eid('splash')) return;
+  const div = document.createElement('div');
+  div.id = 'splash';
+  const imgsHTML = photos.map((p, i) => `<img class="splash-img${i===0?' active':''}" src="${p}" alt="">`).join('');
+  const dotsHTML = photos.map((_, i) => `<span class="${i===0?'active':''}"></span>`).join('');
+  div.innerHTML =
+    '<div class="splash-photos">' + imgsHTML + '</div>' +
+    '<div class="splash-vignette"></div>' +
+    '<div class="splash-overlay">' +
+      '<h1>Reed Family Budget</h1>' +
+      '<p>Tap anywhere to enter</p>' +
+      '<div class="splash-dots">' + dotsHTML + '</div>' +
+    '</div>';
+  document.body.appendChild(div);
+  div.addEventListener('click', dismissSplash);
+
+  if (photos.length > 1) {
+    let idx = 0;
+    const imgs = div.querySelectorAll('.splash-img');
+    const dots = div.querySelectorAll('.splash-dots span');
+    splashRotateTimer = setInterval(() => {
+      imgs[idx].classList.remove('active'); dots[idx].classList.remove('active');
+      idx = (idx + 1) % imgs.length;
+      imgs[idx].classList.add('active'); dots[idx].classList.add('active');
+    }, PHOTO_ROTATE_MS);
+  }
+}
+function dismissSplash() {
+  const div = eid('splash'); if (!div) return;
+  div.classList.add('fade-out');
+  if (splashRotateTimer) { clearInterval(splashRotateTimer); splashRotateTimer = null; }
+  setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 450);
+  sessionStorage.setItem('splash_dismissed', '1');
+}
+function showSplashAgain() {
+  sessionStorage.removeItem('splash_dismissed');
+  showSplash();
+}
+
+// Background photos: faintly cycle behind the whole UI
+let bgRotateTimer = null;
+function renderBgPhotos() {
+  const host = eid('bg-photos'); if (!host) return;
+  const photos = loadPhotos();
+  if (bgRotateTimer) { clearInterval(bgRotateTimer); bgRotateTimer = null; }
+  if (!photos.length) { host.innerHTML = ''; document.body.classList.remove('bg-active'); return; }
+  host.innerHTML = photos.map((p, i) => `<img class="bg-img${i===0?' active':''}" src="${p}" alt="">`).join('');
+  document.body.classList.add('bg-active');
+  if (photos.length > 1) {
+    let idx = 0;
+    const imgs = host.querySelectorAll('.bg-img');
+    bgRotateTimer = setInterval(() => {
+      imgs[idx].classList.remove('active');
+      idx = (idx + 1) % imgs.length;
+      imgs[idx].classList.add('active');
+    }, 12000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VACATION PLANNER
+// ═══════════════════════════════════════════════════════════════════
+const VAC_CATEGORIES = ['Air travel','Hotel','Excursion','Food','Transport','Tickets','Other'];
+
+function renderVacations() {
+  const host = eid('vac-list'); if (!host) return;
+  const list = S.vacations || [];
+  if (!list.length) {
+    host.innerHTML = '<div style="color:var(--text-muted);padding:30px;text-align:center;font-size:13px;">No vacations yet — click <b>+ New vacation</b>.</div>';
+    return;
+  }
+  host.innerHTML = list.map(v => {
+    const items = v.items || [];
+    const estimated = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const paid = items.filter(i => i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const target = Number(v.targetAmount) || 0;
+    const saved = Number(v.savedAmount) || 0;
+    const pct = target > 0 ? Math.min(100, Math.round(saved / target * 100)) : 0;
+    const targetDateLbl = v.targetDate ? new Date(v.targetDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'No date';
+    const daysOut = v.targetDate ? daysBetween(new Date(), parseISO(v.targetDate)) : null;
+    const daysLbl = (daysOut !== null) ? (daysOut > 0 ? daysOut + ' days out' : daysOut === 0 ? 'today' : Math.abs(daysOut) + ' days ago') : '';
+
+    const itemsHTML = items.map(it => `
+      <tr data-id="${it.id}" draggable="true" class="${it.paid?'vac-paid':''}">
+        <td class="drag-c">⋮⋮</td>
+        <td><input type="text" value="${escHTML(it.name||'')}" placeholder="Item name" oninput="updateVacItem('${v.id}','${it.id}','name',this.value)"></td>
+        <td class="cat"><select onchange="updateVacItem('${v.id}','${it.id}','category',this.value)">${VAC_CATEGORIES.map(c => `<option value="${c}" ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
+        <td class="amt"><input type="number" step="0.01" value="${it.amount||0}" placeholder="0" oninput="updateVacItem('${v.id}','${it.id}','amount',parseFloat(this.value)||0)"></td>
+        <td class="paid"><input type="checkbox" ${it.paid?'checked':''} onchange="updateVacItem('${v.id}','${it.id}','paid',this.checked)" title="Paid"></td>
+        <td class="del"><button class="btn danger" style="padding:4px 8px;font-size:11px;" onclick="deleteVacItem('${v.id}','${it.id}')">×</button></td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="vac-card ${v.expanded?'expanded':''}" data-id="${v.id}" draggable="true">
+        <div class="vac-hdr" onclick="toggleVacExpanded('${v.id}', event)">
+          <span class="vac-handle" title="Drag to reorder">⋮⋮</span>
+          <div class="vac-name"><input type="text" value="${escHTML(v.name||'')}" placeholder="Vacation name" oninput="updateVacField('${v.id}','name',this.value)" onclick="event.stopPropagation();"></div>
+          <div class="vac-prog-wrap">
+            <div class="vac-prog-bar"><div class="vac-prog-fill" style="width:${pct}%;"></div></div>
+            <div class="vac-prog-text">${fmt$(saved)} / ${fmt$(target)}</div>
+          </div>
+          <div class="vac-pct">${pct}%</div>
+          <div class="vac-date">${targetDateLbl}${daysLbl?' · '+daysLbl:''}</div>
+          <span class="vac-toggle">▶</span>
+        </div>
+        <div class="vac-body">
+          <div class="vac-fields">
+            <div><label>Target $</label><input type="number" step="0.01" value="${target||0}" oninput="updateVacField('${v.id}','targetAmount',parseFloat(this.value)||0)"></div>
+            <div><label>Saved so far $</label><input type="number" step="0.01" value="${saved||0}" oninput="updateVacField('${v.id}','savedAmount',parseFloat(this.value)||0)"></div>
+            <div><label>Target date</label><input type="date" value="${v.targetDate||''}" oninput="updateVacField('${v.id}','targetDate',this.value)"></div>
+            <div><label>Notes</label><input type="text" value="${escHTML(v.notes||'')}" placeholder="hotel preferences, etc." oninput="updateVacField('${v.id}','notes',this.value)"></div>
+          </div>
+          <table class="vac-items">
+            <thead><tr><th></th><th>Item</th><th>Category</th><th>Amount</th><th>Paid</th><th></th></tr></thead>
+            <tbody data-vid="${v.id}">${itemsHTML || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:20px;">No items yet — add one below.</td></tr>'}</tbody>
+          </table>
+          <div class="vac-totals">
+            <div><span class="lbl">Estimated total: </span><span class="val">${fmt$(estimated)}</span></div>
+            <div><span class="lbl">Paid: </span><span class="val" style="color:var(--accent-dim);">${fmt$(paid)}</span></div>
+            <div><span class="lbl">Remaining cost: </span><span class="val">${fmt$(estimated - paid)}</span></div>
+            <div><span class="lbl">Gap to target: </span><span class="val ${saved>=target?'':''}" style="color:${saved>=target?'var(--accent-dim)':'var(--negative)'};">${saved>=target?'Funded ✓':fmt$(target - saved) + ' to save'}</span></div>
+          </div>
+          <button class="btn vac-add-btn" onclick="addVacItem('${v.id}')">+ Add item</button>
+          <button class="btn danger vac-add-btn" onclick="deleteVacation('${v.id}')" style="float:right;">Delete vacation</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Wire drag-drop for vacation cards
+  host.querySelectorAll('.vac-card').forEach(card => {
+    card.addEventListener('dragstart', e => { if (e.target !== card) return; dragSrcId = card.dataset.id; dragMode='vac'; e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); });
+    card.addEventListener('dragover', e => { if (dragMode!=='vac') return; e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      if (dragMode!=='vac') return; e.preventDefault(); card.classList.remove('drag-over');
+      const tgtId = card.dataset.id;
+      if (!dragSrcId || dragSrcId === tgtId) return;
+      snapshot();
+      const arr = S.vacations;
+      const si = arr.findIndex(x => x.id === dragSrcId);
+      const [m] = arr.splice(si, 1);
+      const ti = arr.findIndex(x => x.id === tgtId);
+      arr.splice(ti, 0, m);
+      saveAndRender();
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over')); dragSrcId=null; dragMode=null; });
+  });
+
+  // Wire drag-drop for items inside each vacation
+  host.querySelectorAll('.vac-items tbody').forEach(tbody => {
+    const vid = tbody.dataset.vid;
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('dragstart', e => { dragSrcId = tr.dataset.id; dragMode = 'vac-item:'+vid; e.dataTransfer.effectAllowed='move'; tr.classList.add('dragging'); e.stopPropagation(); });
+      tr.addEventListener('dragover', e => { if (dragMode !== 'vac-item:'+vid) return; e.preventDefault(); tr.classList.add('drag-over'); });
+      tr.addEventListener('dragleave', () => tr.classList.remove('drag-over'));
+      tr.addEventListener('drop', e => {
+        if (dragMode !== 'vac-item:'+vid) return;
+        e.preventDefault(); tr.classList.remove('drag-over');
+        const tgt = tr.dataset.id;
+        if (!dragSrcId || dragSrcId === tgt) return;
+        snapshot();
+        const v = S.vacations.find(x => x.id === vid);
+        const arr = v.items;
+        const si = arr.findIndex(x => x.id === dragSrcId);
+        const [m] = arr.splice(si, 1);
+        const ti = arr.findIndex(x => x.id === tgt);
+        arr.splice(ti, 0, m);
+        saveAndRender();
+      });
+      tr.addEventListener('dragend', () => { tr.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over')); dragSrcId=null; dragMode=null; });
+    });
+  });
+}
+
+function addVacation() {
+  snapshot();
+  S.vacations = S.vacations || [];
+  S.vacations.push({ id: uid(), name: 'New vacation', targetAmount: 0, savedAmount: 0, targetDate: '', notes: '', expanded: true, items: [] });
+  saveAndRender();
+}
+function deleteVacation(id) {
+  if (!confirm('Delete this vacation and all its items?')) return;
+  snapshot();
+  S.vacations = (S.vacations||[]).filter(v => v.id !== id);
+  saveAndRender();
+}
+function updateVacField(id, field, value) {
+  const v = (S.vacations||[]).find(x => x.id === id); if (!v) return;
+  maybeSnapshot();
+  v[field] = value;
+  scheduleSave();
+  // Update progress bar etc. without full re-render so the input keeps focus
+  if (field === 'targetAmount' || field === 'savedAmount') updateVacProgress(id);
+}
+function updateVacProgress(id) {
+  const v = (S.vacations||[]).find(x => x.id === id); if (!v) return;
+  const card = document.querySelector('.vac-card[data-id="'+id+'"]');
+  if (!card) return;
+  const target = Number(v.targetAmount)||0, saved = Number(v.savedAmount)||0;
+  const pct = target > 0 ? Math.min(100, Math.round(saved/target*100)) : 0;
+  const fill = card.querySelector('.vac-prog-fill'); if (fill) fill.style.width = pct + '%';
+  const text = card.querySelector('.vac-prog-text'); if (text) text.textContent = fmt$(saved) + ' / ' + fmt$(target);
+  const pctEl = card.querySelector('.vac-pct'); if (pctEl) pctEl.textContent = pct + '%';
+  const gap = card.querySelector('.vac-totals .val:last-child');
+  // Refresh totals section text via re-render scoped to this card
+}
+function toggleVacExpanded(id, ev) {
+  // Don't toggle if user clicked an interactive element
+  if (ev && ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'BUTTON' || ev.target.tagName === 'SELECT')) return;
+  const v = (S.vacations||[]).find(x => x.id === id); if (!v) return;
+  v.expanded = !v.expanded;
+  scheduleSave();
+  const card = document.querySelector('.vac-card[data-id="'+id+'"]');
+  if (card) card.classList.toggle('expanded', v.expanded);
+}
+function addVacItem(vid) {
+  const v = (S.vacations||[]).find(x => x.id === vid); if (!v) return;
+  snapshot();
+  v.items = v.items || [];
+  v.items.push({ id: uid(), name: 'New item', category: 'Other', amount: 0, paid: false });
+  saveAndRender();
+}
+function updateVacItem(vid, iid, field, value) {
+  const v = (S.vacations||[]).find(x => x.id === vid); if (!v) return;
+  const it = (v.items||[]).find(x => x.id === iid); if (!it) return;
+  maybeSnapshot();
+  it[field] = value;
+  scheduleSave();
+  if (field === 'amount' || field === 'paid') {
+    // re-render to recompute totals, but only for this card
+    const card = document.querySelector('.vac-card[data-id="'+vid+'"]');
+    if (card) {
+      // Simple approach: full re-render (focus on a numeric input is fine to lose)
+      renderVacations();
+    }
+  }
+}
+function deleteVacItem(vid, iid) {
+  const v = (S.vacations||[]).find(x => x.id === vid); if (!v) return;
+  snapshot();
+  v.items = (v.items||[]).filter(x => x.id !== iid);
+  saveAndRender();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1709,8 +2146,12 @@ function seedIfEmpty() {
 function boot() {
   loadLocal();
   seedIfEmpty();
+  S.vacations = S.vacations || [];
+  renderBgPhotos();
   renderBudget();
   updateSyncPill();
+  // Splash on first load of the session (if photos are configured)
+  if (!sessionStorage.getItem('splash_dismissed')) showSplash();
   if (WEBHOOK_URL) forcePull();
 }
 document.addEventListener('DOMContentLoaded', boot);
