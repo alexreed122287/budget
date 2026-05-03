@@ -110,12 +110,15 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
 .budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:38px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
 
-/* Sticky bottom: 3 footer rows (savings, diff, remainder) */
-.budget-table tfoot tr.savings td{position:sticky;bottom:0;z-index:3;background:var(--bg);color:var(--accent-dim);font-weight:600;}
-.budget-table tfoot tr.diff td{position:sticky;bottom:38px;z-index:3;background:var(--bg);color:var(--text-muted);font-size:12px;font-style:italic;}
+/* Sticky bottom: 3 footer rows (savings, diff, remainder).
+   Equal explicit heights are required so the sticky `bottom` offsets
+   (0 / 40 / 80) line up cleanly without overlap. */
+.budget-table tfoot tr td{height:40px;box-sizing:border-box;}
+.budget-table tfoot tr.savings td{position:sticky;bottom:0;z-index:3;background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
+.budget-table tfoot tr.diff td{position:sticky;bottom:40px;z-index:3;background:var(--bg);color:var(--text-muted);font-size:12px;}
 .budget-table tfoot tr.diff td.pos{color:var(--accent-dim);}
 .budget-table tfoot tr.diff td.neg{color:var(--negative);}
-.budget-table tfoot tr.balance td{position:sticky;bottom:76px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
+.budget-table tfoot tr.balance td{position:sticky;bottom:80px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 
 /* Sticky left: category column */
@@ -164,13 +167,14 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .cell-edit::-webkit-outer-spin-button,
 .cell-edit::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
-/* Inline input next to a cat-cell label (e.g. Savings current balance) */
-.cat-input{
-  width:90px;font:inherit;font-size:12px;font-variant-numeric:tabular-nums;
-  padding:3px 8px;margin-left:8px;
+/* Inline input next to a cat-cell label (e.g. Savings current balance).
+   Constrained height so it doesn't push the sticky footer row taller. */
+input[type=number].cat-input{
+  width:130px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
+  height:26px;padding:0 10px;margin-left:8px;
   border:1px solid var(--border-strong);border-radius:5px;
-  text-align:right;background:var(--bg);color:var(--accent-dim);
-  -moz-appearance:textfield;min-height:0;
+  text-align:right;background:var(--bg);color:var(--accent-dim);font-weight:600;
+  -moz-appearance:textfield;min-height:0;vertical-align:middle;box-sizing:border-box;
 }
 .cat-input::-webkit-outer-spin-button,
 .cat-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
@@ -232,16 +236,64 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 #toast.show{display:block;animation:fadein .2s;}
 @keyframes fadein{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;}}
 
-/* ─── Mobile ─── */
+/* ─── Mobile (iPhone 17 Pro etc.) ─── */
 @media (max-width:768px){
   .ntab{font-size:13px;padding:12px 14px;}
   .field-row{grid-template-columns:1fr;}
-  .tab-pane{padding:14px;}
-  #hdr{padding:12px 14px;}
+  .tab-pane{padding:14px 12px;}
+  #hdr{padding:12px 14px;gap:6px;}
+  #hdr-title{font-size:15px;}
+  #hdr-right{gap:6px;}
+  #hdr-right .btn{padding:6px 10px;font-size:12px;}
+  #hdr-right .btn.subtle{font-size:13px;padding:6px 8px;}
+  .sync-pill{padding:4px 9px;font-size:10px;}
+  #tabs{padding:0 12px;}
+  .budget-controls{padding:12px 0 6px;}
+}
+@media (max-width:480px){
+  /* Prevent iOS zoom-on-focus by using ≥16px font in editable inputs */
+  input[type=text],input[type=number],input[type=date],input[type=url],select,textarea{font-size:16px;}
+  .list-table input,.list-table select{font-size:14px;}
+  /* Tighter table on phone */
+  .budget-table col.col-cat{width:130px;}
+  .budget-table col.col-data{width:96px;}
+  .budget-table th,.budget-table td{padding:8px 8px;font-size:12px;}
+  .budget-table thead tr.paycheck th,.budget-table thead tr.paycheck td{font-size:13px;}
+  .budget-table th .sub{font-size:9px;}
+  input[type=number].cat-input{width:100%;font-size:16px;height:30px;line-height:28px;padding:0 8px;margin-left:0;}
+  /* Drop the redundant 'Savings' label on phones — the row is identifiable
+     by its green color and bottom-most position. */
+  .budget-table tfoot tr.savings td.cat .cat-label{display:none;}
+  .budget-table tr.bill td.cat{padding:8px 6px;}
+  .drag-handle{margin-right:4px;font-size:11px;}
+  /* Footer rows on mobile: tall enough to contain the savings input. */
+  .budget-table tfoot tr td{height:48px;}
+  .budget-table tfoot tr.savings td{bottom:0;}
+  .budget-table tfoot tr.diff td{bottom:48px;}
+  .budget-table tfoot tr.balance td{bottom:96px;}
+  /* Stack budget controls */
+  .budget-controls{flex-direction:column;align-items:stretch;gap:8px;}
+  .budget-controls .ctrl-group{justify-content:stretch;}
+  .budget-controls .ctrl-group .btn{flex:1;}
+  /* Stat grid 2-up on phone */
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .stat-box{padding:14px;}
+  .stat-val{font-size:20px;}
+  .card-hdr{padding:12px 0 10px;font-size:14px;}
+  .card-body{padding:0;}
+  /* List tables — vertical scroll friendly */
+  .list-table th{padding:10px 10px;font-size:10px;}
+  .list-table td{padding:8px 10px;}
+  /* Header — tighten further */
+  #hdr-title{font-size:14px;letter-spacing:-0.005em;}
+  #hdr-right .btn.subtle{font-size:12px;padding:6px 8px;min-height:32px;}
 }
 
-/* Tab pane height for sticky top + bottom */
-#tab-budget{height:calc(100vh - 140px);min-height:520px;}
+/* Tab pane height for sticky top + bottom (use dvh on iOS so the pane shrinks with the keyboard) */
+#tab-budget{height:calc(100dvh - 140px);min-height:520px;}
+@supports not (height: 100dvh) {
+  #tab-budget{height:calc(100vh - 140px);}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 </head>
@@ -778,16 +830,21 @@ function renderBudget() {
   h += '</colgroup>';
 
   // Header rows
+  // Current column: just "CURRENT" (no date). Future paychecks: just date,
+  // no day-of-week sub-label. Ad-hoc columns: date + ± label.
   h += '<thead><tr class="dates"><th class="cat">Category</th>';
   cols.forEach(c => {
     const dt = parseISO(c.date);
     const lbl = (dt.getMonth()+1) + '/' + dt.getDate();
-    let sub, cls = '';
-    if (c.isCurrent) { sub = 'CURRENT'; cls = 'current-col'; }
-    else if (c.isAdhoc) { sub = (c.adhocType === 'expense' ? '−' : '+') + ' ' + (c.label || ''); cls = 'adhoc-col'; }
-    else { sub = c.kind === 'monthly' ? '1st' : 'Thu'; }
-    const adhocBtn = c.isAdhoc ? `<span class="adhoc-controls"><button onclick="editAdhocColumn('${c.adhocId}')" title="Edit">✎</button><button onclick="deleteAdhocColumn('${c.adhocId}')" title="Delete">✕</button></span>` : '';
-    h += `<th class="${cls}">${lbl}<span class="sub">${escHTML(sub)}</span>${adhocBtn}</th>`;
+    if (c.isCurrent) {
+      h += `<th class="current-col">CURRENT</th>`;
+    } else if (c.isAdhoc) {
+      const sub = (c.adhocType === 'expense' ? '−' : '+') + ' ' + (c.label || '');
+      const adhocBtn = `<span class="adhoc-controls"><button onclick="editAdhocColumn('${c.adhocId}')" title="Edit">✎</button><button onclick="deleteAdhocColumn('${c.adhocId}')" title="Delete">✕</button></span>`;
+      h += `<th class="adhoc-col">${lbl}<span class="sub">${escHTML(sub)}</span>${adhocBtn}</th>`;
+    } else {
+      h += `<th>${lbl}</th>`;
+    }
   });
   h += '</tr>';
 
@@ -840,7 +897,8 @@ function renderBudget() {
   });
   h += '</tr>';
 
-  h += '<tr class="savings"><td class="cat">Savings ' +
+  h += '<tr class="savings"><td class="cat">' +
+       '<span class="cat-label">Savings</span>' +
        `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
        `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
        `title="Current savings account balance — auto-grows as scheduled savings contributions pass">` +
@@ -1286,7 +1344,6 @@ function renderBills() {
       <td><label style="margin:0;display:inline;"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></label></td>
       <td class="col-actions"><button class="btn danger" onclick="deleteBill('${b.id}')">Delete</button></td>
     </tr>
-    <tr data-id="${b.id}-notes"><td></td><td colspan="7" style="padding:0 14px 8px;"><input type="text" value="${escHTML(b.notes||'')}" placeholder="Notes (anchor date for biweekly, MM for yearly, YYYY-MM-DD for once)" oninput="updateBill('${b.id}','notes',this.value)" style="font-size:12px;color:var(--text-muted);"></td></tr>
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
 }
