@@ -1231,32 +1231,15 @@ function commitCellEdit(opts = {}) {
     } else {
       const n = parseFloat(raw);
       if (!isNaN(n) && n !== originalValue) {
-        // If different from recurring AND no current override, ask one-time vs apply-all
-        const hasOverride = S.billOverrides[billId] && S.billOverrides[billId][date] !== undefined;
-        if (!hasOverride && n !== (Number(bill.amount) || 0)) {
-          const applyAll = confirm(
-            `Apply $${n} to all future "${bill.name}" payments?\n\n` +
-            `OK = update the recurring amount (every future occurrence)\n` +
-            `Cancel = one-time change for ${date} only`
-          );
-          snapshot();
-          if (applyAll) {
-            bill.amount = n;
-            if (S.billOverrides[billId]) delete S.billOverrides[billId][date];
-          } else {
-            if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
-            S.billOverrides[billId][date] = n;
-          }
+        // Each week is independent — every edit is a per-date override.
+        // No prompt to propagate to future weeks.
+        snapshot();
+        if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
+        if (n === (Number(bill.amount) || 0)) {
+          // Value matches recurring default — clear any override for this date.
+          delete S.billOverrides[billId][date];
         } else {
-          // Already has override OR value equals recurring → just store override
-          snapshot();
-          if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
-          if (n === (Number(bill.amount) || 0)) {
-            // Same as recurring — clear override
-            delete S.billOverrides[billId][date];
-          } else {
-            S.billOverrides[billId][date] = n;
-          }
+          S.billOverrides[billId][date] = n;
         }
       }
     }
@@ -1445,15 +1428,13 @@ function advanceToNextPaycheck() {
   const future = generatePaychecks(BUDGET_WEEKS);
   const next = future[0];
   if (!next) { toast('No upcoming paycheck found'); return; }
-  const amt = Number(next.amount) || 0;
   if (!confirm(
     'Advance to ' + next.date + '?\n\n' +
-    'Adds $' + amt.toLocaleString() + ' to your current balance and shifts ' +
-    'the budget forward. Any unpaid bills from this period merge into the ' +
-    'new Current column.'
+    'Shifts the budget forward. Income resets to $0 in the new Current column ' +
+    '(enter your actual balance manually). Bills carry forward by their recurrence rules.'
   )) return;
   snapshot();
-  S.currentBalance = (Number(S.currentBalance) || 0) + amt;
+  S.currentBalance = 0;
   S.currentDate = next.date;
   saveAndRender();
   toast('Advanced to ' + next.date);
