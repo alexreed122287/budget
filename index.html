@@ -151,6 +151,16 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table td.cell-dragging{opacity:.4;}
 .budget-table td.cell-drag-over{outline:1px dashed var(--accent);outline-offset:-1px;}
 .budget-table td.adhoc-cell{color:var(--accent-dim);font-weight:600;}
+.budget-table tr.overdue td.cat{background:linear-gradient(90deg,rgba(255,180,80,.18),transparent);}
+.overdue-badge{display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;background:#f59e0b;color:#fff;
+  font-weight:800;font-size:11px;margin-left:8px;cursor:pointer;line-height:1;
+  box-shadow:0 0 0 0 rgba(245,158,11,.6);animation:overduePulse 2.4s ease-in-out infinite;}
+.overdue-badge:hover{background:#d97706;}
+@keyframes overduePulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.6);}
+  50%{box-shadow:0 0 0 6px rgba(245,158,11,0);}
+}
 
 /* When editing, the cell stays exactly the same size. The input overlays the
    cell absolutely; the original text is hidden via color:transparent so the
@@ -448,6 +458,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 <div id="tabs">
   <button class="ntab active" onclick="showTab('budget')">Budget</button>
   <button class="ntab" onclick="showTab('bills')">Bills</button>
+  <button class="ntab" onclick="showTab('expenses')">Expenses</button>
   <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
   <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
   <button class="ntab" onclick="showTab('networth')">Net Worth</button>
@@ -494,6 +505,37 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
         </tr></thead>
         <tbody id="bills-tbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EXPENSES ───────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-expenses">
+  <div class="card">
+    <div class="card-hdr">
+      <span>Expenses — where the money goes</span>
+      <span style="font-size:12px;color:var(--text-muted);">Includes overrides from the past 90 days; future months use recurring amounts.</span>
+    </div>
+    <div class="card-body">
+      <div class="exp-stats" id="exp-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div class="chart-wrap"><div id="exp-cat-chart" style="height:340px;"></div></div>
+        <div class="chart-wrap"><div id="exp-trend-chart" style="height:340px;"></div></div>
+      </div>
+      <div style="margin-top:18px;overflow:auto;">
+        <table class="list-table" id="exp-table">
+          <thead><tr>
+            <th>Bill</th>
+            <th>Category</th>
+            <th>Frequency</th>
+            <th style="text-align:right;">Each</th>
+            <th style="text-align:right;">Per month</th>
+            <th style="text-align:right;">Per year</th>
+            <th style="text-align:right;">% of total</th>
+          </tr></thead>
+          <tbody id="exp-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -677,6 +719,8 @@ let S = {
   paycheckOverrides: {},
   bills: [],
   billOverrides: {},
+  billLastConfirmed: {},   // billId → ISO date a value was last typed for this bill (drives overdue reminders)
+  billSnoozed: {},         // billId → ISO date until which overdue popups are suppressed
   adhocColumns: [],   // [{id, date, amount, label, type:'income'|'expense'}]
   mortgage: { balance:205032.92, rate:2.99, pi:979.12, nextPayment:'2026-06-01', extraWeekly:0, onceAmount:0, onceDate:'' },
   accounts: [],
@@ -720,6 +764,7 @@ function showTab(name) {
   });
   if (name === 'budget') renderBudget();
   if (name === 'bills') renderBills();
+  if (name === 'expenses') renderExpenses();
   if (name === 'mortgage') renderMortgage();
   if (name === 'vacation') renderVacations();
   if (name === 'networth') renderNetWorth();
@@ -759,10 +804,21 @@ function redo() {
   toast('Redo');
 }
 window.addEventListener('keydown', (e) => {
-  const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+  const tgt = e.target;
+  const isInput = tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable);
+  // The cell-edit overlay should treat Cmd/Ctrl+Z as "abandon edit, undo last
+  // change" so the shortcut behaves like a Mac native undo across the whole app.
+  const inCellEdit = activeCell && tgt === activeCell.inp;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); return; }
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey && !isInput) { e.preventDefault(); undo(); return; }
-  if ((e.metaKey || e.ctrlKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y') && !isInput) { e.preventDefault(); redo(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+    if (inCellEdit) { e.preventDefault(); cancelCellEdit(); undo(); return; }
+    if (!isInput)   { e.preventDefault(); undo(); return; }
+    return;   // other inputs (bill name, etc.) — let the browser do native undo of typing
+  }
+  if ((e.metaKey || e.ctrlKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
+    if (inCellEdit) { e.preventDefault(); cancelCellEdit(); redo(); return; }
+    if (!isInput)   { e.preventDefault(); redo(); return; }
+  }
 });
 
 function saveNow() {
@@ -889,6 +945,39 @@ function billDueDates(bill, from, to) {
   return dates;
 }
 
+// Days a bill is "supposed to" recur within. Used by the overdue-check.
+// "once" returns Infinity (no recurrence reminder).
+function recurrenceDays(bill) {
+  switch (bill.frequency) {
+    case 'weekly':    return 7;
+    case 'biweekly':  return 14;
+    case 'monthly':   return 31;
+    case 'quarterly': return 92;
+    case 'semi':      return 183;
+    case 'yearly':    return 366;
+    default:          return Infinity;
+  }
+}
+
+// A bill is overdue when more than 1.25 × its recurrence period has elapsed
+// since the last time the user typed a value into one of its cells (or, if
+// never confirmed, since today). Snoozed bills are quiet until the snooze date.
+function billOverdueInfo(bill, todayISO) {
+  if (!bill || bill.active === false) return null;
+  const period = recurrenceDays(bill);
+  if (!isFinite(period)) return null;
+  const today = parseISO(todayISO);
+  const snoozedUntil = (S.billSnoozed || {})[bill.id];
+  if (snoozedUntil && parseISO(snoozedUntil) >= today) return null;
+  const lastISO = (S.billLastConfirmed || {})[bill.id];
+  if (!lastISO) return null;   // never confirmed = brand-new bill, don't pester
+  const last = parseISO(lastISO);
+  const days = daysBetween(last, today);
+  const threshold = Math.ceil(period * 1.25);
+  if (days <= threshold) return null;
+  return { days, period, threshold };
+}
+
 // First column whose date >= due. Bills due before any column collapse into Current.
 function colCoveringDate(cols, due) {
   for (const c of cols) {
@@ -979,12 +1068,24 @@ function buildBudget(weeks) {
 
   S.bills.filter(b => b.active !== false).forEach(bill => {
     const due = billDueDates(bill, lookbackFrom, lastDate);
+    const datesHit = new Set();
     due.forEach(d => {
       const colDate = colCoveringDate(cols, d);
       if (!colDate) return;
       const overrides = S.billOverrides[bill.id] || {};
       const amt = overrides[colDate] !== undefined ? overrides[colDate] : (Number(bill.amount) || 0);
       matrix[colDate][bill.id] = (matrix[colDate][bill.id] || 0) + amt;
+      datesHit.add(colDate);
+    });
+    // Also surface override-only entries: user typed a value into a column where the
+    // bill wasn't naturally due. Without this the saved override would be invisible.
+    const overrides = S.billOverrides[bill.id] || {};
+    Object.keys(overrides).forEach(d => {
+      if (datesHit.has(d)) return;
+      if (!matrix[d]) return;   // override outside the visible window
+      const v = Number(overrides[d]) || 0;
+      if (v === 0) return;       // zero overrides shouldn't render
+      matrix[d][bill.id] = (matrix[d][bill.id] || 0) + v;
     });
   });
 
@@ -1074,10 +1175,16 @@ function renderBudget() {
   h += '</tr></thead>';
 
   // Bill rows
+  const todayISOForOverdue = isoDate(currentBudgetDate());
   h += '<tbody class="bills-body" id="budget-bills">';
   visibleBills.forEach((bill, bi) => {
-    h += `<tr class="bill" draggable="true" data-bill-id="${bill.id}" data-bi="${bi}">`;
-    h += `<td class="cat" title="Drag to reorder"><span class="drag-handle">⋮⋮</span>${escHTML(bill.name)}</td>`;
+    const overdue = billOverdueInfo(bill, todayISOForOverdue);
+    const rowCls = 'bill' + (overdue ? ' overdue' : '');
+    h += `<tr class="${rowCls}" draggable="true" data-bill-id="${bill.id}" data-bi="${bi}">`;
+    const badge = overdue
+      ? `<span class="overdue-badge" data-overdue-bill="${bill.id}" title="Hasn't been confirmed in ${overdue.days} days — click to acknowledge">!</span>`
+      : '';
+    h += `<td class="cat" title="Drag to reorder"><span class="drag-handle">⋮⋮</span>${escHTML(bill.name)}${badge}</td>`;
     cols.forEach((c, ci) => {
       const amt = matrix[c.date][bill.id] || 0;
       const overrides = S.billOverrides[bill.id] || {};
@@ -1165,10 +1272,65 @@ function wireBudgetInteractions() {
 }
 
 function onBudgetClick(ev) {
+  // Overdue bill badge — acknowledge or snooze.
+  const badge = ev.target.closest('[data-overdue-bill]');
+  if (badge) {
+    ev.stopPropagation();
+    acknowledgeOverdueBill(badge.dataset.overdueBill);
+    return;
+  }
   const td = ev.target.closest('td[data-cell-type]');
   if (!td) return;
   if (activeCell && activeCell.td === td) return;
   enterCellEdit(td);
+}
+
+function acknowledgeOverdueBill(billId) {
+  const bill = S.bills.find(b => b.id === billId);
+  if (!bill) return;
+  const todayISO = isoDate(currentBudgetDate());
+  const last = (S.billLastConfirmed || {})[billId];
+  const days = last ? daysBetween(parseISO(last), parseISO(todayISO)) : 0;
+  const ok = confirm(
+    `"${bill.name}" hasn't had a value entered in ${days} days.\n\n` +
+    'OK = mark confirmed today (you handled it / haven\'t forgotten).\n' +
+    'Cancel = snooze for 7 days.'
+  );
+  S.billLastConfirmed = S.billLastConfirmed || {};
+  S.billSnoozed = S.billSnoozed || {};
+  snapshot();
+  if (ok) {
+    S.billLastConfirmed[billId] = todayISO;
+    delete S.billSnoozed[billId];
+    toast('Marked confirmed');
+  } else {
+    S.billSnoozed[billId] = isoDate(addDays(parseISO(todayISO), 7));
+    toast('Snoozed for 7 days');
+  }
+  saveAndRender();
+}
+
+// On app load: show one summary alert listing any overdue bills (after a beat
+// so the page is rendered first). Each individual bill still gets its own
+// inline badge that can be clicked to confirm or snooze.
+let overdueAlertShown = false;
+function showOverdueSummary() {
+  if (overdueAlertShown) return;
+  const todayISO = isoDate(currentBudgetDate());
+  const overdue = (S.bills || []).filter(b => billOverdueInfo(b, todayISO));
+  if (!overdue.length) return;
+  overdueAlertShown = true;
+  const lines = overdue.map(b => {
+    const info = billOverdueInfo(b, todayISO);
+    return `  • ${b.name} — ${info.days} days`;
+  }).join('\n');
+  setTimeout(() => {
+    alert(
+      `${overdue.length} bill${overdue.length>1?'s haven\'t':' hasn\'t'} had a value entered in a while:\n\n` +
+      lines + '\n\n' +
+      'Click the orange ! next to a bill on the Budget tab to confirm or snooze.'
+    );
+  }, 600);
 }
 
 function enterCellEdit(td) {
@@ -1202,13 +1364,21 @@ function enterCellEdit(td) {
   // Overlay the input absolutely on top of the cell — original text stays in
   // place (color:transparent via .editing) so the cell never resizes.
   const inp = document.createElement('input');
-  inp.type = 'number'; inp.step = '0.01'; inp.inputMode = 'decimal';
-  inp.value = curVal === '' ? '' : curVal;
+  // type=text + inputMode=decimal: numeric keyboard on mobile AND .select() works reliably.
+  // (Number inputs silently ignore .select()/.setSelectionRange on some browsers.)
+  inp.type = 'text'; inp.inputMode = 'decimal'; inp.autocomplete = 'off';
+  inp.value = curVal === '' ? '' : String(curVal);
   inp.placeholder = placeholder;
   inp.className = 'cell-edit';
   td.appendChild(inp);
   td.classList.add('editing');
-  inp.focus(); inp.select();
+  inp.focus();
+  // Defer select to next frame so it survives the focus event, and explicitly use
+  // setSelectionRange so the existing value is highlighted (ready for type-to-replace).
+  requestAnimationFrame(() => {
+    if (inp.value) inp.setSelectionRange(0, inp.value.length);
+    else inp.select();
+  });
   inp.addEventListener('keydown', onCellKey);
   inp.addEventListener('blur', () => {
     if (activeCell && activeCell.td === td) commitCellEdit({ silent: false });
@@ -1224,10 +1394,12 @@ function commitCellEdit(opts = {}) {
   if (type === 'bill') {
     const bill = S.bills.find(b => b.id === billId);
     if (!bill) { activeCell = null; return; }
+    let touched = false;
     if (raw === '') {
       // Clear override → revert to recurring
       snapshot();
       if (S.billOverrides[billId]) delete S.billOverrides[billId][date];
+      touched = true;
     } else {
       const n = parseFloat(raw);
       if (!isNaN(n) && n !== originalValue) {
@@ -1241,7 +1413,13 @@ function commitCellEdit(opts = {}) {
         } else {
           S.billOverrides[billId][date] = n;
         }
+        touched = true;
       }
+    }
+    if (touched) {
+      S.billLastConfirmed = S.billLastConfirmed || {};
+      S.billLastConfirmed[billId] = isoDate(currentBudgetDate());
+      if (S.billSnoozed) delete S.billSnoozed[billId];
     }
   } else if (type === 'paycheck') {
     snapshot();
@@ -1610,13 +1788,143 @@ function renderBills() {
   attachListDrag(tbody, 'bills', () => saveAndRender());
 }
 function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, notes:'' }); saveAndRender(); }
-function deleteBill(id) { if (!confirm('Delete this bill?')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; saveAndRender(); }
+function deleteBill(id) { if (!confirm('Delete this bill?')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; if (S.billLastConfirmed) delete S.billLastConfirmed[id]; if (S.billSnoozed) delete S.billSnoozed[id]; saveAndRender(); }
 function updateBill(id, field, value) {
   const b = S.bills.find(x => x.id === id); if (!b) return;
   maybeSnapshot();
   b[field] = value;
   scheduleSave();
   if (eid('tab-budget').classList.contains('active')) renderBudget();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EXPENSES TAB
+// ═══════════════════════════════════════════════════════════════════
+// Convert any bill's recurring amount into a per-month equivalent.
+// "once" bills get amortized over 12 months so they show up sensibly.
+function billPerMonth(bill) {
+  const amt = Number(bill.amount) || 0;
+  switch (bill.frequency) {
+    case 'monthly':   return amt;
+    case 'weekly':    return amt * 52 / 12;
+    case 'biweekly':  return amt * 26 / 12;
+    case 'quarterly': return amt / 3;
+    case 'semi':      return amt / 6;
+    case 'yearly':    return amt / 12;
+    case 'once':      return amt / 12;
+    default:          return 0;
+  }
+}
+
+// Build a 12-month-ahead outflow projection by walking each bill's due dates.
+// Overrides on those dates win over the recurring amount.
+function projectMonthlyOutflow(monthsAhead) {
+  const today = currentBudgetDate();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + monthsAhead, 0);
+  const buckets = [];
+  for (let i = 0; i < monthsAhead; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    buckets.push({ key: isoDate(d).slice(0,7), label: d.toLocaleString(undefined,{month:'short',year:'2-digit'}), total: 0 });
+  }
+  const idx = m => buckets.findIndex(b => b.key === m);
+  S.bills.filter(b => b.active !== false).forEach(bill => {
+    const dues = billDueDates(bill, start, end);
+    const overrides = S.billOverrides[bill.id] || {};
+    dues.forEach(d => {
+      const iso = isoDate(d);
+      const v = overrides[iso] !== undefined ? Number(overrides[iso]) : (Number(bill.amount) || 0);
+      const i = idx(iso.slice(0,7));
+      if (i >= 0) buckets[i].total += v;
+    });
+  });
+  return buckets;
+}
+
+function renderExpenses() {
+  const stats = eid('exp-stats');
+  const tbody = eid('exp-tbody');
+  if (!stats || !tbody) return;
+  const active = (S.bills || []).filter(b => b.active !== false);
+  if (!active.length) {
+    stats.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:24px;">No active bills yet — add some on the Bills tab.</div>';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  // Per-bill monthly equivalent + totals
+  const rows = active.map(b => ({ bill: b, perMonth: billPerMonth(b) }));
+  const totalMonthly = rows.reduce((a, r) => a + r.perMonth, 0);
+  rows.sort((a,b) => b.perMonth - a.perMonth);
+
+  // Category aggregation
+  const catTotals = {};
+  rows.forEach(r => {
+    const k = (r.bill.category && r.bill.category.trim()) || 'Uncategorized';
+    catTotals[k] = (catTotals[k] || 0) + r.perMonth;
+  });
+  const catEntries = Object.entries(catTotals).sort((a,b) => b[1]-a[1]);
+  const top = rows[0];
+
+  // Stats cards
+  stats.innerHTML = [
+    statCard('Per month',  fmt$(totalMonthly), `${active.length} active bills`),
+    statCard('Per year',   fmt$(totalMonthly * 12), 'projected at current rates'),
+    statCard('Top expense', top ? top.bill.name : '—', top ? fmt$(top.perMonth) + '/mo' : ''),
+    statCard('Categories', String(catEntries.length), catEntries[0] ? `largest: ${catEntries[0][0]}` : ''),
+  ].join('');
+
+  // Category pie
+  const catChart = echarts.init(eid('exp-cat-chart'), null, { renderer: 'svg' });
+  catChart.setOption({
+    title: { text: 'Spending by category', left: 'center', textStyle:{ fontSize:13, fontWeight:600 } },
+    tooltip: { trigger: 'item', formatter: p => `${p.name}: ${fmt$(p.value)} (${p.percent}%)` },
+    legend: { bottom: 0, type: 'scroll' },
+    series: [{
+      type: 'pie', radius: ['38%', '62%'], center: ['50%', '46%'], avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+      label: { show: true, formatter: '{b}\n{d}%', fontSize: 11 },
+      data: catEntries.map(([name, value]) => ({ name, value: Math.round(value) })),
+    }],
+  });
+
+  // 12-month outflow trend
+  const buckets = projectMonthlyOutflow(12);
+  const trendChart = echarts.init(eid('exp-trend-chart'), null, { renderer: 'svg' });
+  trendChart.setOption({
+    title: { text: 'Projected monthly outflow (next 12 months)', left: 'center', textStyle:{ fontSize:13, fontWeight:600 } },
+    tooltip: { trigger: 'axis', valueFormatter: v => fmt$(v) },
+    grid: { top: 50, left: 50, right: 20, bottom: 30 },
+    xAxis: { type: 'category', data: buckets.map(b => b.label), axisLabel: { fontSize: 10 } },
+    yAxis: { type: 'value', axisLabel: { formatter: v => '$' + (v/1000).toFixed(1) + 'k' } },
+    series: [{
+      type: 'bar', name: 'Outflow', barMaxWidth: 36,
+      data: buckets.map(b => Math.round(b.total)),
+      itemStyle: { color: '#6b8afd', borderRadius: [3,3,0,0] },
+    }],
+  });
+
+  // Table — every bill with monthly + annual + share-of-total
+  tbody.innerHTML = rows.map(r => {
+    const pct = totalMonthly > 0 ? (r.perMonth / totalMonthly * 100) : 0;
+    return `<tr>
+      <td>${escHTML(r.bill.name)}</td>
+      <td>${escHTML(r.bill.category || '—')}</td>
+      <td>${escHTML(r.bill.frequency)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${fmt$2(Number(r.bill.amount)||0)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${fmt$2(r.perMonth)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${fmt$2(r.perMonth * 12)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${pct.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function statCard(label, value, sub) {
+  return `<div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);">${escHTML(label)}</div>
+    <div style="font-size:22px;font-weight:700;margin-top:4px;">${escHTML(value)}</div>
+    ${sub ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHTML(sub)}</div>` : ''}
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1961,6 +2269,8 @@ function loadLocal() {
   if (raw) { try { const data = JSON.parse(raw); S = Object.assign({}, S, data); } catch {} }
   S.adhocColumns = S.adhocColumns || [];
   S.paychecks = S.paychecks || [];
+  S.billLastConfirmed = S.billLastConfirmed || {};
+  S.billSnoozed = S.billSnoozed || {};
   // Migrate legacy single-rule fields to the new paycheck list
   if (S.paychecks.length === 0 && (S.paycheckMonthly || S.paycheckWeekly)) {
     if (S.paycheckMonthly) S.paychecks.push({ id: uid(), label: 'Monthly (1st)', amount: S.paycheckMonthly, frequency: 'monthly', dueDay: 1, active: true, notes: '' });
@@ -1971,6 +2281,7 @@ function loadLocal() {
 function renderAll() {
   if (eid('tab-budget').classList.contains('active')) renderBudget();
   if (eid('tab-bills').classList.contains('active')) renderBills();
+  if (eid('tab-expenses').classList.contains('active')) renderExpenses();
   if (eid('tab-mortgage').classList.contains('active')) renderMortgage();
   if (eid('tab-vacation').classList.contains('active')) renderVacations();
   if (eid('tab-networth').classList.contains('active')) renderNetWorth();
@@ -2404,6 +2715,7 @@ function boot() {
   // Splash on first load of the session (if photos are configured)
   if (!sessionStorage.getItem('splash_dismissed')) showSplash();
   if (WEBHOOK_URL) forcePull();
+  showOverdueSummary();
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
