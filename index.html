@@ -464,8 +464,10 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   <div class="budget-controls">
     <div class="ctrl-group">
       <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
+      <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current (paycheck added to balance, unpaid bills carried forward)">→ Advance</button>
     </div>
     <div class="ctrl-group">
+      <button class="btn subtle" onclick="resetCurrentDate()" id="btn-reset-date" title="Reset Current back to today">⤺ Today</button>
       <button class="btn" onclick="renderBudget()">↻ Refresh</button>
     </div>
   </div>
@@ -669,6 +671,7 @@ let S = {
   paycheckWeekly: 1597,
   paychecks: [],   // [{id, label, amount, frequency, dueDay, active, notes}]
   currentBalance: 0,
+  currentDate: null,    // ISO date — when set, the Budget's CURRENT column anchors here instead of today (advanced forward via the Advance button)
   savingsBalance: 0,
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
@@ -778,9 +781,19 @@ function saveNow() {
 // Iterates S.paychecks (each is a rule with frequency + dueDay) and reuses
 // billDueDates for the date math. Multiple paychecks landing on the same day
 // coalesce into one column whose amount is the sum.
+// The Budget tab anchors on this date instead of real today when the user
+// has explicitly advanced forward via the Advance button. Falls back to
+// today when not set, or when the saved date is somehow stale (in the past).
+function currentBudgetDate() {
+  const realToday = new Date(); realToday.setHours(0,0,0,0);
+  if (!S.currentDate) return realToday;
+  const d = parseISO(S.currentDate); d.setHours(0,0,0,0);
+  return d > realToday ? d : realToday;
+}
+
 function generatePaychecks(weeks) {
   const out = [];
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = currentBudgetDate();
   const end = addDays(today, weeks * 7);
 
   const rules = (S.paychecks || []).filter(p => p.active !== false && (Number(p.amount) || 0) > 0);
@@ -788,7 +801,7 @@ function generatePaychecks(weeks) {
     const dates = billDueDates({ frequency: p.frequency, dueDay: p.dueDay, notes: p.notes || '' }, today, end);
     dates.forEach(d => {
       const iso = isoDate(d);
-      if (parseISO(iso) < today) return;  // strictly future
+      if (parseISO(iso) <= today) return;  // strictly after the Current anchor
       const existing = out.find(o => o.date === iso);
       if (existing) {
         existing.amount += Number(p.amount) || 0;
@@ -937,7 +950,7 @@ function autoAdvanceAccounts() {
 
 function buildBudget(weeks) {
   autoAdvanceSavings();
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = currentBudgetDate();
   const todayISO = isoDate(today);
   const future = generatePaychecks(weeks);
 
@@ -1419,6 +1432,42 @@ function shiftBillCadence(billId, fromDate, toDate) {
 // ═══════════════════════════════════════════════════════════════════
 //  AD-HOC ONE-TIME COLUMNS
 // ═══════════════════════════════════════════════════════════════════
+// "Advance" — promote the next upcoming paycheck column into the Current
+// column. The next paycheck's amount is added to S.currentBalance, and
+// S.currentDate moves forward to that paycheck's date. Bills that were due
+// in the old period (before the new date) automatically merge into the new
+// Current column via the existing colCoveringDate logic — colCoveringDate
+// returns the first column whose date is >= a bill's due date, so any past
+// dues get absorbed into the new Current naturally. The math works out:
+// new Remainder = (old balance + paycheck) - (old bills + new column's bills)
+// = previously projected next-column Remainder.
+function advanceToNextPaycheck() {
+  const future = generatePaychecks(BUDGET_WEEKS);
+  const next = future[0];
+  if (!next) { toast('No upcoming paycheck found'); return; }
+  const amt = Number(next.amount) || 0;
+  if (!confirm(
+    'Advance to ' + next.date + '?\n\n' +
+    'Adds $' + amt.toLocaleString() + ' to your current balance and shifts ' +
+    'the budget forward. Any unpaid bills from this period merge into the ' +
+    'new Current column.'
+  )) return;
+  snapshot();
+  S.currentBalance = (Number(S.currentBalance) || 0) + amt;
+  S.currentDate = next.date;
+  saveAndRender();
+  toast('Advanced to ' + next.date);
+}
+
+function resetCurrentDate() {
+  if (!S.currentDate) { toast('Already on today'); return; }
+  if (!confirm('Reset the Current column back to today?\n\nYour current balance is left untouched.')) return;
+  snapshot();
+  S.currentDate = null;
+  saveAndRender();
+  toast('Current reset to today');
+}
+
 function updateSavingsBalance(value) {
   maybeSnapshot();
   S.savingsBalance = Number(value) || 0;
