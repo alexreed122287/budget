@@ -600,12 +600,28 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   </div>
 
   <div class="card">
-    <div class="card-hdr">Income</div>
-    <div class="card-body">
-      <div class="field-row">
-        <div class="field"><label>Monthly paycheck (1st) — $</label><input id="cfg-paycheck-monthly" type="number" step="1" oninput="onCfgChange()"></div>
-        <div class="field"><label>Weekly paycheck (Thu) — $</label><input id="cfg-paycheck-weekly" type="number" step="1" oninput="onCfgChange()"></div>
-      </div>
+    <div class="card-hdr">
+      <span>Income — paychecks</span>
+      <button class="btn primary" onclick="addPaycheck()">+ Add paycheck</button>
+    </div>
+    <div class="card-body" style="overflow:auto;padding:0;">
+      <table class="list-table" id="paychecks-table">
+        <thead><tr>
+          <th class="col-actions" style="width:24px;"></th>
+          <th>Label</th>
+          <th class="col-amt">Amount</th>
+          <th class="col-freq">Frequency</th>
+          <th class="col-day">Day</th>
+          <th>Active</th>
+          <th class="col-actions"></th>
+        </tr></thead>
+        <tbody id="paychecks-tbody"></tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);padding:10px 4px 0;line-height:1.6;">
+      <strong>Day:</strong> for monthly / quarterly / yearly = day of month (1–31).
+      For weekly / biweekly = day of week (<code>0</code>=Sun … <code>4</code>=Thu … <code>6</code>=Sat).
+      For biweekly, set the anchor date in your local data if needed; defaults to start of the current month.
     </div>
   </div>
 
@@ -648,8 +664,10 @@ const LS_WEBHOOK = 'roth_budget_webhook';
 const BUDGET_WEEKS = 52;
 
 let S = {
+  // Legacy single-rule fields — kept for migration only. New code uses S.paychecks (list).
   paycheckMonthly: 3750,
   paycheckWeekly: 1597,
+  paychecks: [],   // [{id, label, amount, frequency, dueDay, active, notes}]
   currentBalance: 0,
   savingsBalance: 0,
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
@@ -756,27 +774,35 @@ function saveNow() {
 // ═══════════════════════════════════════════════════════════════════
 //  PAYCHECK + AD-HOC SCHEDULE
 // ═══════════════════════════════════════════════════════════════════
+// Generate every paycheck-arrival date in the next `weeks` window from today.
+// Iterates S.paychecks (each is a rule with frequency + dueDay) and reuses
+// billDueDates for the date math. Multiple paychecks landing on the same day
+// coalesce into one column whose amount is the sum.
 function generatePaychecks(weeks) {
   const out = [];
   const today = new Date(); today.setHours(0,0,0,0);
   const end = addDays(today, weeks * 7);
 
-  let m = new Date(today.getFullYear(), today.getMonth(), 1);
-  if (m <= today) m = new Date(today.getFullYear(), today.getMonth()+1, 1);
-  while (m <= end) {
-    const iso = isoDate(m);
-    out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckMonthly, kind: 'monthly' });
-    m = addMonths(m, 1);
-  }
+  const rules = (S.paychecks || []).filter(p => p.active !== false && (Number(p.amount) || 0) > 0);
+  rules.forEach(p => {
+    const dates = billDueDates({ frequency: p.frequency, dueDay: p.dueDay, notes: p.notes || '' }, today, end);
+    dates.forEach(d => {
+      const iso = isoDate(d);
+      if (parseISO(iso) < today) return;  // strictly future
+      const existing = out.find(o => o.date === iso);
+      if (existing) {
+        existing.amount += Number(p.amount) || 0;
+        existing.label = (existing.label ? existing.label + ' + ' : '') + (p.label || '');
+      } else {
+        out.push({ date: iso, amount: Number(p.amount) || 0, kind: p.frequency, label: p.label || '' });
+      }
+    });
+  });
 
-  let w = new Date(today);
-  const daysUntilThu = (4 - w.getDay() + 7) % 7;
-  w = addDays(w, daysUntilThu === 0 ? 7 : daysUntilThu);
-  while (w <= end) {
-    const iso = isoDate(w);
-    if (!out.some(p => p.date === iso)) out.push({ date: iso, amount: S.paycheckOverrides[iso] ?? S.paycheckWeekly, kind: 'weekly' });
-    w = addDays(w, 7);
-  }
+  // Apply per-paycheck overrides (replace the date's combined amount entirely)
+  out.forEach(o => {
+    if (S.paycheckOverrides[o.date] !== undefined) o.amount = S.paycheckOverrides[o.date];
+  });
 
   out.sort((a,b) => a.date.localeCompare(b.date));
   return out;
@@ -1739,16 +1765,58 @@ function snapshotNetWorth() {
 // ═══════════════════════════════════════════════════════════════════
 function renderSettings() {
   eid('ss-webhook').value = WEBHOOK_URL || '';
-  eid('cfg-paycheck-monthly').value = S.paycheckMonthly;
-  eid('cfg-paycheck-weekly').value = S.paycheckWeekly;
+  renderPaychecks();
   renderPhotoThumbs();
   updateSyncPill();
 }
-function onCfgChange() {
+
+// ─── Paycheck list (Settings → Income) ───
+function renderPaychecks() {
+  const tbody = eid('paychecks-tbody');
+  if (!tbody) return;
+  if (!S.paychecks || !S.paychecks.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">No paychecks yet. Click <strong>+ Add paycheck</strong>.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = S.paychecks.map((p, i) => `
+    <tr class="${p.active === false ? 'inactive' : ''}" data-id="${p.id}">
+      <td class="drag-cell">⋮⋮</td>
+      <td data-label="Label"><input type="text" value="${escHTML(p.label||'')}" placeholder="e.g. Main job" oninput="updatePaycheck('${p.id}','label',this.value)"></td>
+      <td class="col-amt" data-label="Amount"><input type="number" step="0.01" value="${p.amount||0}" oninput="updatePaycheck('${p.id}','amount',parseFloat(this.value)||0)"></td>
+      <td class="col-freq" data-label="Frequency"><select onchange="updatePaycheck('${p.id}','frequency',this.value)">
+        ${['monthly','weekly','biweekly','semi','quarterly','yearly','once'].map(f => `<option value="${f}" ${p.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
+      </select></td>
+      <td class="col-day" data-label="Day"><input type="number" min="0" max="31" value="${p.dueDay||1}" oninput="updatePaycheck('${p.id}','dueDay',parseInt(this.value)||0)"></td>
+      <td data-label="Active"><input type="checkbox" ${p.active!==false?'checked':''} onchange="updatePaycheck('${p.id}','active',this.checked)"></td>
+      <td class="col-actions">
+        <span class="row-move">
+          <button onclick="moveItem('paychecks','${p.id}',-1)" ${i===0?'disabled':''} title="Move up">↑</button>
+          <button onclick="moveItem('paychecks','${p.id}',1)" ${i===S.paychecks.length-1?'disabled':''} title="Move down">↓</button>
+        </span>
+        <button class="btn danger" onclick="deletePaycheck('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+function addPaycheck() {
+  snapshot();
+  S.paychecks = S.paychecks || [];
+  S.paychecks.push({ id: uid(), label: 'New paycheck', amount: 0, frequency: 'weekly', dueDay: 4, active: true, notes: '' });
+  saveAndRender();
+}
+function deletePaycheck(id) {
+  if (!confirm('Delete this paycheck rule?')) return;
+  snapshot();
+  S.paychecks = (S.paychecks || []).filter(p => p.id !== id);
+  saveAndRender();
+}
+function updatePaycheck(id, field, value) {
+  const p = (S.paychecks || []).find(x => x.id === id);
+  if (!p) return;
   maybeSnapshot();
-  S.paycheckMonthly = parseFloat(eid('cfg-paycheck-monthly').value) || 0;
-  S.paycheckWeekly = parseFloat(eid('cfg-paycheck-weekly').value) || 0;
+  p[field] = value;
   scheduleSave();
+  if (eid('tab-budget').classList.contains('active')) renderBudget();
 }
 function saveWebhook() {
   WEBHOOK_URL = eid('ss-webhook').value.trim();
@@ -1862,6 +1930,12 @@ function loadLocal() {
   const raw = localStorage.getItem(LS_KEY);
   if (raw) { try { const data = JSON.parse(raw); S = Object.assign({}, S, data); } catch {} }
   S.adhocColumns = S.adhocColumns || [];
+  S.paychecks = S.paychecks || [];
+  // Migrate legacy single-rule fields to the new paycheck list
+  if (S.paychecks.length === 0 && (S.paycheckMonthly || S.paycheckWeekly)) {
+    if (S.paycheckMonthly) S.paychecks.push({ id: uid(), label: 'Monthly (1st)', amount: S.paycheckMonthly, frequency: 'monthly', dueDay: 1, active: true, notes: '' });
+    if (S.paycheckWeekly)  S.paychecks.push({ id: uid(), label: 'Weekly (Thu)',  amount: S.paycheckWeekly,  frequency: 'weekly',  dueDay: 4, active: true, notes: '' });
+  }
   WEBHOOK_URL = localStorage.getItem(LS_WEBHOOK) || '';
 }
 function renderAll() {
@@ -2242,6 +2316,12 @@ function deleteVacItem(vid, iid) {
 //  SEED
 // ═══════════════════════════════════════════════════════════════════
 function seedIfEmpty() {
+  if (!S.paychecks || !S.paychecks.length) {
+    S.paychecks = [
+      { id: uid(), label:'Monthly (1st)', amount:3750, frequency:'monthly', dueDay:1, active:true, notes:'' },
+      { id: uid(), label:'Weekly (Thu)',  amount:1597, frequency:'weekly',  dueDay:4, active:true, notes:'' },
+    ];
+  }
   if (S.bills.length === 0 && S.accounts.length === 0) {
     S.bills = [
       { id: uid(), name:'Mortgage',      amount:1585.93, frequency:'monthly',  dueDay:1,  category:'housing',     active:true, notes:'' },
