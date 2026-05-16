@@ -241,6 +241,58 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .gro-badge.soon{background:#f59e0b;}
 .gro-badge.ok{background:#10b981;}
 
+/* ─── Friendly "planning" look (Vacation / Things / House / Grocery) ─── */
+.plan-hero{border-radius:18px;padding:26px 24px;margin-bottom:18px;color:#fff;
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%);
+  box-shadow:0 10px 28px -12px rgba(99,102,241,.55);}
+.plan-hero--vacation{background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 55%,#6366f1 100%);}
+.plan-hero--things{background:linear-gradient(135deg,#f97316 0%,#ef4444 100%);
+  box-shadow:0 10px 28px -12px rgba(239,68,68,.5);}
+.plan-hero--house{background:linear-gradient(135deg,#10b981 0%,#0d9488 100%);
+  box-shadow:0 10px 28px -12px rgba(13,148,136,.5);}
+.plan-hero--grocery{background:linear-gradient(135deg,#8b5cf6 0%,#d946ef 100%);
+  box-shadow:0 10px 28px -12px rgba(217,70,239,.45);}
+.plan-hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;
+  background:rgba(255,255,255,.12);border-radius:50%;}
+.plan-hero-eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85;}
+.plan-hero-title{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:4px 0 6px;line-height:1.15;}
+.plan-hero-sub{font-size:14px;line-height:1.55;opacity:.92;max-width:46ch;}
+
+.plan-empty{color:var(--text-muted);padding:30px 22px;text-align:center;font-size:14px;
+  line-height:1.6;background:var(--bg-soft);border:1px dashed var(--border-strong);border-radius:14px;}
+
+/* Project / idea cards — warmer, card-like, friendly */
+.plan-card{background:var(--bg);border:1px solid var(--border-strong);border-radius:16px;
+  padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:box-shadow .15s,transform .15s;}
+.plan-card:hover{box-shadow:0 6px 20px -10px rgba(0,0,0,.18);}
+.plan-card .pc-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.plan-card .pc-top input.pc-name{flex:1;min-width:170px;font-size:17px;font-weight:700;
+  border:none;background:none;padding:6px 2px;border-bottom:2px solid transparent;}
+.plan-card .pc-top input.pc-name:focus{border-bottom-color:var(--accent);outline:none;}
+.plan-card .pc-notes{width:100%;margin-top:10px;padding:10px 12px;border:1px solid var(--border-strong);
+  border-radius:10px;font:inherit;font-size:14px;background:var(--bg-soft);}
+.plan-meta-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px;}
+.plan-meta-row label{margin:0 6px 0 0;}
+.plan-date{padding:9px 11px;border:1px solid var(--border-strong);border-radius:9px;font:inherit;font-size:14px;}
+
+/* Status chips */
+.status-pick{display:inline-flex;gap:6px;flex-wrap:wrap;}
+.chip{font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--border-strong);background:var(--bg);color:var(--text-muted);user-select:none;}
+.chip.on.idea{background:#eef2ff;border-color:#c7d2fe;color:#4338ca;}
+.chip.on.planned{background:#ecfeff;border-color:#a5f3fc;color:#0e7490;}
+.chip.on.doing{background:#fff7ed;border-color:#fed7aa;color:#c2410c;}
+.chip.on.done{background:#ecfdf5;border-color:#a7f3d0;color:#047857;}
+.plan-card.is-done{opacity:.72;}
+.plan-card.is-done .pc-name{text-decoration:line-through;}
+
+/* Cost estimate callout */
+.cost-callout{margin-top:12px;background:linear-gradient(135deg,#ecfdf5,#f0fdfa);
+  border:1px solid #a7f3d0;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;color:#065f46;}
+.cost-callout a{color:#047857;}
+.house-loc{font-size:12px;color:var(--text-muted);margin:-6px 0 16px;}
+
 /* When editing, the cell stays exactly the same size. The input overlays the
    cell absolutely; the original text is hidden via color:transparent so the
    cell's intrinsic height/width are preserved. */
@@ -635,6 +687,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
     <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
     <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
     <button class="ntab" onclick="showTab('things')">Things to do</button>
+    <button class="ntab" onclick="showTab('house')">Around the House</button>
     <button class="ntab" onclick="showTab('grocery')">Go-to Grocery List</button>
     <button class="ntab" onclick="showTab('networth')">Net Worth</button>
     <button class="ntab" onclick="showTab('settings')">Settings</button>
@@ -757,6 +810,11 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── VACATION PLANNER ───────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-vacation">
+  <div class="plan-hero plan-hero--vacation">
+    <div class="plan-hero-eyebrow">Vacation Planner</div>
+    <div class="plan-hero-title">Where to next?</div>
+    <div class="plan-hero-sub">Dream it, save the links, set a savings goal — let AI sketch the trip, the reviews and a budget.</div>
+  </div>
   <div class="ticker" id="ticker-vacation" title="Trending things to do & destinations"></div>
   <div class="card">
     <div class="card-hdr">
@@ -799,6 +857,11 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── THINGS TO DO ───────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-things">
+  <div class="plan-hero plan-hero--things">
+    <div class="plan-hero-eyebrow">Things to do</div>
+    <div class="plan-hero-title">Make the weekend count</div>
+    <div class="plan-hero-sub">Events, festivals and little adventures around San Antonio — saved and ready when you are.</div>
+  </div>
   <div class="ticker" id="ticker-things" title="Trending events & things to do"></div>
   <div class="card">
     <div class="card-hdr">
@@ -818,6 +881,11 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── GO-TO GROCERY LIST ─────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-grocery">
+  <div class="plan-hero plan-hero--grocery">
+    <div class="plan-hero-eyebrow">Go-to Grocery List</div>
+    <div class="plan-hero-title">Never run out again</div>
+    <div class="plan-hero-sub">Snap a receipt — we learn what you buy and remind you when it's time to restock.</div>
+  </div>
   <div class="card">
     <div class="card-hdr">
       <span>Go-to Grocery List</span>
@@ -838,6 +906,27 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
       <div id="grocery-checklist"></div>
       <h4 class="sec-h" style="margin-top:18px;">Purchase history</h4>
       <div id="grocery-history" style="overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── AROUND THE HOUSE (Honey-Do) ────────────────────────────────── -->
+<div class="tab-pane" id="tab-house">
+  <div class="plan-hero plan-hero--house">
+    <div class="plan-hero-eyebrow">Around the House</div>
+    <div class="plan-hero-title">Your home wish list</div>
+    <div class="plan-hero-sub">Porch, sod, roof, that thing you keep meaning to do. Jot the idea, save a link, set a goal — and get a ballpark cost for your area.</div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <span>Projects &amp; ideas</span>
+      <button class="btn primary" onclick="addHouseProject()">+ Add project</button>
+    </div>
+    <div class="card-body">
+      <div id="house-loc" class="house-loc"></div>
+      <div id="house-list">
+        <div class="plan-empty">Nothing here yet. Add a project like <b>“Replace roof”</b> or <b>“Lay sod in the backyard”</b> — capture the idea now, refine it later.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -971,6 +1060,19 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   </div>
 
   <div class="card">
+    <div class="card-hdr"><span>Home</span></div>
+    <div class="card-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        Used for local cost estimates on the <b>Around the House</b> tab. Stays in this browser.
+      </div>
+      <div class="field"><label>Home address / area</label>
+        <input id="home-addr" type="text" placeholder="9003 Rainbow Crk., San Antonio, TX 78245" style="width:100%;" oninput="updateHomeLoc('address',this.value)"></div>
+      <div class="field" style="margin-bottom:0;"><label>ZIP</label>
+        <input id="home-zip" type="text" inputmode="numeric" placeholder="78245" style="max-width:140px;" oninput="updateHomeLoc('zip',this.value)"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-hdr">Data</div>
     <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="exportJSON()">⬇ Export JSON</button>
@@ -1011,6 +1113,8 @@ let S = {
   vacations: [],      // [{id, name, targetAmount, targetDate, savedAmount, notes, expanded, items:[...], links:[{id,label,url}]}]
   vacationIdeas: [],  // [{id, place, notes, expanded, links:[{id,label,url}], ai:''}]
   thingsToDo: [],     // [{id, title, url, when, notes, done}]
+  houseProjects: [],  // [{id, name, status, notes, goalDate, links:[{id,label,url}], ai:''}]
+  homeLocation: { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' },
   grocery: { purchases: [], lastReceiptNote: '' },   // purchases:[{id,name,date,qty}]
   tickerCache: { items: [], ts: null },
   ai: { endpoint:'', token:'', model:'', account:'' },  // optional override; blank = free Pollinations no-key
@@ -1181,6 +1285,7 @@ function showTab(name) {
   if (name === 'mortgage') renderMortgage();
   if (name === 'vacation') { renderVacations(); renderVacationIdeas(); renderAIChat(); renderTicker('ticker-vacation'); }
   if (name === 'things') renderThings();
+  if (name === 'house') renderHouse();
   if (name === 'grocery') renderGrocery();
   if (name === 'networth') renderNetWorth();
   if (name === 'settings') renderSettings();
@@ -2649,6 +2754,9 @@ function renderSettings() {
   if (eid('ai-ep'))  eid('ai-ep').value  = S.ai.endpoint || '';
   if (eid('ai-tok')) eid('ai-tok').value = S.ai.token || '';
   if (eid('ai-mdl')) eid('ai-mdl').value = S.ai.model || '';
+  S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
+  if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
+  if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
   renderPaychecks();
   renderPhotoThumbs();
   updateSyncPill();
@@ -2656,6 +2764,11 @@ function renderSettings() {
 function updateAISetting(field, value) {
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
   S.ai[field] = value;
+  scheduleSave();
+}
+function updateHomeLoc(field, value) {
+  S.homeLocation = S.homeLocation || { address:'', zip:'' };
+  S.homeLocation[field] = value;
   scheduleSave();
 }
 async function testAI() {
@@ -2833,6 +2946,8 @@ function loadLocal() {
   S.billSnoozed = S.billSnoozed || {};
   S.vacationIdeas = S.vacationIdeas || [];
   S.thingsToDo = S.thingsToDo || [];
+  S.houseProjects = S.houseProjects || [];
+  S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
   S.grocery = S.grocery || { purchases: [], lastReceiptNote: '' };
   S.grocery.purchases = S.grocery.purchases || [];
   S.tickerCache = S.tickerCache || { items: [], ts: null };
@@ -2852,6 +2967,7 @@ function renderAll() {
   if (eid('tab-mortgage').classList.contains('active')) renderMortgage();
   if (eid('tab-vacation').classList.contains('active')) { renderVacations(); renderVacationIdeas(); renderAIChat(); renderTicker('ticker-vacation'); }
   if (eid('tab-things').classList.contains('active')) renderThings();
+  if (eid('tab-house').classList.contains('active')) renderHouse();
   if (eid('tab-grocery').classList.contains('active')) renderGrocery();
   if (eid('tab-networth').classList.contains('active')) renderNetWorth();
   if (eid('tab-settings').classList.contains('active')) renderSettings();
@@ -3039,6 +3155,7 @@ function findLinkArr(ctx) {
   const ix = ctx.indexOf(':'); const kind = ctx.slice(0, ix), id = ctx.slice(ix + 1);
   if (kind === 'vac')  { const v = (S.vacations || []).find(x => x.id === id);     return v ? (v.links = v.links || []) : null; }
   if (kind === 'idea') { const i = (S.vacationIdeas || []).find(x => x.id === id); return i ? (i.links = i.links || []) : null; }
+  if (kind === 'house'){ const h = (S.houseProjects || []).find(x => x.id === id); return h ? (h.links = h.links || []) : null; }
   return null;
 }
 function removeLink(ctx, lid) {
@@ -3063,6 +3180,15 @@ function addIdeaLink(iid) {
   const it = (S.vacationIdeas || []).find(x => x.id === iid); if (!it) return;
   it.links = it.links || [];
   it.links.push({ id: uid(), label: (l && l.value.trim()) || url, url });
+  saveAndRender();
+}
+function addHouseLink(hid) {
+  const l = eid('hlk-l-' + hid), u = eid('hlk-u-' + hid);
+  const url = normUrl(u && u.value); if (!url) { toast('Enter a URL'); return; }
+  snapshot();
+  const h = (S.houseProjects || []).find(x => x.id === hid); if (!h) return;
+  h.links = h.links || [];
+  h.links.push({ id: uid(), label: (l && l.value.trim()) || url, url });
   saveAndRender();
 }
 
@@ -3312,6 +3438,109 @@ function saveThingFromAI(json) {
 }
 function aiThingsWeekend() { aiThings('What are the best things to do in and around San Antonio, Texas THIS coming weekend (events, festivals, family-friendly, outdoors, food)?', 'This weekend in San Antonio'); }
 function aiThingsUpcoming() { aiThings('What notable upcoming events, concerts, festivals, and seasonal activities are happening in San Antonio, Texas over the next 1-2 months?', 'Upcoming around San Antonio'); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  AROUND THE HOUSE  (Honey-Do — projects, ideas, links, AI quotes)
+// ═══════════════════════════════════════════════════════════════════
+const HOUSE_STATUSES = [
+  { k:'idea',    label:'Idea' },
+  { k:'planned', label:'Planned' },
+  { k:'doing',   label:'In progress' },
+  { k:'done',    label:'Done' },
+];
+function homeAreaStr() {
+  const h = S.homeLocation || {};
+  return (h.address && h.address.trim()) || ('ZIP ' + ((h.zip && h.zip.trim()) || '78245'));
+}
+function renderHouse() {
+  const loc = eid('house-loc');
+  if (loc) loc.innerHTML = 'Cost estimates use <b>' + escHTML(homeAreaStr()) + '</b> · change in Settings → Home';
+  const host = eid('house-list'); if (!host) return;
+  const list = S.houseProjects || [];
+  if (!list.length) {
+    host.innerHTML = '<div class="plan-empty">Nothing here yet. Add a project like <b>“Replace roof”</b> or <b>“Lay sod in the backyard”</b> — capture the idea now, refine it later.</div>';
+    return;
+  }
+  host.innerHTML = list.map(p => {
+    const st = p.status || 'idea';
+    return `
+    <div class="plan-card ${st==='done'?'is-done':''}" data-id="${p.id}">
+      <div class="pc-top">
+        <input class="pc-name" type="text" value="${escHTML(p.name||'')}" placeholder="Project (e.g. Redo the porch)" oninput="updateHouseProject('${p.id}','name',this.value)">
+        <button class="btn danger" onclick="deleteHouseProject('${p.id}')">Delete</button>
+      </div>
+      <div class="status-pick" style="margin-top:10px;">
+        ${HOUSE_STATUSES.map(s => `<span class="chip ${s.k} ${st===s.k?'on':''}" onclick="setHouseStatus('${p.id}','${s.k}')">${s.label}</span>`).join('')}
+      </div>
+      <textarea class="pc-notes" rows="2" placeholder="Ideas, materials, who to call, the vision in your head…" oninput="updateHouseProject('${p.id}','notes',this.value)">${escHTML(p.notes||'')}</textarea>
+      <div class="plan-meta-row">
+        <label>Goal date</label>
+        <input class="plan-date" type="date" value="${p.goalDate||''}" onchange="updateHouseProject('${p.id}','goalDate',this.value)">
+      </div>
+      <div style="margin-top:12px;">${linkChipsHTML(p.links, 'house:'+p.id)}</div>
+      <div class="link-add-row">
+        <input type="text" id="hlk-l-${p.id}" placeholder="Label (e.g. Roofing quote)" style="flex:1;min-width:130px;">
+        <input type="url" id="hlk-u-${p.id}" placeholder="https://…" style="flex:2;min-width:160px;">
+        <button class="btn" onclick="addHouseLink('${p.id}')">+ Save link</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+        <button class="btn" onclick="aiHouseEstimate('${p.id}')">✦ Ballpark cost in my area</button>
+        <button class="btn" onclick="aiHouseTips('${p.id}')">✦ How-to &amp; what to watch for</button>
+      </div>
+      <div id="house-ai-${p.id}" class="cost-callout" style="margin-top:12px;${p.ai?'':'display:none;'}">${p.ai ? linkify(p.ai).replace(/\n/g,'<br>') : ''}</div>
+    </div>`;
+  }).join('');
+}
+function addHouseProject() {
+  snapshot();
+  S.houseProjects = S.houseProjects || [];
+  S.houseProjects.unshift({ id: uid(), name: '', status: 'idea', notes: '', goalDate: '', links: [], ai: '' });
+  saveAndRender();
+}
+function updateHouseProject(id, field, value) {
+  const p = (S.houseProjects || []).find(x => x.id === id); if (!p) return;
+  maybeSnapshot(); p[field] = value; scheduleSave();
+}
+function setHouseStatus(id, st) {
+  const p = (S.houseProjects || []).find(x => x.id === id); if (!p) return;
+  snapshot(); p.status = st; saveAndRender();
+}
+function deleteHouseProject(id) {
+  if (!confirm('Delete this project?')) return;
+  snapshot(); S.houseProjects = (S.houseProjects || []).filter(x => x.id !== id); saveAndRender();
+}
+async function aiHouseEstimate(id) {
+  const p = (S.houseProjects || []).find(x => x.id === id); if (!p) return;
+  const name = (p.name || '').trim(); if (!name) { toast('Name the project first'); return; }
+  const el = eid('house-ai-' + id); el.style.display = 'block';
+  el.innerHTML = `<span class="ai-loading">Estimating "${escHTML(name)}" costs near ${escHTML(homeAreaStr())}<span class="ai-dots"></span></span>`;
+  try {
+    const ans = await aiAsk(
+      `Give a realistic ballpark cost for this home project for a single-family home near ${homeAreaStr()} (San Antonio, TX area): "${name}". ${p.notes?('Details: '+p.notes+'. '):''}Include a typical low–high price range in USD for this region, the main cost drivers, DIY vs. hiring a pro, and 2-3 ways to save. Be concrete with numbers; note it's a rough estimate, not a quote.`,
+      'You are a practical home-improvement cost estimator familiar with the San Antonio, Texas market. Use round USD ranges and be concise.');
+    p.ai = 'Ballpark — ' + name + ' (near ' + homeAreaStr() + ')\n\n' + ans;
+    scheduleSave();
+    el.innerHTML = linkify(p.ai).replace(/\n/g,'<br>');
+  } catch (e) {
+    el.innerHTML = '<span class="ai-err">⚠ Couldn\'t get an estimate right now (free AI service is busy). Try again shortly.</span>';
+  }
+}
+async function aiHouseTips(id) {
+  const p = (S.houseProjects || []).find(x => x.id === id); if (!p) return;
+  const name = (p.name || '').trim(); if (!name) { toast('Name the project first'); return; }
+  const el = eid('house-ai-' + id); el.style.display = 'block';
+  el.innerHTML = `<span class="ai-loading">Pulling how-to &amp; gotchas for "${escHTML(name)}"<span class="ai-dots"></span></span>`;
+  try {
+    const ans = await aiAsk(
+      `For the home project "${name}" in the San Antonio, TX climate: give a short step overview, what commonly goes wrong, permits/HOA things to check, the best season to do it locally, and how to vet a contractor. ${p.notes?('Context: '+p.notes):''}`,
+      'You are a seasoned general contractor giving honest, practical advice. Skimmable bullets.');
+    p.ai = 'How-to — ' + name + '\n\n' + ans;
+    scheduleSave();
+    el.innerHTML = linkify(p.ai).replace(/\n/g,'<br>');
+  } catch (e) {
+    el.innerHTML = '<span class="ai-err">⚠ Couldn\'t reach the free AI service. Try again shortly.</span>';
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  GO-TO GROCERY LIST  (AI receipt parsing + frequency engine)
