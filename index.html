@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reed Budget">
+<meta name="format-detection" content="telephone=no">
 <title>Reed Family Budget</title>
 <style>
 :root{
@@ -25,10 +29,18 @@
   --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--ff);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--ff);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;}
 
-/* ─── Header ─── */
-#hdr{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--bg);}
+/* ─── Sticky chrome (header + tabs as one pinned unit) ─── */
+#chrome{position:sticky;top:0;z-index:50;background:var(--bg);
+  box-shadow:0 1px 0 var(--border);}
+
+/* ─── Header (safe-area aware) ─── */
+#hdr{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--bg);
+  padding-top:calc(14px + env(safe-area-inset-top));
+  padding-left:calc(24px + env(safe-area-inset-left));
+  padding-right:calc(24px + env(safe-area-inset-right));}
 #hdr-title{font-size:17px;font-weight:600;letter-spacing:-0.01em;color:var(--text);}
 #hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
 .sync-pill{padding:5px 11px;border-radius:999px;font-size:11px;font-weight:600;color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.04em;}
@@ -36,9 +48,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .sync-pill.err{color:var(--negative);background:var(--negative-soft);}
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
 
-/* ─── Tabs ─── */
-#tabs{display:flex;gap:0;background:var(--bg);padding:0 24px;border-bottom:1px solid var(--border);overflow-x:auto;}
-.ntab{font-family:inherit;font-size:14px;font-weight:500;padding:14px 18px;background:none;border:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .12s,border-color .12s;}
+/* ─── Tabs (sticky under header, scroll-snap, momentum) ─── */
+#tabs{display:flex;gap:0;background:var(--bg);padding:0 24px;border-bottom:1px solid var(--border);
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none;
+  padding-left:calc(24px + env(safe-area-inset-left));padding-right:calc(24px + env(safe-area-inset-right));}
+#tabs::-webkit-scrollbar{display:none;height:0;}
+.ntab{font-family:inherit;font-size:14px;font-weight:500;padding:14px 18px;background:none;border:none;
+  color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;
+  transition:color .12s,border-color .12s;scroll-snap-align:center;flex:0 0 auto;}
 .ntab.active{color:var(--text);border-bottom-color:var(--text);}
 .ntab:hover{color:var(--text);}
 
@@ -326,7 +344,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.5s ease-in-out;filter:blur(14px) brightness(1.15) saturate(0.7);}
 .bg-img.active{opacity:0.07;}
 body.bg-active{background:transparent;}
-body.bg-active #hdr,body.bg-active #tabs{background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);}
+body.bg-active #chrome,body.bg-active #hdr,body.bg-active #tabs{background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);}
 body.bg-active .card{background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);}
 body.bg-active .budget-wrap{background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);}
 body.bg-active .budget-table th,body.bg-active .budget-table td{background:rgba(255,255,255,0.85);}
@@ -500,33 +518,130 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   /* Mortgage / Settings field rows */
   .field-row{grid-template-columns:1fr;}
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   iPHONE-FIRST POLISH  — bigger touch targets, readable type, safe
+   areas, thumb-reachable controls. Layered last so it wins.
+   ════════════════════════════════════════════════════════════════════ */
+.icon-btn{padding:8px 10px;min-width:38px;font-size:15px;line-height:1;text-align:center;}
+
+/* Any touch device: every tappable thing ≥44px (Apple HIG). */
+@media (pointer:coarse){
+  .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+  .ntab{min-height:48px;}
+  input[type=checkbox],input[type=radio]{width:24px;height:24px;accent-color:var(--accent);}
+  input[type=text],input[type=number],input[type=date],input[type=url],select,textarea{min-height:44px;}
+  select{-webkit-appearance:none;appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),linear-gradient(135deg,var(--text-muted) 50%,transparent 50%);
+    background-position:calc(100% - 18px) center,calc(100% - 13px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px;}
+  a,button{touch-action:manipulation;}
+}
+
+@media (max-width:768px){
+  html,body{font-size:15px;}
+  /* Make the pinned bar feel like an app chrome */
+  #chrome{box-shadow:0 1px 8px rgba(0,0,0,.06);}
+  #hdr{padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));gap:8px;}
+  #hdr-title{font-size:16px;}
+  #hdr-right{gap:6px;}
+  #hdr-right .btn.green{font-size:14px;padding:9px 16px;font-weight:700;}
+  .icon-btn{padding:9px 11px;min-width:42px;font-size:17px;}
+  .sync-pill{padding:6px 10px;font-size:10px;}
+
+  /* Tabs: large, snappy, clearly-active, scroll affordance */
+  #tabs{gap:2px;}
+  .ntab{font-size:15px;font-weight:600;padding:14px 16px;min-height:50px;}
+  .ntab.active{border-bottom-width:3px;color:var(--accent-dim);border-bottom-color:var(--accent);}
+
+  .tab-pane{padding:16px 14px;padding-left:calc(14px + env(safe-area-inset-left));
+    padding-right:calc(14px + env(safe-area-inset-right));
+    padding-bottom:calc(28px + env(safe-area-inset-bottom));}
+
+  /* Card headers stack; primary action becomes a big full-width button */
+  .card{margin-bottom:18px;}
+  .card-hdr{padding:14px 0 12px;font-size:17px;align-items:stretch;}
+  .card-hdr > span:last-child{display:flex;flex-wrap:wrap;gap:8px;}
+  .card-hdr .btn{flex:1 1 auto;min-height:46px;font-size:15px;}
+  .card-hdr .btn.primary{flex:1 1 100%;}
+
+  .btn{font-size:15px;padding:11px 16px;}
+  /* Generic "delete / ×" buttons in rows — easy to hit */
+  .btn.danger{min-width:44px;}
+  .list-table td.col-actions .btn.danger,.vac-items td.del .btn.danger{padding:10px 14px;font-size:13px;}
+
+  /* Budget tab: recompute internal-scroll height for the new chrome,
+     keep the bottom action bar pinned & above the home indicator */
+  #tab-budget{height:calc(100dvh - 108px - env(safe-area-inset-top));min-height:0;}
+  .budget-controls{position:sticky;bottom:0;background:var(--bg);z-index:6;
+    padding:10px 0 calc(10px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--border);margin-top:6px;}
+  .budget-controls .btn{min-height:48px;font-size:15px;font-weight:600;}
+
+  /* Stacked list cards: roomier, clearer labels */
+  .list-table tr{padding:16px 14px 12px;}
+  .list-table td{padding:7px 0;}
+  .list-table td:before{font-size:11px;margin-bottom:6px;}
+  .list-table td.col-actions{padding-top:14px;}
+
+  /* Vacation / ideas / things / grocery controls bigger */
+  .link-add-row input,.ai-chat-row input{min-height:46px;font-size:16px;}
+  .ai-chat-row{flex-wrap:wrap;}
+  .ai-chat-row .btn{flex:1;}
+  .todo-row,.gro-row{padding:14px 0;}
+  .todo-row input[type=checkbox],.gro-row input[type=checkbox]{width:26px;height:26px;flex:0 0 auto;}
+  .idea-card .idea-top{gap:10px;}
+  .idea-card .idea-top .btn{flex:1 1 auto;}
+
+  /* Toast clears the home indicator and is easy to read */
+  #toast{bottom:calc(24px + env(safe-area-inset-bottom));font-size:14px;padding:12px 20px;
+    max-width:90vw;text-align:center;}
+}
+
+@media (max-width:480px){
+  #hdr-title{font-size:15px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .ticker{height:38px;line-height:38px;font-size:14px;}
+  /* One clean column for the expenses overview cards */
+  #exp-stats{grid-template-columns:1fr 1fr !important;}
+  /* Expense / charts side-by-side → stack */
+  #tab-expenses .card-body > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important;}
+}
+
+/* Respect reduced-motion: calm the ticker & pulse */
+@media (prefers-reduced-motion:reduce){
+  .ticker .tk-track{animation:none;}
+  .overdue-badge{animation:none;}
+  *{scroll-behavior:auto !important;}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 </head>
 <body>
 
-<div id="hdr">
-  <div id="hdr-title">Reed Family Budget</div>
-  <div id="hdr-right">
-    <button class="btn subtle" id="btn-undo" onclick="undo()" title="Undo (⌘Z)">↶ Undo</button>
-    <button class="btn subtle" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)">↷ Redo</button>
-    <button class="btn green" onclick="saveNow()" title="Save now (⌘S)">Save</button>
-    <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
+<div id="chrome">
+  <div id="hdr">
+    <div id="hdr-title">Reed Family Budget</div>
+    <div id="hdr-right">
+      <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↶</button>
+      <button class="btn subtle icon-btn" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)" aria-label="Redo">↷</button>
+      <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
+      <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
+    </div>
+  </div>
+  <div id="tabs">
+    <button class="ntab active" onclick="showTab('budget')">Budget</button>
+    <button class="ntab" onclick="showTab('bills')">Bills</button>
+    <button class="ntab" onclick="showTab('expenses')">Expenses</button>
+    <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
+    <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
+    <button class="ntab" onclick="showTab('things')">Things to do</button>
+    <button class="ntab" onclick="showTab('grocery')">Go-to Grocery List</button>
+    <button class="ntab" onclick="showTab('networth')">Net Worth</button>
+    <button class="ntab" onclick="showTab('settings')">Settings</button>
   </div>
 </div>
 
 <div id="bg-photos"></div>
-<div id="tabs">
-  <button class="ntab active" onclick="showTab('budget')">Budget</button>
-  <button class="ntab" onclick="showTab('bills')">Bills</button>
-  <button class="ntab" onclick="showTab('expenses')">Expenses</button>
-  <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
-  <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
-  <button class="ntab" onclick="showTab('things')">Things to do</button>
-  <button class="ntab" onclick="showTab('grocery')">Go-to Grocery List</button>
-  <button class="ntab" onclick="showTab('networth')">Net Worth</button>
-  <button class="ntab" onclick="showTab('settings')">Settings</button>
-</div>
 
 <!-- ─── BUDGET ─────────────────────────────────────────────────────── -->
 <div class="tab-pane active" id="tab-budget">
@@ -1038,6 +1153,20 @@ function aiBox(id) {
   };
 }
 
+// Smoothly center the active tab inside the horizontal strip so the user
+// always sees where they are and what's nearby (reliable on iOS Safari).
+function centerActiveTab() {
+  const tabs = eid('tabs'); if (!tabs) return;
+  const a = tabs.querySelector('.ntab.active'); if (!a) return;
+  // Rect-based so it's correct regardless of offsetParent / sticky chrome.
+  const aR = a.getBoundingClientRect(), tR = tabs.getBoundingClientRect();
+  const delta = (aR.left - tR.left) - (tabs.clientWidth - aR.width) / 2;
+  const max = tabs.scrollWidth - tabs.clientWidth;
+  const left = Math.max(0, Math.min(max, tabs.scrollLeft + delta));
+  // setTimeout(0) (not rAF) — a scrollLeft set inside rAF gets reset by the
+  // scroll-snap container before paint; a macrotask assignment sticks.
+  setTimeout(() => { tabs.scrollLeft = left; }, 0);
+}
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ntab').forEach(b => b.classList.remove('active'));
@@ -1045,6 +1174,7 @@ function showTab(name) {
   document.querySelectorAll('.ntab').forEach(b => {
     if (b.getAttribute('onclick').includes("'" + name + "'")) b.classList.add('active');
   });
+  centerActiveTab();
   if (name === 'budget') renderBudget();
   if (name === 'bills') renderBills();
   if (name === 'expenses') renderExpenses();
@@ -3589,6 +3719,8 @@ function boot() {
   if (WEBHOOK_URL) forcePull();
   showOverdueSummary();
   refreshTickerIfStale();
+  centerActiveTab();
+  window.addEventListener('resize', centerActiveTab, { passive: true });
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
