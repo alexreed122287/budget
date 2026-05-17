@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -43,11 +43,11 @@
   --bg:#0e1116;
   --bg-soft:#171c23;
   --bg-strong:#1f2630;
-  --border:#262d39;
-  --border-strong:#374252;
-  --text:#e9edf3;
+  --border:#2b323d;
+  --border-strong:#3b4555;
+  --text:#c7cfdb;            /* soft light slate — legible, not harsh white */
   --text-muted:#9aa6b6;
-  --text-light:#6b7686;
+  --text-light:#737e8d;
   --accent:#27d062;
   --accent-dim:#1faf51;
   --accent-soft:#11371f;
@@ -80,9 +80,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
 
 /* ─── Grouped icon nav (Money / Fun / Chores dropdowns + solos) ─── */
-#tabs{display:flex;gap:6px;background:var(--bg);border-bottom:1px solid var(--border);
+#tabs{display:flex;gap:8px;background:var(--bg);border-bottom:1px solid var(--border);
   padding:8px 12px;padding-left:calc(12px + env(safe-area-inset-left));
-  padding-right:calc(12px + env(safe-area-inset-right));flex-wrap:wrap;}
+  padding-right:calc(12px + env(safe-area-inset-right));flex-wrap:wrap;justify-content:center;}
 .navgrp{position:relative;}
 .grpbtn{display:inline-flex;align-items:center;gap:4px;font-family:inherit;font-size:14px;
   font-weight:600;padding:9px 13px;background:var(--bg-soft);border:1px solid var(--border-strong);
@@ -96,12 +96,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .grpbtn.active,.navgrp.active .grpbtn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dim);}
 
 /* Light / dark toggle */
-.theme-toggle{display:inline-flex;border:1px solid var(--border-strong);border-radius:999px;overflow:hidden;}
-.tt-b{font-family:inherit;font-size:15px;line-height:1;padding:7px 11px;background:var(--bg);
-  border:none;color:var(--text-muted);cursor:pointer;}
-.tt-b+.tt-b{border-left:1px solid var(--border-strong);}
-html[data-theme="light"] .tt-b[data-th="light"],
-html[data-theme="dark"]  .tt-b[data-th="dark"]{background:var(--accent);color:#fff;}
+#theme-btn{font-size:18px;line-height:1;width:40px;height:40px;border-radius:999px;
+  border:1px solid var(--border-strong);background:var(--bg-soft);color:var(--text);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+#theme-btn:hover{background:var(--bg-strong);}
 .grpmenu{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--bg);
   border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 12px 30px -8px rgba(0,0,0,.22);
   padding:6px;display:none;z-index:60;}
@@ -170,14 +168,20 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table col.col-data{width:118px;}
 
 .budget-table th, .budget-table td{
-  padding:10px 14px;
+  padding:10px 12px;
   border-bottom:1px solid var(--border);
-  text-align:right;font-size:13px;background:var(--bg);color:var(--text);
+  border-right:1px solid var(--border);          /* faint gridlines */
+  text-align:center;font-size:13px;background:var(--bg);color:var(--text);
+  font-variant-numeric:tabular-nums;
 }
 .budget-table th{
   background:var(--bg);color:var(--text-muted);
   font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
 }
+/* Column date headers: centered, bolder, a touch larger */
+.budget-table thead tr.dates th{font-size:14px;font-weight:800;color:var(--text);
+  letter-spacing:0;text-transform:none;}
+.budget-table thead tr.dates th.corner{border-right-color:transparent;}
 .budget-table th .sub{display:block;font-size:9px;color:var(--text-light);margin-top:3px;font-weight:600;letter-spacing:.06em;}
 .budget-table th.current-col{color:var(--text);}
 .budget-table th.current-col .sub{color:var(--accent-dim);}
@@ -395,11 +399,15 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .todo-line .tl-del{border:none;background:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;}
 
 /* ─── Calendar ─── */
-.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;flex:0 0 auto;}
 .seg-b{font-family:inherit;font-size:13px;font-weight:600;padding:9px 14px;background:var(--bg);
   border:none;border-right:1px solid var(--border-strong);color:var(--text-muted);cursor:pointer;}
 .seg-b:last-child{border-right:none;}
-.seg-b.on{background:var(--text);color:#fff;}
+.seg-b.on{background:var(--accent);color:#fff;}
+/* Calendar header controls always share one row with + Event */
+.cal-hdr-ctrls{display:flex !important;gap:6px;align-items:center;flex-wrap:nowrap !important;}
+.cal-hdr-ctrls .seg-b{padding:8px 11px;font-size:12px;}
+.cal-hdr-ctrls #cal-add-btn{flex:0 0 auto;min-height:0;padding:9px 14px;font-size:13px;white-space:nowrap;}
 .cal-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
 .cal-title{font-weight:700;font-size:16px;margin-left:6px;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
@@ -487,9 +495,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
 /* ─── Budget bottom controls ─── */
 .budget-controls{
-  display:flex;justify-content:space-between;align-items:center;gap:12px;
-  padding:14px 0 4px;flex-wrap:wrap;
+  display:flex;flex-direction:column;align-items:stretch;gap:10px;
+  padding:10px 0 4px;
 }
+#ba-toggle{align-self:flex-start;padding:7px 14px;font-size:13px;}
+#budget-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+#budget-actions.ba-collapsed{display:none;}
 .budget-controls .ctrl-group{display:flex;gap:10px;align-items:center;}
 
 /* ─── List tables ─── */
@@ -654,6 +665,7 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
      heights/offsets here so they never drift on mobile. */
   /* Stack budget controls */
   .budget-controls{flex-direction:column;align-items:stretch;gap:8px;}
+  #budget-actions{flex-direction:column;align-items:stretch;gap:8px;}
   .budget-controls .ctrl-group{justify-content:stretch;}
   .budget-controls .ctrl-group .btn{flex:1;}
   /* Stat grid 2-up on phone */
@@ -833,13 +845,10 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
 
 <div id="chrome">
   <div id="hdr">
+    <button id="theme-btn" onclick="toggleTheme()" title="Switch light / dark" aria-label="Switch theme">🌙</button>
     <div id="hdr-right">
-      <span class="theme-toggle" role="group" aria-label="Theme">
-        <button class="tt-b" data-th="light" onclick="setTheme('light')" title="Light mode" aria-label="Light mode">☀</button>
-        <button class="tt-b" data-th="dark" onclick="setTheme('dark')" title="Dark mode" aria-label="Dark mode">☾</button>
-      </span>
-      <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↶</button>
-      <button class="btn subtle icon-btn" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)" aria-label="Redo">↷</button>
+      <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↩</button>
+      <button class="btn subtle icon-btn" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)" aria-label="Redo">↪</button>
       <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
       <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
     </div>
@@ -887,14 +896,17 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     </div>
   </div>
   <div class="budget-controls">
-    <div class="ctrl-group">
-      <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
-      <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
-      <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
-    </div>
-    <div class="ctrl-group">
-      <button class="btn subtle" onclick="resetCurrentDate()" id="btn-reset-date" title="Reset Current back to today">⤺ Today</button>
-      <button class="btn" onclick="renderBudget()">↻ Refresh</button>
+    <button id="ba-toggle" class="btn subtle" onclick="toggleBudgetActions()" aria-expanded="false">Actions ▾</button>
+    <div id="budget-actions" class="ba-collapsed">
+      <div class="ctrl-group">
+        <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
+        <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
+        <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
+      </div>
+      <div class="ctrl-group">
+        <button class="btn subtle" onclick="resetCurrentDate()" id="btn-reset-date" title="Reset Current back to today">⤺ Today</button>
+        <button class="btn" onclick="renderBudget()">↻ Refresh</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1139,13 +1151,13 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   <div class="card">
     <div class="card-hdr">
       <span>Shared Calendar</span>
-      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <span class="cal-hdr-ctrls">
         <span class="seg" id="cal-views">
           <button class="seg-b" data-v="month" onclick="setCalView('month')">Month</button>
           <button class="seg-b" data-v="week" onclick="setCalView('week')">Week</button>
           <button class="seg-b" data-v="day" onclick="setCalView('day')">Day</button>
         </span>
-        <button class="btn primary" onclick="addCalEvent()">+ Event</button>
+        <button class="btn primary" id="cal-add-btn" onclick="addCalEvent()">+ Event</button>
       </span>
     </div>
     <div class="card-body">
@@ -1424,14 +1436,35 @@ function linkify(s) {
 const AI_DEFAULT_ENDPOINT = 'https://text.pollinations.ai/openai';
 const AI_DEFAULT_MODEL = 'openai';
 
-function aiConfigured() { return true; }   // free endpoint always available (best-effort)
-function aiEndpoint() { return (S.ai && S.ai.endpoint && S.ai.endpoint.trim()) || AI_DEFAULT_ENDPOINT; }
-function aiModel()    { return (S.ai && S.ai.model && S.ai.model.trim())    || AI_DEFAULT_MODEL; }
+function aiConfigured() { return true; }
+// Resolve the endpoint/model/key. If the user picked a provider preset
+// (Groq etc.), ALWAYS use that preset's endpoint+model — even if the
+// input fields weren't edited — so the key never gets sent to the free
+// Pollinations endpoint (whose server returns ENOSPC/500).
+function aiResolved() {
+  const ai = S.ai || {};
+  const presets = (typeof AI_PROVIDERS !== 'undefined') ? AI_PROVIDERS : null;
+  let provKey = (ai.provider && presets && presets[ai.provider] && ai.provider !== 'none' && ai.provider !== 'custom')
+    ? ai.provider : '';
+  const token    = (ai.token && ai.token.trim()) || '';
+  const hasEpField = !!(ai.endpoint && ai.endpoint.trim());
+  // Safety net: a key was pasted but no provider/endpoint was set
+  // (dropdown left on its default). Treat it as Groq so the key never
+  // gets routed to the free Pollinations endpoint (which ENOSPC/500s).
+  if (token && !provKey && !hasEpField && presets && presets.groq) provKey = 'groq';
+  const preset = provKey ? presets[provKey] : null;
+  const endpoint = (ai.endpoint && ai.endpoint.trim()) || (preset && preset.endpoint) || AI_DEFAULT_ENDPOINT;
+  const model    = (ai.model && ai.model.trim())       || (preset && preset.model)    || AI_DEFAULT_MODEL;
+  const keyed    = !!token && endpoint !== AI_DEFAULT_ENDPOINT;
+  return { endpoint, model, token, keyed };
+}
+function aiEndpoint() { return aiResolved().endpoint; }
+function aiModel()    { return aiResolved().model; }
 
 // The free Pollinations endpoint now serves this banner to browser/website
 // requests instead of an answer (they closed the no-key path for sites).
 function isAINotice(t) { return /IMPORTANT NOTICE|legacy text API|being deprecated|enter\.pollinations/i.test(t || ''); }
-function aiHasKey() { return !!(S.ai && S.ai.endpoint && S.ai.endpoint.trim() && S.ai.token && S.ai.token.trim()); }
+function aiHasKey() { return aiResolved().keyed; }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function aiFetchOnce(messages, model, timeoutMs) {
@@ -1597,6 +1630,12 @@ function setTheme(t) {
   try { localStorage.setItem('reed_theme', t); } catch {}
   const tc = document.querySelector('meta[name=theme-color]');
   if (tc) tc.setAttribute('content', t === 'dark' ? '#0e1116' : '#ffffff');
+  const tb = eid('theme-btn');
+  if (tb) tb.textContent = (t === 'dark') ? '☀' : '🌙';   // icon = the mode you'll switch TO
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
 }
 document.addEventListener('click', e => {
   if (!e.target.closest('#tabs')) closeNavMenus();
@@ -2160,7 +2199,7 @@ function renderBudget() {
   // Header rows
   // Current column: just "CURRENT" (no date). Future paychecks: just date,
   // no day-of-week sub-label. Ad-hoc columns: date + ± label.
-  h += '<thead><tr class="dates"><th class="cat">Category</th>';
+  h += '<thead><tr class="dates"><th class="cat corner"></th>';
   cols.forEach(c => {
     const dt = parseISO(c.date);
     const lbl = (dt.getMonth()+1) + '/' + dt.getDate();
@@ -2715,6 +2754,7 @@ function updateSavingsBalance(value) {
 // offsets measured from real heights so they never drift vertically.
 function lockBudgetFooter() {
   const wrap = eid('budget-scroll'); if (!wrap) return;
+  // Footer: pin from the bottom up.
   const rows = Array.from(wrap.querySelectorAll('.budget-table tfoot tr'));
   let cum = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
@@ -2722,11 +2762,28 @@ function lockBudgetFooter() {
     rows[i].querySelectorAll('td,th').forEach(c => { c.style.bottom = cum + 'px'; });
     cum += hgt;
   }
+  // Header: pin the paycheck row exactly under the dates row (no gap that
+  // scrolling cell values could peek through).
+  const dates = wrap.querySelector('.budget-table thead tr.dates');
+  const pay = wrap.querySelector('.budget-table thead tr.paycheck');
+  if (dates && pay) {
+    const dh = Math.round(dates.getBoundingClientRect().height);
+    dates.querySelectorAll('td,th').forEach(c => { c.style.top = '0px'; });
+    pay.querySelectorAll('td,th').forEach(c => { c.style.top = dh + 'px'; });
+  }
+}
+function toggleBudgetActions() {
+  const box = eid('budget-actions'), btn = eid('ba-toggle');
+  if (!box) return;
+  const open = box.classList.toggle('ba-collapsed') === false;
+  if (btn) { btn.textContent = open ? 'Actions ▴' : 'Actions ▾'; btn.setAttribute('aria-expanded', String(open)); }
+  requestAnimationFrame(lockBudgetFooter);
 }
 function addSavingsExtra() {
   snapshot();
   S.savingsExtra = S.savingsExtra || [];
   S.savingsExtra.push({ id: uid(), label: 'Crypto', balance: 0 });
+  if (eid('budget-actions') && eid('budget-actions').classList.contains('ba-collapsed')) {} // stay collapsed
   saveAndRender();
 }
 function updateSavingsExtra(id, field, value) {
@@ -3307,6 +3364,13 @@ function renderSettings() {
 function updateAISetting(field, value) {
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
   S.ai[field] = value;
+  // If a key is pasted but no provider was explicitly picked, lock in
+  // whatever the provider dropdown is showing (defaults to Groq) so the
+  // key routes to a real endpoint, not the free one.
+  if (field === 'token' && value && value.trim() && !S.ai.provider) {
+    const sel = eid('ai-provider');
+    applyAIProvider(sel && sel.value ? sel.value : 'groq');
+  }
   scheduleSave();
 }
 function updateHomeLoc(field, value) {
@@ -4842,6 +4906,7 @@ function boot() {
   refreshTickerIfStale();
   updateNavActive('budget');
   renderActiveVerse();
+  { const tb = eid('theme-btn'); if (tb) tb.textContent = (document.documentElement.getAttribute('data-theme')==='dark') ? '☀' : '🌙'; }
   // Calendar reminders while the app is open (every 30s).
   checkCalReminders();
   setInterval(checkCalReminders, 30000);
