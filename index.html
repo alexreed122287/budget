@@ -727,10 +727,12 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   #hdr-right .btn.subtle{font-size:12px;padding:6px 8px;min-height:32px;}
 }
 
-/* Tab pane height for sticky top + bottom (use dvh on iOS so the pane shrinks with the keyboard) */
-#tab-budget{height:calc(100dvh - 140px);min-height:520px;}
+/* Budget pane fills exactly from below the chrome to the viewport
+   bottom — exact height is set by sizeBudgetPane() in JS so there's no
+   dead space when Actions is collapsed. This is just a fallback. */
+#tab-budget{height:calc(100dvh - 120px);min-height:60vh;}
 @supports not (height: 100dvh) {
-  #tab-budget{height:calc(100vh - 140px);}
+  #tab-budget{height:calc(100vh - 120px);}
 }
 
 /* ─── Stacked card layout for tabular forms on phones ─── */
@@ -828,8 +830,8 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   .btn.danger{min-width:44px;}
   .list-table td.col-actions .btn.danger,.vac-items td.del .btn.danger{padding:10px 14px;font-size:13px;}
 
-  /* Budget tab: recompute internal-scroll height for the new chrome,
-     keep the bottom action bar pinned & above the home indicator */
+  /* Budget tab: exact height comes from sizeBudgetPane() in JS; this
+     is only a pre-JS fallback. */
   #tab-budget{height:calc(100dvh - 108px - env(safe-area-inset-top));min-height:0;}
   .budget-controls{position:sticky;bottom:0;background:var(--bg);z-index:6;
     padding:10px 0 calc(10px + env(safe-area-inset-bottom));
@@ -2329,8 +2331,9 @@ function renderBudget() {
 
   wrap.innerHTML = h;
   wireBudgetInteractions();
-  requestAnimationFrame(lockBudgetFooter);
-  setTimeout(lockBudgetFooter, 90);   // belt-and-suspenders after layout settles
+  sizeBudgetPane();
+  requestAnimationFrame(() => { sizeBudgetPane(); lockBudgetFooter(); });
+  setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 90);
 
   if (pendingFocus) {
     const { r, c, edit } = pendingFocus;
@@ -2780,6 +2783,16 @@ function updateSavingsBalance(value) {
 
 // Pin Remainder / Difference / Savings / custom rows to the bottom with
 // offsets measured from real heights so they never drift vertically.
+// Make the budget pane fill exactly from below the chrome to the
+// viewport bottom — no dead space when Actions is collapsed, and the
+// grid gets every available pixel.
+function sizeBudgetPane() {
+  const pane = eid('tab-budget');
+  if (!pane || !pane.classList.contains('active')) return;
+  const top = pane.getBoundingClientRect().top;     // bottom of sticky chrome
+  const h = Math.max(320, Math.round(window.innerHeight - top));
+  pane.style.height = h + 'px';
+}
 function lockBudgetFooter() {
   const wrap = eid('budget-scroll'); if (!wrap) return;
   // Footer: pin from the bottom up.
@@ -2834,7 +2847,7 @@ function toggleBudgetActions() {
   if (!box) return;
   const open = box.classList.toggle('ba-collapsed') === false;
   if (btn) { btn.textContent = open ? 'Actions ▴' : 'Actions ▾'; btn.setAttribute('aria-expanded', String(open)); }
-  requestAnimationFrame(lockBudgetFooter);
+  requestAnimationFrame(() => { sizeBudgetPane(); lockBudgetFooter(); });
 }
 function addSavingsExtra() {
   const name = (prompt('Name this saved row (e.g. Crypto, HSA, 529):', 'Crypto') || '').trim();
@@ -5030,8 +5043,9 @@ function boot() {
   setInterval(checkCalReminders, 30000);
   // Re-pin the budget footer if the viewport changes (rotation, keyboard).
   let __lockT;
-  window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(lockBudgetFooter, 120); }, { passive: true });
+  window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 120); }, { passive: true });
   enableBudgetAxisLock();
+  sizeBudgetPane();
   // Auto-save safety net: flush whenever the app is backgrounded or closed
   // (in addition to the debounced save on every edit).
   const flush = () => { try { saveLocal(); if (WEBHOOK_URL) backgroundPush(); } catch {} };
