@@ -207,6 +207,12 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .ai-dots::after{content:'';animation:aiDots 1.4s steps(4,end) infinite;}
 @keyframes aiDots{0%{content:'';}25%{content:'.';}50%{content:'..';}75%{content:'...';}}
 .ai-err{color:var(--negative);font-size:12px;}
+.ai-needkey{background:linear-gradient(135deg,#eef2ff,#ecfeff);border:1px solid #c7d2fe;
+  border-radius:12px;padding:16px;font-size:14px;color:#312e81;}
+.ai-needkey b{color:#1e1b4b;}
+.ai-needkey .btn.primary{margin-top:4px;}
+.ai-setup-step{font-size:13px;color:var(--text-muted);line-height:1.6;margin:2px 0;}
+.ai-setup-step b{color:var(--text);}
 .ai-chat-log{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto;margin-bottom:10px;}
 .ai-msg{padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;}
 .ai-msg.user{align-self:flex-end;background:var(--accent-soft);}
@@ -1036,26 +1042,40 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   </div>
 
   <div class="card">
-    <div class="card-hdr"><span>AI assistant</span></div>
+    <div class="card-hdr"><span>AI assistant — connect (free)</span></div>
     <div class="card-body">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        The Vacation, Things-to-do and Grocery tabs use a <b>free, no-sign-in AI</b> (Pollinations) for
-        ideas, reviews, deals, events and receipt reading. It's best-effort — it can be slow or briefly
-        unavailable, and the app keeps working without it. <b>Have your own account/key?</b> Paste an
-        OpenAI-compatible endpoint &amp; key below to use it instead (stored only in this browser, never
-        committed). Leave blank for the free service.
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+        The old no-key AI stopped working for websites, so the ✦ AI buttons (trip ideas, reviews,
+        deals, events, home cost estimates, receipt reading) need a <b>free key</b>. <b>Groq</b> is the
+        easiest — instant sign-up, no credit card. Pick a provider, paste the key, done. The key is
+        stored only in this browser and never leaves your device except to call that provider.
       </div>
-      <div class="field"><label>API endpoint (OpenAI-compatible chat/completions)</label>
-        <input id="ai-ep" type="url" placeholder="https://api.openai.com/v1/chat/completions" style="width:100%;" oninput="updateAISetting('endpoint',this.value)"></div>
+
+      <div class="field"><label>Provider</label>
+        <select id="ai-provider" onchange="applyAIProvider(this.value)">
+          <option value="groq">Groq — free, fast (recommended)</option>
+          <option value="openrouter">OpenRouter — free models</option>
+          <option value="cerebras">Cerebras — free, fast</option>
+          <option value="custom">Custom / OpenAI-compatible</option>
+          <option value="none">None (disable AI features)</option>
+        </select>
+      </div>
+
+      <div id="ai-howto" class="ai-needkey" style="margin:4px 0 14px;"></div>
+
+      <div class="field"><label>API key / token</label>
+        <input id="ai-tok" type="password" placeholder="paste your free key here" autocomplete="off" oninput="updateAISetting('token',this.value)"></div>
       <div class="field-row" style="margin-top:8px;">
-        <div class="field"><label>API key / token</label><input id="ai-tok" type="password" placeholder="sk-… (optional)" oninput="updateAISetting('token',this.value)"></div>
-        <div class="field"><label>Model</label><input id="ai-mdl" type="text" placeholder="openai (free) or gpt-4o-mini…" oninput="updateAISetting('model',this.value)"></div>
+        <div class="field"><label>Endpoint</label>
+          <input id="ai-ep" type="url" placeholder="auto-filled by provider" style="width:100%;" oninput="updateAISetting('endpoint',this.value)"></div>
+        <div class="field"><label>Model</label>
+          <input id="ai-mdl" type="text" placeholder="auto-filled by provider" oninput="updateAISetting('model',this.value)"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        <button class="btn" onclick="testAI()">Test AI</button>
+        <button class="btn primary" onclick="testAI()">Test AI</button>
         <button class="btn" onclick="aiRefreshTicker(true)">↻ Refresh trending ticker</button>
       </div>
-      <div id="ai-test-status" style="font-size:12px;color:var(--text-muted);margin-top:8px;"></div>
+      <div id="ai-test-status" style="font-size:13px;color:var(--text-muted);margin-top:10px;font-weight:600;"></div>
     </div>
   </div>
 
@@ -1162,24 +1182,25 @@ function aiConfigured() { return true; }   // free endpoint always available (be
 function aiEndpoint() { return (S.ai && S.ai.endpoint && S.ai.endpoint.trim()) || AI_DEFAULT_ENDPOINT; }
 function aiModel()    { return (S.ai && S.ai.model && S.ai.model.trim())    || AI_DEFAULT_MODEL; }
 
-// The free Pollinations endpoint intermittently returns this banner instead
-// of an answer (rate-limit / legacy gating). Never surface it to the user.
-function isAINotice(t) { return /IMPORTANT NOTICE|legacy text API|being deprecated/i.test(t || ''); }
+// The free Pollinations endpoint now serves this banner to browser/website
+// requests instead of an answer (they closed the no-key path for sites).
+function isAINotice(t) { return /IMPORTANT NOTICE|legacy text API|being deprecated|enter\.pollinations/i.test(t || ''); }
+function aiHasKey() { return !!(S.ai && S.ai.endpoint && S.ai.endpoint.trim() && S.ai.token && S.ai.token.trim()); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function aiFetchOnce(messages, model, timeoutMs) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const headers = { 'Content-Type': 'application/json' };
-    const custom = S.ai && S.ai.token && S.ai.token.trim();
-    if (custom) headers['Authorization'] = 'Bearer ' + S.ai.token.trim();
-    // Minimal body only — extra fields (private/referrer/response_format) make
-    // the free endpoint 500. JSON is requested via the prompt instead.
+    const custom = aiHasKey();
+    if (S.ai && S.ai.token && S.ai.token.trim()) headers['Authorization'] = 'Bearer ' + S.ai.token.trim();
     const body = JSON.stringify({ model, messages });
     const init = { method: 'POST', headers, body, signal: ctrl.signal };
     // Stripping the Referer keeps the free endpoint on its "anonymous" path.
     if (!custom) { init.referrerPolicy = 'no-referrer'; init.referrer = ''; }
     const r = await fetch(aiEndpoint(), init);
+    if (r.status === 429) throw new Error('AI_RATELIMIT');
     if (!r.ok) throw new Error('AI service returned HTTP ' + r.status);
     const ct = r.headers.get('content-type') || '';
     let content;
@@ -1191,30 +1212,61 @@ async function aiFetchOnce(messages, model, timeoutMs) {
     }
     content = content == null ? '' : String(content).trim();
     if (!content) throw new Error('Empty AI response');
-    if (isAINotice(content)) throw new Error('AI_NOTICE');
+    if (/Queue full for IP/i.test(content)) throw new Error('AI_RATELIMIT');
+    if (isAINotice(content)) throw new Error('AI_NEEDS_KEY');
     return content;
   } finally { clearTimeout(timer); }
 }
 
-// messages: standard OpenAI chat array. Returns assistant text or throws.
-// Retries once with an alternate model when the free service rate-limits.
+// messages: standard OpenAI chat array. Returns assistant text or throws an
+// Error whose .message is already a clean, user-facing sentence.
+//  - With a configured key (Groq/OpenRouter/etc): one attempt, real errors.
+//  - Free Pollinations default: one attempt; on a 429 IP-queue, ONE short
+//    backoff retry (never blast multiple models — that trips the queue);
+//    if it returns the legacy notice, surface the "needs key" guidance.
 async function aiChat(messages, opts = {}) {
+  if (S.ai && S.ai.disabled) throw new Error('AI features are turned off (Settings → AI).');
   const timeoutMs = opts.timeoutMs || 45000;
-  const primary = aiModel();
-  const usingFree = !(S.ai && S.ai.endpoint && S.ai.endpoint.trim());
-  const chain = usingFree ? [primary, 'openai-fast', 'mistral'] : [primary];
+  const model = aiModel();
+  const keyed = aiHasKey();
   let lastErr;
-  for (let i = 0; i < chain.length; i++) {
-    try { return await aiFetchOnce(messages, chain[i], timeoutMs); }
+  const attempts = keyed ? 1 : 2;
+  for (let i = 0; i < attempts; i++) {
+    try { return await aiFetchOnce(messages, model, timeoutMs); }
     catch (e) {
       lastErr = e;
-      if (e.name === 'AbortError') break;            // genuine timeout — stop
-      // otherwise try the next model in the chain
+      if (e.name === 'AbortError') { lastErr = new Error('The AI took too long to respond. Please try again.'); break; }
+      if (e.message === 'AI_NEEDS_KEY') break;                 // no point retrying
+      if (e.message === 'AI_RATELIMIT' && i < attempts - 1) { await sleep(3500); continue; }
+      break;
     }
   }
-  if (lastErr && lastErr.message === 'AI_NOTICE')
-    throw new Error('The free AI service is rate-limiting right now. Try again shortly, or add a key in Settings → AI.');
-  throw lastErr || new Error('AI unavailable');
+  const m = lastErr && lastErr.message;
+  if (m === 'AI_NEEDS_KEY')
+    throw new Error(keyed ? 'Your configured AI provider rejected the request — check the key/endpoint in Settings → AI.' : '__NEEDS_KEY__');
+  if (m === 'AI_RATELIMIT')
+    throw new Error(keyed ? 'Your AI provider is rate-limiting. Wait a moment and try again.' : '__NEEDS_KEY__');
+  if (keyed && /HTTP \d/.test(m || ''))
+    throw new Error('Your configured AI endpoint returned an error (' + m + '). Check Settings → AI.');
+  throw new Error(m || 'AI unavailable right now. Please try again.');
+}
+
+// Actionable HTML shown when the free service is gated / no key set.
+function aiUnavailableHTML(custom) {
+  if (custom) return '<div class="ai-err">⚠ Your configured AI (Settings → AI) didn\'t respond. Open <b>Settings → AI</b> and tap <b>Test AI</b> to check the key &amp; endpoint.</div>';
+  return '<div class="ai-needkey">' +
+    '<b>Turn on AI — it\'s free &amp; takes ~1 minute.</b>' +
+    '<div style="margin:6px 0 10px;color:var(--text-muted);font-size:13px;line-height:1.55;">' +
+    'The old no-key AI service stopped working for websites. Connect a free key (Groq is instant, no credit card) and every ✦ AI button here starts working. Everything else in the app works without it.</div>' +
+    '<button class="btn primary" onclick="showTab(\'settings\');setTimeout(()=>{var e=document.getElementById(\'ai-provider\');if(e)e.scrollIntoView({block:\'center\'});},60)">Set up AI (free) →</button>' +
+    '</div>';
+}
+function aiErrText(e) {
+  const m = (e && e.message) || '';
+  if (m === '__NEEDS_KEY__') return aiHasKey()
+    ? 'Your configured AI provider rejected the request — check Settings → AI.'
+    : 'Free AI now needs a quick free key — open Settings → AI (about 1 minute).';
+  return m || 'AI unavailable right now. Please try again.';
 }
 
 // Convenience: single-prompt ask with an optional system role.
@@ -1251,7 +1303,12 @@ function aiBox(id) {
   const el = eid(id);
   return {
     loading(msg) { if (el) el.innerHTML = `<div class="ai-loading">${escHTML(msg||'Thinking…')}<span class="ai-dots"></span></div>`; },
-    error(msg)   { if (el) el.innerHTML = `<div class="ai-err">⚠ ${escHTML(msg||'AI unavailable right now — the free service may be busy. Try again.')}</div>`; },
+    error(arg)   {
+      if (!el) return;
+      const m = (arg && arg.message) || arg;            // accepts Error or string
+      if (!m || m === '__NEEDS_KEY__') { el.innerHTML = aiUnavailableHTML(aiHasKey()); return; }
+      el.innerHTML = `<div class="ai-err">⚠ ${escHTML(m)}</div>`;
+    },
     html(h)      { if (el) el.innerHTML = h; },
     text(t)      { if (el) el.innerHTML = `<div class="ai-out">${linkify(t).replace(/\n/g,'<br>')}</div>`; },
   };
@@ -2748,12 +2805,72 @@ function snapshotNetWorth() {
 // ═══════════════════════════════════════════════════════════════════
 //  SETTINGS / SYNC
 // ═══════════════════════════════════════════════════════════════════
+// One-tap providers. Endpoints are OpenAI-compatible & browser-CORS-friendly.
+const AI_PROVIDERS = {
+  groq: {
+    name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama-3.3-70b-versatile', keyUrl: 'https://console.groq.com/keys',
+    steps: ['Open <a href="https://console.groq.com/keys" target="_blank" rel="noopener"><b>console.groq.com/keys</b></a> and sign in (Google works — no credit card).',
+            'Click <b>Create API Key</b>, copy it.',
+            'Paste it in the <b>API key</b> box below, then tap <b>Test AI</b>.'],
+  },
+  openrouter: {
+    name: 'OpenRouter', endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    model: 'meta-llama/llama-3.3-70b-instruct:free', keyUrl: 'https://openrouter.ai/keys',
+    steps: ['Open <a href="https://openrouter.ai/keys" target="_blank" rel="noopener"><b>openrouter.ai/keys</b></a> and sign in.',
+            'Click <b>Create Key</b>, copy it.',
+            'Paste it below and tap <b>Test AI</b>. (Uses a free model.)'],
+  },
+  cerebras: {
+    name: 'Cerebras', endpoint: 'https://api.cerebras.ai/v1/chat/completions',
+    model: 'llama-3.3-70b', keyUrl: 'https://cloud.cerebras.ai',
+    steps: ['Open <a href="https://cloud.cerebras.ai" target="_blank" rel="noopener"><b>cloud.cerebras.ai</b></a> and sign in.',
+            'Go to <b>API Keys</b> → create one, copy it.',
+            'Paste it below and tap <b>Test AI</b>.'],
+  },
+  custom: {
+    name: 'Custom', endpoint: '', model: '', keyUrl: '',
+    steps: ['Enter any OpenAI-compatible <b>/chat/completions</b> endpoint, your key, and a model name.'],
+  },
+  none: { name: 'None', endpoint: '', model: '', keyUrl: '',
+    steps: ['AI features are off. The rest of the app works normally. Pick a provider above to turn them back on.'] },
+};
+function currentAIProvider() {
+  const ai = S.ai || {};
+  if (ai.provider) return ai.provider;
+  const ep = (ai.endpoint || '');
+  if (/groq\.com/.test(ep)) return 'groq';
+  if (/openrouter\.ai/.test(ep)) return 'openrouter';
+  if (/cerebras\.ai/.test(ep)) return 'cerebras';
+  if (ep) return 'custom';
+  return 'groq';   // default suggestion
+}
+function renderAIHowto() {
+  const box = eid('ai-howto'); if (!box) return;
+  const p = AI_PROVIDERS[currentAIProvider()] || AI_PROVIDERS.groq;
+  box.innerHTML = '<b>' + escHTML(p.name) + ' setup</b><ol style="margin:8px 0 0 18px;padding:0;">' +
+    p.steps.map(s => '<li class="ai-setup-step">' + s + '</li>').join('') + '</ol>';
+}
+function applyAIProvider(p) {
+  S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
+  S.ai.provider = p;
+  const def = AI_PROVIDERS[p] || AI_PROVIDERS.custom;
+  S.ai.disabled = (p === 'none');
+  if (p !== 'custom') { S.ai.endpoint = def.endpoint; S.ai.model = def.model; }
+  if (eid('ai-ep'))  eid('ai-ep').value  = S.ai.endpoint || '';
+  if (eid('ai-mdl')) eid('ai-mdl').value = S.ai.model || '';
+  renderAIHowto();
+  scheduleSave();
+}
 function renderSettings() {
   eid('ss-webhook').value = WEBHOOK_URL || '';
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
+  const prov = currentAIProvider();
+  if (eid('ai-provider')) eid('ai-provider').value = S.ai.disabled ? 'none' : prov;
   if (eid('ai-ep'))  eid('ai-ep').value  = S.ai.endpoint || '';
   if (eid('ai-tok')) eid('ai-tok').value = S.ai.token || '';
   if (eid('ai-mdl')) eid('ai-mdl').value = S.ai.model || '';
+  renderAIHowto();
   S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
   if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
   if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
@@ -2772,12 +2889,13 @@ function updateHomeLoc(field, value) {
   scheduleSave();
 }
 async function testAI() {
-  const el = eid('ai-test-status'); if (el) { el.style.color = 'var(--text-muted)'; el.textContent = 'Testing AI…'; }
+  const el = eid('ai-test-status'); if (!el) return;
+  el.style.color = 'var(--text-muted)'; el.textContent = 'Testing AI…';
   try {
     const a = await aiAsk('Reply with exactly: OK', 'Reply with exactly OK and nothing else.', { timeoutMs: 25000 });
-    if (el) { el.style.color = 'var(--accent-dim)'; el.textContent = '✓ AI responding: ' + a.slice(0, 60); }
+    el.style.color = 'var(--accent-dim)'; el.textContent = '✓ Connected — AI is working. ' + (a.slice(0,40));
   } catch (e) {
-    if (el) { el.style.color = 'var(--negative)'; el.textContent = '✗ ' + (e.message || 'AI unreachable') + ' — the app still works without AI.'; }
+    el.style.color = 'var(--negative)'; el.textContent = '✗ ' + aiErrText(e);
   }
 }
 
@@ -3282,7 +3400,7 @@ async function sendAIChat() {
     const ans = await aiChat(msgs, { timeoutMs: 45000 });
     AI_CHAT[AI_CHAT.length - 1] = { role: 'assistant', content: ans };
   } catch (e) {
-    AI_CHAT[AI_CHAT.length - 1] = { role: 'assistant', content: '⚠ The free AI service is busy or unreachable right now. Please try again in a moment.' };
+    AI_CHAT[AI_CHAT.length - 1] = { role: 'assistant', content: '⚠ ' + aiErrText(e) };
   }
   renderAIChat();
 }
@@ -3522,7 +3640,8 @@ async function aiHouseEstimate(id) {
     scheduleSave();
     el.innerHTML = linkify(p.ai).replace(/\n/g,'<br>');
   } catch (e) {
-    el.innerHTML = '<span class="ai-err">⚠ Couldn\'t get an estimate right now (free AI service is busy). Try again shortly.</span>';
+    el.innerHTML = (e && e.message === '__NEEDS_KEY__') ? aiUnavailableHTML(aiHasKey())
+      : '<span class="ai-err">⚠ ' + escHTML(aiErrText(e)) + '</span>';
   }
 }
 async function aiHouseTips(id) {
@@ -3538,7 +3657,8 @@ async function aiHouseTips(id) {
     scheduleSave();
     el.innerHTML = linkify(p.ai).replace(/\n/g,'<br>');
   } catch (e) {
-    el.innerHTML = '<span class="ai-err">⚠ Couldn\'t reach the free AI service. Try again shortly.</span>';
+    el.innerHTML = (e && e.message === '__NEEDS_KEY__') ? aiUnavailableHTML(aiHasKey())
+      : '<span class="ai-err">⚠ ' + escHTML(aiErrText(e)) + '</span>';
   }
 }
 
@@ -3593,7 +3713,7 @@ async function onReceiptUpload(ev) {
       '<div style="font-size:12px;color:var(--text-muted);">' + arr.map(x => escHTML(x.name)).filter(Boolean).join(' · ') + '</div>');
     toast(added + ' grocery items logged');
   } catch (e) {
-    box.error('Receipt reading failed (the free AI vision service may be busy). You can add items manually.');
+    box.error(e);   // shows the "connect free AI" guidance, or the real error
   }
 }
 function groceryStats() {
