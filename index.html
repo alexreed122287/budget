@@ -13,13 +13,18 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>Reed Family Budget</title>
 <script>
-  // Apply saved theme before paint to avoid a flash.
+  // Apply saved theme + seasonal palette before paint to avoid a flash.
   (function(){
+    function seasonForDate(d){ var m=d.getMonth(); // 0=Jan
+      return (m<=1||m===11) ? 'winter' : m<=4 ? 'spring' : m<=7 ? 'summer' : 'fall'; }
     try {
       var t = localStorage.getItem('reed_theme');
       if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', t);
-    } catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+      var s = localStorage.getItem('reed_season') || 'auto';
+      var eff = (s==='auto' || !s) ? seasonForDate(new Date()) : s;
+      document.documentElement.setAttribute('data-season', eff);
+    } catch(e){ document.documentElement.setAttribute('data-theme','light'); document.documentElement.setAttribute('data-season','spring'); }
   })();
 </script>
 <style>
@@ -59,6 +64,32 @@
   --warn:#fbbf24;
   --highlight:#3a3216;
   --shadow:rgba(0,0,0,.45);
+}
+/* ─── Seasonal LIGHT palettes (auto by date, or chosen in Settings).
+   Dark mode is unaffected — selectors require data-theme="light". ─── */
+:root[data-theme="light"][data-season="spring"]{
+  --bg:#ffffff; --bg-soft:#f1f8f3; --bg-strong:#e6f1e9;
+  --border:#e2eee7; --border-strong:#cfe0d4;
+  --accent:#2bb673; --accent-dim:#1f9e5f; --accent-soft:#e7f7ee;
+  --highlight:#fdeef5; --shadow:rgba(20,90,55,.10);
+}
+:root[data-theme="light"][data-season="summer"]{
+  --bg:#ffffff; --bg-soft:#eef8f9; --bg-strong:#e0f0f2;
+  --border:#dbeaec; --border-strong:#c4dde0;
+  --accent:#0ea5b7; --accent-dim:#0c8a99; --accent-soft:#ddf3f6;
+  --highlight:#fff3d2; --shadow:rgba(10,90,100,.10);
+}
+:root[data-theme="light"][data-season="fall"]{
+  --bg:#fffdfa; --bg-soft:#faf2e7; --bg-strong:#efe1d0;
+  --border:#ece0cd; --border-strong:#dcc8af;
+  --accent:#c2682a; --accent-dim:#a4541f; --accent-soft:#f6e6d4;
+  --highlight:#ffefcf; --shadow:rgba(120,70,20,.12);
+}
+:root[data-theme="light"][data-season="winter"]{
+  --bg:#ffffff; --bg-soft:#f1f5fb; --bg-strong:#e4edf6;
+  --border:#dee7f1; --border-strong:#c7d4e4;
+  --accent:#2f74d0; --accent-dim:#245fae; --accent-soft:#e3edfb;
+  --highlight:#eaf2fb; --shadow:rgba(20,50,100,.12);
 }
 html{color-scheme:light;}
 html[data-theme="dark"]{color-scheme:dark;}
@@ -1279,6 +1310,26 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   </div>
 
   <details class="set-card">
+    <summary>Appearance</summary>
+    <div class="set-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        The light theme uses a seasonal color palette. Leave it on <b>Auto</b> to
+        follow the calendar, or pick a season. (Dark mode is unaffected — toggle
+        light/dark with the button at the top-left.)
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Light theme season</label>
+        <select id="season-sel" onchange="setSeason(this.value)">
+          <option value="auto">Auto (follow the date)</option>
+          <option value="spring">Spring</option>
+          <option value="summer">Summer</option>
+          <option value="fall">Fall</option>
+          <option value="winter">Winter</option>
+        </select>
+      </div>
+    </div>
+  </details>
+
+  <details class="set-card">
     <summary>Income — paychecks</summary>
     <div class="set-body">
       <button class="btn primary" onclick="addPaycheck()" style="margin-bottom:12px;">+ Add paycheck</button>
@@ -1667,6 +1718,26 @@ function setTheme(t) {
 function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+// ── Seasonal light palette ──────────────────────────────────────────
+function seasonForDate(d) {
+  const m = (d || new Date()).getMonth();   // 0=Jan
+  return (m <= 1 || m === 11) ? 'winter' : m <= 4 ? 'spring' : m <= 7 ? 'summer' : 'fall';
+}
+function seasonChoice() {
+  try { return localStorage.getItem('reed_season') || 'auto'; } catch { return 'auto'; }
+}
+function effectiveSeason() {
+  const c = seasonChoice();
+  return (c === 'auto') ? seasonForDate(new Date()) : c;
+}
+function applySeason() {
+  document.documentElement.setAttribute('data-season', effectiveSeason());
+}
+function setSeason(v) {
+  try { localStorage.setItem('reed_season', v); } catch {}
+  applySeason();
+  const sel = eid('season-sel'); if (sel) sel.value = v;
 }
 document.addEventListener('click', e => {
   if (!e.target.closest('#tabs')) closeNavMenus();
@@ -3418,6 +3489,7 @@ function applyAIProvider(p) {
 }
 function renderSettings() {
   eid('ss-webhook').value = WEBHOOK_URL || '';
+  if (eid('season-sel')) eid('season-sel').value = seasonChoice();
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
   const prov = currentAIProvider();
   if (eid('ai-provider')) eid('ai-provider').value = S.ai.disabled ? 'none' : prov;
@@ -5038,6 +5110,7 @@ function boot() {
   updateNavActive('budget');
   renderActiveVerse();
   { const tb = eid('theme-btn'); if (tb) tb.textContent = (document.documentElement.getAttribute('data-theme')==='dark') ? '☀' : '🌙'; }
+  applySeason();
   // Calendar reminders while the app is open (every 30s).
   checkCalReminders();
   setInterval(checkCalReminders, 30000);
