@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Reed Budget">
 <meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Reed Family Budget</title>
 <script>
   // Apply saved theme before paint to avoid a flash.
@@ -87,15 +90,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
 
 /* ─── Grouped icon nav (Money / Fun / Chores dropdowns + solos) ─── */
-#tabs{display:flex;flex:1 1 auto;min-width:0;gap:4px;background:transparent;
+#tabs{display:flex;flex:1 1 auto;min-width:0;gap:3px;background:transparent;
   justify-content:center;flex-wrap:nowrap;overflow:visible;}
 .navgrp{position:relative;flex:0 0 auto;}
 .grpbtn{display:inline-flex;align-items:center;justify-content:center;font-family:inherit;
-  font-weight:600;padding:5px 7px;background:var(--bg-soft);border:1px solid var(--border-strong);
+  font-weight:600;padding:5px 6px;background:var(--bg-soft);border:1px solid var(--border-strong);
   color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;flex:0 0 auto;
   transition:background .12s,border-color .12s,color .12s;}
 .grpbtn:hover{background:var(--bg-strong);}
-.grpbtn .gi{font-size:18px;line-height:1;}
+.grpbtn .gi{font-size:17px;line-height:1;}
 .grpbtn .gl{display:none;}      /* icon-only nav */
 .grpbtn .gcaret{display:none;}  /* dropdown still opens on tap */
 .navgrp.open .grpbtn{background:var(--accent);color:#fff;border-color:var(--accent);}
@@ -390,6 +393,16 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
   padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:box-shadow .15s,transform .15s;}
 .plan-card:hover{box-shadow:0 6px 20px -10px rgba(0,0,0,.18);}
 .plan-card .pc-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+/* Collapsible cards (vacation ideas / house / goals) — collapsed by
+   default after creation; tap the header to expand. */
+.card-collapse-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  cursor:pointer;font-weight:700;font-size:15px;color:var(--text);padding:2px 0;}
+.card-collapse-hdr .cc-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-collapse-hdr .cc-caret{flex:0 0 auto;color:var(--text-muted);font-size:12px;transition:transform .15s;}
+.cc-collapsed .card-collapse-hdr .cc-caret{transform:rotate(-90deg);}
+.cc-collapsed .cc-body{display:none;}
+.cc-body{margin-top:10px;}
 .plan-card .pc-top input.pc-name{flex:1;min-width:170px;font-size:17px;font-weight:700;
   border:none;background:none;padding:6px 2px;border-bottom:2px solid transparent;}
 .plan-card .pc-top input.pc-name:focus{border-bottom-color:var(--accent);outline:none;}
@@ -898,8 +911,7 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     <button class="grpbtn solo" data-tab="settings" onclick="goTab('settings')"><span class="gi">⚙️</span><span class="gl">Settings</span></button>
     </div>
     <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↩</button>
-    <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
-    <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
+    <span id="last-sync" class="sync-pill local" title="Saved automatically">SAVED</span>
   </div>
 </div>
 
@@ -2303,13 +2315,12 @@ function renderBudget() {
     const bal = Number(row.balance) || 0;
     const nm = (row.label && row.label.trim()) || 'Saved';
     h += `<tr class="xsave" data-xid="${row.id}"><td class="cat sv">` +
-      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to edit">${escHTML(nm)}</button>` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to set the amount">${escHTML(nm)}</button>` +
       `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
-      `<input class="xsave-name" type="text" value="${escHTML(row.label||'')}" placeholder="Label" ` +
-      `oninput="updateSavingsExtra('${row.id}','label',this.value)">` +
       `<input type="number" step="0.01" class="cat-input" value="${bal.toFixed(2)}" placeholder="0" ` +
-      `oninput="updateSavingsExtra('${row.id}','balance',parseFloat(this.value)||0)">` +
-      `<button class="xsave-del" title="Remove row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
+      `oninput="updateSavingsExtra('${row.id}','balance',parseFloat(this.value)||0)" ` +
+      `title="${escHTML(nm)} balance">` +
+      `<button class="xsave-del" title="Remove this row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
       `</span></td>`;
     cols.forEach(() => h += `<td>${fmt$(bal)}</td>`);
     h += '</tr>';
@@ -2826,10 +2837,11 @@ function toggleBudgetActions() {
   requestAnimationFrame(lockBudgetFooter);
 }
 function addSavingsExtra() {
+  const name = (prompt('Name this saved row (e.g. Crypto, HSA, 529):', 'Crypto') || '').trim();
+  if (!name) return;
   snapshot();
   S.savingsExtra = S.savingsExtra || [];
-  S.savingsExtra.push({ id: uid(), label: 'Crypto', balance: 0 });
-  if (eid('budget-actions') && eid('budget-actions').classList.contains('ba-collapsed')) {} // stay collapsed
+  S.savingsExtra.push({ id: uid(), label: name, balance: 0 });
   saveAndRender();
 }
 function updateSavingsExtra(id, field, value) {
@@ -3536,7 +3548,7 @@ function setStatus(msg, color) {
 }
 function updateSyncPill() {
   const p = eid('last-sync');
-  if (!WEBHOOK_URL) { p.className = 'sync-pill local'; p.textContent = 'LOCAL'; p.title='Set webhook in Settings to sync'; return; }
+  if (!WEBHOOK_URL) { p.className = 'sync-pill ok'; p.textContent = 'SAVED'; p.title='Auto-saved on this device. Set a Sheet URL in Settings to sync with your spouse.'; return; }
   if (SYNC_STATE === 'ok') { p.className = 'sync-pill ok'; p.textContent = 'SYNCED'; p.title='Last sync: ' + (LAST_PULL || 'never'); return; }
   if (SYNC_STATE === 'err') { p.className = 'sync-pill err'; p.textContent = 'ERROR'; return; }
   p.className = 'sync-pill'; p.textContent = 'IDLE'; p.title='';
@@ -3962,7 +3974,12 @@ function renderVacationIdeas() {
     return;
   }
   host.innerHTML = list.map(it => `
-    <div class="idea-card" data-id="${it.id}">
+    <div class="idea-card ${it.collapsed?'cc-collapsed':''}" data-id="${it.id}">
+      <div class="card-collapse-hdr" onclick="toggleCollapse('idea','${it.id}')">
+        <span class="cc-title">${escHTML(it.place||'New idea')}</span>
+        <span class="cc-caret">▾</span>
+      </div>
+      <div class="cc-body">
       <div class="idea-top">
         <input class="place" type="text" value="${escHTML(it.place||'')}" placeholder="Place" oninput="updateVacationIdea('${it.id}','place',this.value)">
         <button class="btn" onclick="aiIdeaSuggest('${it.id}')">✦ Things to do &amp; reviews</button>
@@ -3977,12 +3994,21 @@ function renderVacationIdeas() {
         <button class="btn" onclick="addIdeaLink('${it.id}')">+ Save link</button>
       </div>
       <div id="idea-ai-${it.id}" class="ai-region" style="margin-top:10px;${it.ai?'':'display:none;'}">${it.ai ? `<div class="ai-out">${linkify(it.ai).replace(/\n/g,'<br>')}</div>` : ''}</div>
+      </div>
     </div>`).join('');
+}
+function toggleCollapse(kind, id) {
+  const arr = kind === 'idea' ? S.vacationIdeas : kind === 'house' ? S.houseProjects : kind === 'goal' ? S.goals : null;
+  const it = (arr || []).find(x => x.id === id); if (!it) return;
+  it.collapsed = !it.collapsed; scheduleSave();
+  if (kind === 'idea') renderVacationIdeas();
+  else if (kind === 'house') renderHouse();
+  else if (kind === 'goal') renderGoals();
 }
 function addVacationIdea() {
   snapshot();
   S.vacationIdeas = S.vacationIdeas || [];
-  S.vacationIdeas.push({ id: uid(), place: '', notes: '', links: [], ai: '' });
+  S.vacationIdeas.push({ id: uid(), place: '', notes: '', links: [], ai: '', collapsed: true });
   saveAndRender();
 }
 function updateVacationIdea(id, field, value) {
@@ -4117,7 +4143,12 @@ function renderGoals() {
     const imgs = (g.images || []).map((src, i) =>
       `<div class="goal-img"><img src="${src}" alt=""><button onclick="deleteGoalImage('${g.id}',${i})" title="Remove">×</button></div>`).join('');
     return `
-    <div class="plan-card" data-id="${g.id}">
+    <div class="plan-card ${g.collapsed?'cc-collapsed':''}" data-id="${g.id}">
+      <div class="card-collapse-hdr" onclick="toggleCollapse('goal','${g.id}')">
+        <span class="cc-title">${escHTML(g.title||'New goal')}</span>
+        <span class="cc-caret">▾</span>
+      </div>
+      <div class="cc-body">
       <div class="pc-top">
         <input class="pc-name" type="text" value="${escHTML(g.title||'')}" placeholder="Goal" oninput="updateGoal('${g.id}','title',this.value)">
         <button class="btn danger" onclick="deleteGoal('${g.id}')">Delete</button>
@@ -4145,10 +4176,11 @@ function renderGoals() {
         <button class="btn" onclick="aiGoalIdeas('${g.id}')">✦ Ideas, steps &amp; resources</button>
       </div>
       <div id="goal-ai-${g.id}" class="ai-region" style="margin-top:10px;${g.ai?'':'display:none;'}">${g.ai ? `<div class="ai-out">${linkify(g.ai).replace(/\n/g,'<br>')}</div>` : ''}</div>
+      </div>
     </div>`;
   }).join('');
 }
-function addGoal() { snapshot(); S.goals = S.goals || []; S.goals.unshift({ id: uid(), title:'', kind:'financial', target:'', notes:'', links:[], images:[], ai:'' }); saveAndRender(); }
+function addGoal() { snapshot(); S.goals = S.goals || []; S.goals.unshift({ id: uid(), title:'', kind:'financial', target:'', notes:'', links:[], images:[], ai:'', collapsed:true }); saveAndRender(); }
 function updateGoal(id, f, v) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; maybeSnapshot(); g[f]=v; scheduleSave(); }
 function setGoalKind(id, k) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; snapshot(); g.kind=k; saveAndRender(); }
 function deleteGoal(id) { if(!confirm('Delete this goal?'))return; snapshot(); S.goals=(S.goals||[]).filter(x=>x.id!==id); saveAndRender(); }
@@ -4498,7 +4530,12 @@ function renderHouse() {
   host.innerHTML = list.map(p => {
     const st = p.status || 'idea';
     return `
-    <div class="plan-card ${st==='done'?'is-done':''}" data-id="${p.id}">
+    <div class="plan-card ${st==='done'?'is-done':''} ${p.collapsed?'cc-collapsed':''}" data-id="${p.id}">
+      <div class="card-collapse-hdr" onclick="toggleCollapse('house','${p.id}')">
+        <span class="cc-title">${escHTML(p.name||'New project')}</span>
+        <span class="cc-caret">▾</span>
+      </div>
+      <div class="cc-body">
       <div class="pc-top">
         <input class="pc-name" type="text" value="${escHTML(p.name||'')}" placeholder="Project" oninput="updateHouseProject('${p.id}','name',this.value)">
         <button class="btn danger" onclick="deleteHouseProject('${p.id}')">Delete</button>
@@ -4522,13 +4559,14 @@ function renderHouse() {
         <button class="btn" onclick="aiHouseTips('${p.id}')">✦ How-to &amp; what to watch for</button>
       </div>
       <div id="house-ai-${p.id}" class="cost-callout" style="margin-top:12px;${p.ai?'':'display:none;'}">${p.ai ? linkify(p.ai).replace(/\n/g,'<br>') : ''}</div>
+      </div>
     </div>`;
   }).join('');
 }
 function addHouseProject() {
   snapshot();
   S.houseProjects = S.houseProjects || [];
-  S.houseProjects.unshift({ id: uid(), name: '', status: 'idea', notes: '', goalDate: '', links: [], ai: '' });
+  S.houseProjects.unshift({ id: uid(), name: '', status: 'idea', notes: '', goalDate: '', links: [], ai: '', collapsed: true });
   saveAndRender();
 }
 function updateHouseProject(id, field, value) {
@@ -4852,7 +4890,7 @@ function renderVacations() {
 function addVacation() {
   snapshot();
   S.vacations = S.vacations || [];
-  S.vacations.push({ id: uid(), name: 'New vacation', targetAmount: 0, savedAmount: 0, targetDate: '', notes: '', expanded: true, items: [] });
+  S.vacations.push({ id: uid(), name: 'New vacation', targetAmount: 0, savedAmount: 0, targetDate: '', notes: '', expanded: false, items: [] });
   saveAndRender();
 }
 function deleteVacation(id) {
@@ -4994,6 +5032,12 @@ function boot() {
   let __lockT;
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(lockBudgetFooter, 120); }, { passive: true });
   enableBudgetAxisLock();
+  // Auto-save safety net: flush whenever the app is backgrounded or closed
+  // (in addition to the debounced save on every edit).
+  const flush = () => { try { saveLocal(); if (WEBHOOK_URL) backgroundPush(); } catch {} };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+  window.addEventListener('pagehide', flush);
+  window.addEventListener('beforeunload', flush);
 }
 
 // Budget grid: lock a scroll gesture to ONE axis (no diagonal). Whichever
