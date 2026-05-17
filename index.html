@@ -168,12 +168,18 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table col.col-data{width:118px;}
 
 .budget-table th, .budget-table td{
-  padding:10px 12px;
+  padding:6px 10px;
   border-bottom:1px solid var(--border);
   border-right:1px solid var(--border);          /* faint gridlines */
   text-align:center;font-size:13px;background:var(--bg);color:var(--text);
   font-variant-numeric:tabular-nums;
+  /* Never wrap, never let a cell change size — text is shrunk to fit. */
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  height:38px;box-sizing:border-box;
 }
+.budget-table tbody tr.bill td{height:40px;}
+.budget-table thead tr.dates th{height:38px;}
+.budget-table thead tr.paycheck th,.budget-table thead tr.paycheck td{height:38px;}
 .budget-table th{
   background:var(--bg);color:var(--text-muted);
   font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
@@ -181,7 +187,14 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 /* Column date headers: centered, bolder, a touch larger */
 .budget-table thead tr.dates th{font-size:14px;font-weight:800;color:var(--text);
   letter-spacing:0;text-transform:none;}
-.budget-table thead tr.dates th.corner{border-right-color:transparent;}
+/* Faint divider to the LEFT of the CURRENT column (same line as the
+   rest of the table) — keep the corner cell's right border. */
+.budget-table tr.bill td.cat .cat-inner{display:flex;align-items:center;gap:4px;width:100%;}
+.budget-table tr.bill td.cat .bill-name{flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.budget-table tr.bill td.cat .drag-handle,
+.budget-table tr.bill td.cat .overdue-badge{flex:0 0 auto;}
+.budget-table td.cat.sv.sv-open{overflow:visible;}
 .budget-table th .sub{display:block;font-size:9px;color:var(--text-light);margin-top:3px;font-weight:600;letter-spacing:.06em;}
 .budget-table th.current-col{color:var(--text);}
 .budget-table th.current-col .sub{color:var(--accent-dim);}
@@ -2238,7 +2251,7 @@ function renderBudget() {
     const badge = overdue
       ? `<span class="overdue-badge" data-overdue-bill="${bill.id}" title="Hasn't been confirmed in ${overdue.days} days — click to acknowledge">!</span>`
       : '';
-    h += `<td class="cat" title="Drag to reorder"><span class="drag-handle">⋮⋮</span>${escHTML(bill.name)}${badge}</td>`;
+    h += `<td class="cat" title="Drag to reorder"><span class="cat-inner"><span class="drag-handle">⋮⋮</span><span class="bill-name">${escHTML(bill.name)}</span>${badge}</span></td>`;
     cols.forEach((c, ci) => {
       const amt = matrix[c.date][bill.id] || 0;
       const overrides = S.billOverrides[bill.id] || {};
@@ -2771,6 +2784,35 @@ function lockBudgetFooter() {
     dates.querySelectorAll('td,th').forEach(c => { c.style.top = '0px'; });
     pay.querySelectorAll('td,th').forEach(c => { c.style.top = dh + 'px'; });
   }
+  fitBudgetText();
+}
+// Shrink long text to fit the fixed cell (canvas-measured so flexbox
+// truncation doesn't hide the overflow from us).
+function fitBudgetText() {
+  const wrap = eid('budget-scroll'); if (!wrap) return;
+  const ctx = fitBudgetText._c || (fitBudgetText._c = document.createElement('canvas').getContext('2d'));
+  const shrink = (el, weight, base, min, avail) => {
+    const txt = el.textContent || ''; if (!txt) { el.style.fontSize = ''; return; }
+    let size = base;
+    ctx.font = weight + ' ' + size + 'px ' + getComputedStyle(el).fontFamily;
+    let guard = 0;
+    while (size > min && ctx.measureText(txt).width > avail && guard++ < 40) {
+      size -= 0.5;
+      ctx.font = weight + ' ' + size + 'px ' + getComputedStyle(el).fontFamily;
+    }
+    el.style.fontSize = size + 'px';
+  };
+  wrap.querySelectorAll('tr.bill td.cat').forEach(td => {
+    const span = td.querySelector('.bill-name'); if (!span) return;
+    let reserve = 22;                                    // drag handle + gaps
+    const badge = td.querySelector('.overdue-badge');
+    if (badge) reserve += badge.getBoundingClientRect().width + 6;
+    const avail = Math.max(28, td.clientWidth - 20 - reserve);  // 20 = h padding
+    shrink(span, '500', 13, 8.5, avail);
+  });
+  wrap.querySelectorAll('thead tr.dates th:not(.cat)').forEach(th => {
+    shrink(th, '800', 14, 9, Math.max(28, th.clientWidth - 16));
+  });
 }
 function toggleBudgetActions() {
   const box = eid('budget-actions'), btn = eid('ba-toggle');
