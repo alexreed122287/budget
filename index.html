@@ -48,17 +48,37 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .sync-pill.err{color:var(--negative);background:var(--negative-soft);}
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
 
-/* ─── Tabs (sticky under header, scroll-snap, momentum) ─── */
-#tabs{display:flex;gap:0;background:var(--bg);padding:0 24px;border-bottom:1px solid var(--border);
-  overflow-x:auto;overflow-y:hidden;
-  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none;
-  padding-left:calc(24px + env(safe-area-inset-left));padding-right:calc(24px + env(safe-area-inset-right));}
-#tabs::-webkit-scrollbar{display:none;height:0;}
-.ntab{font-family:inherit;font-size:14px;font-weight:500;padding:14px 18px;background:none;border:none;
-  color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;
-  transition:color .12s,border-color .12s;scroll-snap-align:center;flex:0 0 auto;}
-.ntab.active{color:var(--text);border-bottom-color:var(--text);}
-.ntab:hover{color:var(--text);}
+/* ─── Grouped icon nav (Money / Fun / Chores dropdowns + solos) ─── */
+#tabs{display:flex;gap:6px;background:var(--bg);border-bottom:1px solid var(--border);
+  padding:8px 12px;padding-left:calc(12px + env(safe-area-inset-left));
+  padding-right:calc(12px + env(safe-area-inset-right));flex-wrap:wrap;}
+.navgrp{position:relative;}
+.grpbtn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:14px;
+  font-weight:600;padding:10px 14px;background:var(--bg-soft);border:1px solid var(--border-strong);
+  color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+.grpbtn:hover{background:var(--bg-strong);}
+.grpbtn .gi{font-size:17px;line-height:1;}
+.grpbtn .gcaret{font-size:10px;color:var(--text-muted);transition:transform .15s;}
+.navgrp.open .grpbtn{background:var(--text);color:#fff;border-color:var(--text);}
+.navgrp.open .grpbtn .gcaret{transform:rotate(180deg);color:#fff;}
+.grpbtn.active,.navgrp.active .grpbtn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dim);}
+.grpmenu{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--bg);
+  border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 12px 30px -8px rgba(0,0,0,.22);
+  padding:6px;display:none;z-index:60;}
+.navgrp.open .grpmenu{display:block;}
+.grpmenu button{display:block;width:100%;text-align:left;font-family:inherit;font-size:14px;
+  font-weight:500;padding:12px 14px;background:none;border:none;color:var(--text);cursor:pointer;
+  border-radius:8px;white-space:nowrap;}
+.grpmenu button:hover{background:var(--bg-soft);}
+.grpmenu button.active{background:var(--accent-soft);color:var(--accent-dim);font-weight:700;}
+
+/* ─── Category Bible verse banner ─── */
+.verse{font-size:13px;line-height:1.55;color:var(--text);background:var(--bg-soft);
+  border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;
+  padding:11px 15px;margin:0 0 16px;font-style:italic;}
+.verse .vref{display:block;margin-top:3px;font-style:normal;font-weight:600;
+  font-size:11px;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase;}
+.verse:empty{display:none;}
 
 .tab-pane{display:none;padding:20px 24px;max-width:1500px;margin:0 auto;}
 .tab-pane.active{display:flex;flex-direction:column;}
@@ -139,13 +159,18 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table tfoot tr.balance td{position:sticky;bottom:80px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 
-/* Sticky left: category column */
+/* Sticky left: category column. Must be FULLY OPAQUE and above the
+   scrolling data cells so $ values vanish behind it when swiping. */
 .budget-table td.cat, .budget-table th.cat{
-  position:sticky;left:0;z-index:2;
+  position:sticky;left:0;z-index:4;
   background:var(--bg);
   text-align:left;font-weight:500;color:var(--text);
   border-right:1px solid var(--border);
 }
+/* Even with the photo glass background on, the frozen column stays solid
+   so cell values can't bleed through it while scrolling. */
+body.bg-active .budget-table td.cat,
+body.bg-active .budget-table th.cat{ background:#ffffff !important; }
 .budget-table thead tr.dates th.cat{z-index:5;background:var(--bg);}
 .budget-table thead tr.paycheck th.cat{z-index:5;background:var(--bg-strong);font-size:11px;color:var(--text-muted);font-weight:600;}
 .budget-table tfoot tr.balance td.cat{z-index:5;background:var(--bg-strong);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
@@ -298,6 +323,72 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
   border:1px solid #a7f3d0;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;color:#065f46;}
 .cost-callout a{color:#047857;}
 .house-loc{font-size:12px;color:var(--text-muted);margin:-6px 0 16px;}
+
+/* ─── Goals / To-Dos ─── */
+.goal-kinds{display:inline-flex;gap:6px;flex-wrap:wrap;}
+.goal-img-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.goal-img{position:relative;width:88px;height:64px;border-radius:8px;overflow:hidden;background:var(--bg-strong);}
+.goal-img img{width:100%;height:100%;object-fit:cover;}
+.goal-img button{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:none;
+  width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;line-height:1;padding:0;}
+.todo-line{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);}
+.todo-line.done .tl-text{text-decoration:line-through;color:var(--text-light);}
+.todo-line input[type=checkbox]{width:24px;height:24px;flex:0 0 auto;accent-color:var(--accent);}
+.todo-line .tl-text{flex:1;border:none;background:none;font:inherit;font-size:15px;color:var(--text);padding:4px 0;}
+.todo-line .tl-del{border:none;background:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;}
+
+/* ─── Calendar ─── */
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;}
+.seg-b{font-family:inherit;font-size:13px;font-weight:600;padding:9px 14px;background:var(--bg);
+  border:none;border-right:1px solid var(--border-strong);color:var(--text-muted);cursor:pointer;}
+.seg-b:last-child{border-right:none;}
+.seg-b.on{background:var(--text);color:#fff;}
+.cal-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.cal-title{font-weight:700;font-size:16px;margin-left:6px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-dow{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
+  text-align:center;padding:6px 0;letter-spacing:.04em;}
+.cal-cell{min-height:78px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;
+  background:var(--bg-soft);cursor:pointer;overflow:hidden;}
+.cal-cell.out{opacity:.4;}
+.cal-cell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-cell .cd{font-size:12px;font-weight:700;color:var(--text);}
+.cal-cell .ce{font-size:10px;line-height:1.3;background:var(--accent-soft);color:var(--accent-dim);
+  border-radius:4px;padding:1px 4px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-cell .cmore{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.cal-list{display:flex;flex-direction:column;gap:8px;}
+.cal-ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;background:var(--bg-soft);}
+.cal-ev .cetime{font-weight:700;font-size:13px;color:var(--accent-dim);min-width:74px;}
+.cal-ev .cetitle{flex:1;font-weight:600;font-size:14px;}
+.cal-ev .cenote{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.cal-ev .cebtns{display:flex;gap:6px;}
+.cal-ev .cebtns button{border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:4px 6px;}
+.cal-empty{color:var(--text-muted);text-align:center;padding:26px;font-size:13px;}
+@media (max-width:560px){
+  .cal-cell{min-height:58px;padding:4px;}
+  .cal-cell .ce{font-size:9px;}
+  .cal-title{font-size:15px;}
+}
+/* Calendar event modal */
+#cal-modal{display:none;}
+#cal-modal .cm-wrap{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;justify-content:center;padding:0;}
+#cal-modal .cm-card{background:var(--bg);width:100%;max-width:480px;border-radius:18px 18px 0 0;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2);
+  max-height:90vh;overflow:auto;}
+@media (min-width:560px){
+  #cal-modal .cm-wrap{align-items:center;}
+  #cal-modal .cm-card{border-radius:16px;}
+}
+#cal-modal .cm-title{font-size:18px;font-weight:700;margin-bottom:14px;}
+#cal-modal label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);
+  letter-spacing:.04em;margin:12px 0 5px;text-transform:uppercase;}
+#cal-modal input,#cal-modal select,#cal-modal textarea{width:100%;font:inherit;font-size:16px;
+  padding:11px 12px;border:1px solid var(--border-strong);border-radius:9px;background:var(--bg);color:var(--text);}
+#cal-modal .cm-row{display:flex;gap:10px;}
+#cal-modal .cm-actions{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:8px;}
+#cal-modal .cm-actions .btn{min-height:46px;}
 
 /* When editing, the cell stays exactly the same size. The input overlays the
    cell absolutely; the original text is hidden via color:transparent so the
@@ -606,10 +697,13 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   .icon-btn{padding:9px 11px;min-width:42px;font-size:17px;}
   .sync-pill{padding:6px 10px;font-size:10px;}
 
-  /* Tabs: large, snappy, clearly-active, scroll affordance */
-  #tabs{gap:2px;}
-  .ntab{font-size:15px;font-weight:600;padding:14px 16px;min-height:50px;}
-  .ntab.active{border-bottom-width:3px;color:var(--accent-dim);border-bottom-color:var(--accent);}
+  /* Grouped icon nav: big tap targets, full-width dropdown items */
+  #tabs{gap:6px;}
+  .grpbtn{min-height:46px;font-size:15px;padding:10px 14px;}
+  .grpbtn .gi{font-size:19px;}
+  .grpbtn .gl{font-size:14px;}
+  .grpmenu{min-width:220px;}
+  .grpmenu button{min-height:48px;font-size:15px;}
 
   .tab-pane{padding:16px 14px;padding-left:calc(14px + env(safe-area-inset-left));
     padding-right:calc(14px + env(safe-area-inset-right));
@@ -687,16 +781,34 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
     </div>
   </div>
   <div id="tabs">
-    <button class="ntab active" onclick="showTab('budget')">Budget</button>
-    <button class="ntab" onclick="showTab('bills')">Bills</button>
-    <button class="ntab" onclick="showTab('expenses')">Expenses</button>
-    <button class="ntab" onclick="showTab('mortgage')">Mortgage</button>
-    <button class="ntab" onclick="showTab('vacation')">Vacation Planner</button>
-    <button class="ntab" onclick="showTab('things')">Things to do</button>
-    <button class="ntab" onclick="showTab('house')">Around the House</button>
-    <button class="ntab" onclick="showTab('grocery')">Go-to Grocery List</button>
-    <button class="ntab" onclick="showTab('networth')">Net Worth</button>
-    <button class="ntab" onclick="showTab('settings')">Settings</button>
+    <div class="navgrp" data-grp="money">
+      <button class="grpbtn" onclick="toggleGrp(event,'money')"><span class="gi">💰</span><span class="gl">Money</span><span class="gcaret">▾</span></button>
+      <div class="grpmenu" id="grp-money">
+        <button onclick="goTab('budget')">Budget</button>
+        <button onclick="goTab('bills')">Bills</button>
+        <button onclick="goTab('expenses')">Expenses</button>
+        <button onclick="goTab('mortgage')">Mortgage</button>
+        <button onclick="goTab('networth')">Net Worth</button>
+      </div>
+    </div>
+    <div class="navgrp" data-grp="fun">
+      <button class="grpbtn" onclick="toggleGrp(event,'fun')"><span class="gi">🎉</span><span class="gl">Fun</span><span class="gcaret">▾</span></button>
+      <div class="grpmenu" id="grp-fun">
+        <button onclick="goTab('vacation')">Vacation Planner</button>
+        <button onclick="goTab('things')">Things to do</button>
+        <button onclick="goTab('goals')">Goals</button>
+      </div>
+    </div>
+    <div class="navgrp" data-grp="chores">
+      <button class="grpbtn" onclick="toggleGrp(event,'chores')"><span class="gi">🧹</span><span class="gl">Chores</span><span class="gcaret">▾</span></button>
+      <div class="grpmenu" id="grp-chores">
+        <button onclick="goTab('house')">Around the House</button>
+        <button onclick="goTab('grocery')">Groceries</button>
+        <button onclick="goTab('todos')">To-Do's</button>
+      </div>
+    </div>
+    <button class="grpbtn solo" data-tab="calendar" onclick="goTab('calendar')"><span class="gi">📅</span><span class="gl">Calendar</span></button>
+    <button class="grpbtn solo" data-tab="settings" onclick="goTab('settings')"><span class="gi">⚙️</span><span class="gl">Settings</span></button>
   </div>
 </div>
 
@@ -704,6 +816,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── BUDGET ─────────────────────────────────────────────────────── -->
 <div class="tab-pane active" id="tab-budget">
+  <div class="verse" data-vcat="money"></div>
   <div class="budget-wrap">
     <div class="budget-scroll" id="budget-scroll">
       <div style="padding:30px;color:var(--text-muted);text-align:center;">Loading…</div>
@@ -723,6 +836,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── BILLS ──────────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-bills">
+  <div class="verse" data-vcat="money"></div>
   <div class="card">
     <div class="card-hdr">
       <span>Bills</span>
@@ -748,6 +862,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── EXPENSES ───────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-expenses">
+  <div class="verse" data-vcat="money"></div>
   <div class="card">
     <div class="card-hdr">
       <span>Expenses — where the money goes</span>
@@ -779,6 +894,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── MORTGAGE ───────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-mortgage">
+  <div class="verse" data-vcat="money"></div>
   <div class="card">
     <div class="card-hdr">Mortgage payoff</div>
     <div class="card-body">
@@ -816,11 +932,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── VACATION PLANNER ───────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-vacation">
-  <div class="plan-hero plan-hero--vacation">
-    <div class="plan-hero-eyebrow">Vacation Planner</div>
-    <div class="plan-hero-title">Where to next?</div>
-    <div class="plan-hero-sub">Dream it, save the links, set a savings goal — let AI sketch the trip, the reviews and a budget.</div>
-  </div>
+  <div class="verse" data-vcat="fun"></div>
   <div class="ticker" id="ticker-vacation" title="Trending things to do & destinations"></div>
   <div class="card">
     <div class="card-hdr">
@@ -863,11 +975,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── THINGS TO DO ───────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-things">
-  <div class="plan-hero plan-hero--things">
-    <div class="plan-hero-eyebrow">Things to do</div>
-    <div class="plan-hero-title">Make the weekend count</div>
-    <div class="plan-hero-sub">Events, festivals and little adventures around San Antonio — saved and ready when you are.</div>
-  </div>
+  <div class="verse" data-vcat="fun"></div>
   <div class="ticker" id="ticker-things" title="Trending events & things to do"></div>
   <div class="card">
     <div class="card-hdr">
@@ -887,14 +995,10 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── GO-TO GROCERY LIST ─────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-grocery">
-  <div class="plan-hero plan-hero--grocery">
-    <div class="plan-hero-eyebrow">Go-to Grocery List</div>
-    <div class="plan-hero-title">Never run out again</div>
-    <div class="plan-hero-sub">Snap a receipt — we learn what you buy and remind you when it's time to restock.</div>
-  </div>
+  <div class="verse" data-vcat="chores"></div>
   <div class="card">
     <div class="card-hdr">
-      <span>Go-to Grocery List</span>
+      <span>Groceries</span>
       <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <label class="btn" style="cursor:pointer;">📷 Upload receipt
           <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="onReceiptUpload(event)">
@@ -918,11 +1022,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 
 <!-- ─── AROUND THE HOUSE (Honey-Do) ────────────────────────────────── -->
 <div class="tab-pane" id="tab-house">
-  <div class="plan-hero plan-hero--house">
-    <div class="plan-hero-eyebrow">Around the House</div>
-    <div class="plan-hero-title">Your home wish list</div>
-    <div class="plan-hero-sub">Porch, sod, roof, that thing you keep meaning to do. Jot the idea, save a link, set a goal — and get a ballpark cost for your area.</div>
-  </div>
+  <div class="verse" data-vcat="chores"></div>
   <div class="card">
     <div class="card-hdr">
       <span>Projects &amp; ideas</span>
@@ -937,8 +1037,68 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   </div>
 </div>
 
+<!-- ─── GOALS ──────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-goals">
+  <div class="verse" data-vcat="fun"></div>
+  <div class="card">
+    <div class="card-hdr">
+      <span>Goals</span>
+      <button class="btn primary" onclick="addGoal()">+ Add goal</button>
+    </div>
+    <div class="card-body">
+      <div id="goals-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TO-DO'S ────────────────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-todos">
+  <div class="verse" data-vcat="chores"></div>
+  <div class="card">
+    <div class="card-hdr">
+      <span>To-Do's</span>
+      <button class="btn primary" onclick="addTodo()">+ Add to-do</button>
+    </div>
+    <div class="card-body">
+      <div class="link-add-row" style="margin-bottom:14px;">
+        <input type="text" id="todo-quick" placeholder="Type a task and press Enter…" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')addTodoQuick()">
+        <button class="btn" onclick="addTodoQuick()">Add</button>
+      </div>
+      <div id="todos-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CALENDAR (shared) ──────────────────────────────────────────── -->
+<div class="tab-pane" id="tab-calendar">
+  <div class="card">
+    <div class="card-hdr">
+      <span>Shared Calendar</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span class="seg" id="cal-views">
+          <button class="seg-b" data-v="month" onclick="setCalView('month')">Month</button>
+          <button class="seg-b" data-v="week" onclick="setCalView('week')">Week</button>
+          <button class="seg-b" data-v="day" onclick="setCalView('day')">Day</button>
+        </span>
+        <button class="btn primary" onclick="addCalEvent()">+ Event</button>
+      </span>
+    </div>
+    <div class="card-body">
+      <div id="cal-share-note" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.55;"></div>
+      <div class="cal-bar">
+        <button class="btn subtle" onclick="calNav(-1)">‹ Prev</button>
+        <button class="btn subtle" onclick="calToday()">Today</button>
+        <button class="btn subtle" onclick="calNav(1)">Next ›</button>
+        <span id="cal-title" class="cal-title"></span>
+      </div>
+      <div id="cal-body"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── NET WORTH ──────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-networth">
+  <div class="verse" data-vcat="money"></div>
   <div class="card">
     <div class="card-hdr">
       <span>Accounts</span>
@@ -1134,6 +1294,9 @@ let S = {
   vacationIdeas: [],  // [{id, place, notes, expanded, links:[{id,label,url}], ai:''}]
   thingsToDo: [],     // [{id, title, url, when, notes, done}]
   houseProjects: [],  // [{id, name, status, notes, goalDate, links:[{id,label,url}], ai:''}]
+  goals: [],          // [{id, title, kind, target, notes, links:[{id,label,url}], images:[dataURL], ai:''}]
+  todos: [],          // [{id, text, done}]
+  calendar: { events: [] },  // events:[{id,title,date,time,notes,recur,remindMins,createdBy,updatedAt}]
   homeLocation: { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' },
   grocery: { purchases: [], lastReceiptNote: '' },   // purchases:[{id,name,date,qty}]
   tickerCache: { items: [], ts: null },
@@ -1155,6 +1318,10 @@ const eid = id => document.getElementById(id);
 const fmt$ = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
 const fmt$2 = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const isoDate = d => { const dt = (typeof d === 'string') ? new Date(d) : d; return dt.toISOString().slice(0,10); };
+// LOCAL calendar date (no UTC shift) — used by the shared calendar so an
+// evening entry never rolls to the next day.
+const localISO = d => { const x = d ? new Date(d) : new Date();
+  return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0'); };
 const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
 const addDays = (d,n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
 const addMonths = (d,n) => { const r = new Date(d); r.setMonth(r.getMonth()+n); return r; };
@@ -1314,28 +1481,45 @@ function aiBox(id) {
   };
 }
 
-// Smoothly center the active tab inside the horizontal strip so the user
-// always sees where they are and what's nearby (reliable on iOS Safari).
-function centerActiveTab() {
-  const tabs = eid('tabs'); if (!tabs) return;
-  const a = tabs.querySelector('.ntab.active'); if (!a) return;
-  // Rect-based so it's correct regardless of offsetParent / sticky chrome.
-  const aR = a.getBoundingClientRect(), tR = tabs.getBoundingClientRect();
-  const delta = (aR.left - tR.left) - (tabs.clientWidth - aR.width) / 2;
-  const max = tabs.scrollWidth - tabs.clientWidth;
-  const left = Math.max(0, Math.min(max, tabs.scrollLeft + delta));
-  // setTimeout(0) (not rAF) — a scrollLeft set inside rAF gets reset by the
-  // scroll-snap container before paint; a macrotask assignment sticks.
-  setTimeout(() => { tabs.scrollLeft = left; }, 0);
+// ── Grouped icon navigation ──────────────────────────────────────
+const TAB_GROUPS = {
+  money:  ['budget','bills','expenses','mortgage','networth'],
+  fun:    ['vacation','things','goals'],
+  chores: ['house','grocery','todos'],
+};
+function groupOfTab(name) {
+  for (const g in TAB_GROUPS) if (TAB_GROUPS[g].includes(name)) return g;
+  return null;
 }
+function closeNavMenus() {
+  document.querySelectorAll('.navgrp.open').forEach(n => n.classList.remove('open'));
+}
+function toggleGrp(ev, g) {
+  if (ev) ev.stopPropagation();
+  const grp = document.querySelector('.navgrp[data-grp="' + g + '"]');
+  const wasOpen = grp && grp.classList.contains('open');
+  closeNavMenus();
+  if (grp && !wasOpen) grp.classList.add('open');
+}
+function goTab(name) { closeNavMenus(); showTab(name); }
+document.addEventListener('click', e => {
+  if (!e.target.closest('#tabs')) closeNavMenus();
+});
+function updateNavActive(name) {
+  const g = groupOfTab(name);
+  document.querySelectorAll('.navgrp').forEach(n => n.classList.toggle('active', n.dataset.grp === g));
+  document.querySelectorAll('.grpbtn.solo').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.grpmenu button').forEach(b => {
+    const oc = b.getAttribute('onclick') || '';
+    b.classList.toggle('active', oc.includes("'" + name + "'"));
+  });
+}
+
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.ntab').forEach(b => b.classList.remove('active'));
-  eid('tab-' + name).classList.add('active');
-  document.querySelectorAll('.ntab').forEach(b => {
-    if (b.getAttribute('onclick').includes("'" + name + "'")) b.classList.add('active');
-  });
-  centerActiveTab();
+  const pane = eid('tab-' + name); if (pane) pane.classList.add('active');
+  updateNavActive(name);
+  renderActiveVerse();
   if (name === 'budget') renderBudget();
   if (name === 'bills') renderBills();
   if (name === 'expenses') renderExpenses();
@@ -1344,9 +1528,61 @@ function showTab(name) {
   if (name === 'things') renderThings();
   if (name === 'house') renderHouse();
   if (name === 'grocery') renderGrocery();
+  if (name === 'goals') renderGoals();
+  if (name === 'todos') renderTodos();
+  if (name === 'calendar') renderCalendar();
   if (name === 'networth') renderNetWorth();
   if (name === 'settings') renderSettings();
 }
+
+// ── Bible verses (NIV) per category ──────────────────────────────
+const VERSES = {
+  money: [
+    ['Honor the LORD with your wealth, with the firstfruits of all your crops; then your barns will be filled to overflowing.', 'Proverbs 3:9-10'],
+    ['Bring the whole tithe into the storehouse… Test me in this, says the LORD Almighty, and see if I will not throw open the floodgates of heaven.', 'Malachi 3:10'],
+    ['Dishonest money dwindles away, but whoever gathers money little by little makes it grow.', 'Proverbs 13:11'],
+    ['The plans of the diligent lead to profit as surely as haste leads to poverty.', 'Proverbs 21:5'],
+    ['For where your treasure is, there your heart will be also.', 'Matthew 6:21'],
+    ['Each of you should give what you have decided in your heart to give… for God loves a cheerful giver.', '2 Corinthians 9:7'],
+    ['The rich rule over the poor, and the borrower is slave to the lender.', 'Proverbs 22:7'],
+    ['Whoever loves money never has enough; whoever loves wealth is never satisfied with their income.', 'Ecclesiastes 5:10'],
+    ['So if you have not been trustworthy in handling worldly wealth, who will trust you with true riches?', 'Luke 16:11'],
+    ['The wise store up choice food and olive oil, but fools gulp theirs down.', 'Proverbs 21:20'],
+  ],
+  fun: [
+    ['There is nothing better for people than to be happy and to do good while they live.', 'Ecclesiastes 3:12'],
+    ['A cheerful heart is good medicine, but a crushed spirit dries up the bones.', 'Proverbs 17:22'],
+    ['Children are a heritage from the LORD, offspring a reward from him.', 'Psalm 127:3'],
+    ['Husbands, love your wives, just as Christ loved the church and gave himself up for her.', 'Ephesians 5:25'],
+    ['Enjoy life with your wife, whom you love, all the days of this meaningless life.', 'Ecclesiastes 9:9'],
+    ['May you rejoice in the wife of your youth… may you ever be intoxicated with her love.', 'Proverbs 5:18-19'],
+    ['But as for me and my household, we will serve the LORD.', 'Joshua 24:15'],
+    ['Love is patient, love is kind… It always protects, always trusts, always hopes, always perseveres.', '1 Corinthians 13:4-7'],
+    ['So I commend the enjoyment of life… to eat and drink and be glad.', 'Ecclesiastes 8:15'],
+    ['A happy heart makes the face cheerful.', 'Proverbs 15:13'],
+  ],
+  chores: [
+    ['Whatever you do, work at it with all your heart, as working for the Lord, not for human masters.', 'Colossians 3:23'],
+    ['All hard work brings a profit, but mere talk leads only to poverty.', 'Proverbs 14:23'],
+    ['But the fruit of the Spirit is… faithfulness, gentleness and self-control.', 'Galatians 5:22-23'],
+    ['The one who works his land will have abundant food, but whoever chases fantasies has no sense.', 'Proverbs 12:11'],
+    ['The desire of the diligent is fully satisfied; the sluggard craves and gets nothing.', 'Proverbs 13:4'],
+    ['Go to the ant, you sluggard; consider its ways and be wise.', 'Proverbs 6:6'],
+    ['For the Spirit God gave us does not make us timid, but gives us power, love and self-discipline.', '2 Timothy 1:7'],
+    ['Like a city whose walls are broken through is a person who lacks self-control.', 'Proverbs 25:28'],
+    ['Whatever your hand finds to do, do it with all your might.', 'Ecclesiastes 9:10'],
+    ['Lazy hands make for poverty, but diligent hands bring wealth.', 'Proverbs 10:4'],
+  ],
+};
+function renderActiveVerse() {
+  const pane = document.querySelector('.tab-pane.active'); if (!pane) return;
+  const el = pane.querySelector('.verse'); if (!el) return;
+  const cat = el.dataset.vcat; const list = VERSES[cat]; if (!list) { el.innerHTML = ''; return; }
+  const v = list[Math.floor(Math.random() * list.length)];
+  el.innerHTML = '“' + escHTML(v[0]) + '”<span class="vref">' + escHTML(v[1]) + ' · NIV</span>';
+}
+// kept as a no-op so any older callers don't error
+function centerActiveTab() {}
 
 // ═══════════════════════════════════════════════════════════════════
 //  UNDO / REDO
@@ -2028,15 +2264,23 @@ function enterCellEdit(td) {
   let curVal = '', placeholder = '';
   if (type === 'bill') {
     const overrides = S.billOverrides[billId] || {};
-    const bill = S.bills.find(b => b.id === billId);
-    if (overrides[date] !== undefined) curVal = overrides[date];
-    else if (bill && (bill.amount || 0) > 0) {
-      // Show recurring as placeholder (so blank input means "use recurring")
-      placeholder = String(bill.amount);
+    if (overrides[date] !== undefined) {
+      curVal = overrides[date];
+    } else {
+      // Pre-fill the amount the cell is actually SHOWING (recurring or due
+      // value) so the user can select-and-delete it to erase the occurrence.
+      const shown = parseFloat(String(td.textContent).replace(/[^0-9.\-]/g, ''));
+      curVal = isNaN(shown) ? '' : shown;
     }
+    placeholder = '0';
   } else if (type === 'paycheck') {
-    if (S.paycheckOverrides[date] !== undefined) curVal = S.paycheckOverrides[date];
-    placeholder = String(parseISO(date).getDate() === 1 ? S.paycheckMonthly : S.paycheckWeekly);
+    if (S.paycheckOverrides[date] !== undefined) {
+      curVal = S.paycheckOverrides[date];
+    } else {
+      const shown = parseFloat(String(td.textContent).replace(/[^0-9.\-]/g, ''));
+      curVal = isNaN(shown) ? '' : shown;
+    }
+    placeholder = '0';
   } else if (type === 'current-balance') {
     curVal = S.currentBalance || ''; placeholder = '0';
   } else if (type === 'adhoc') {
@@ -2078,11 +2322,16 @@ function commitCellEdit(opts = {}) {
     const bill = S.bills.find(b => b.id === billId);
     if (!bill) { activeCell = null; return; }
     let touched = false;
+    const hadValue = originalValue !== '' && originalValue !== null && originalValue !== undefined && !isNaN(Number(originalValue));
     if (raw === '') {
-      // Clear override → revert to recurring
-      snapshot();
-      if (S.billOverrides[billId]) delete S.billOverrides[billId][date];
-      touched = true;
+      // Emptied: if a value was showing, ERASE this occurrence (override 0).
+      // If nothing was there, leave it alone (don't accidentally zero a cell).
+      if (hadValue && Number(originalValue) !== 0) {
+        snapshot();
+        S.billOverrides[billId] = S.billOverrides[billId] || {};
+        S.billOverrides[billId][date] = 0;
+        touched = true;
+      }
     } else {
       const n = parseFloat(raw);
       if (!isNaN(n) && n !== originalValue) {
@@ -2105,9 +2354,13 @@ function commitCellEdit(opts = {}) {
       if (S.billSnoozed) delete S.billSnoozed[billId];
     }
   } else if (type === 'paycheck') {
-    snapshot();
-    if (raw === '') delete S.paycheckOverrides[date];
-    else { const n = parseFloat(raw); if (!isNaN(n)) S.paycheckOverrides[date] = n; }
+    const hadValue = originalValue !== '' && originalValue !== null && originalValue !== undefined && !isNaN(Number(originalValue));
+    if (raw === '') {
+      snapshot();
+      // Emptied a shown paycheck → erase it for that date (override 0).
+      if (hadValue && Number(originalValue) !== 0) S.paycheckOverrides[date] = 0;
+      else delete S.paycheckOverrides[date];
+    } else { const n = parseFloat(raw); if (!isNaN(n)) { snapshot(); S.paycheckOverrides[date] = n; } }
   } else if (type === 'current-balance') {
     snapshot();
     const n = parseFloat(raw);
@@ -3065,6 +3318,10 @@ function loadLocal() {
   S.vacationIdeas = S.vacationIdeas || [];
   S.thingsToDo = S.thingsToDo || [];
   S.houseProjects = S.houseProjects || [];
+  S.goals = S.goals || [];
+  S.todos = S.todos || [];
+  S.calendar = S.calendar || { events: [] };
+  S.calendar.events = S.calendar.events || [];
   S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
   S.grocery = S.grocery || { purchases: [], lastReceiptNote: '' };
   S.grocery.purchases = S.grocery.purchases || [];
@@ -3087,6 +3344,9 @@ function renderAll() {
   if (eid('tab-things').classList.contains('active')) renderThings();
   if (eid('tab-house').classList.contains('active')) renderHouse();
   if (eid('tab-grocery').classList.contains('active')) renderGrocery();
+  if (eid('tab-goals').classList.contains('active')) renderGoals();
+  if (eid('tab-todos').classList.contains('active')) renderTodos();
+  if (eid('tab-calendar').classList.contains('active')) renderCalendar();
   if (eid('tab-networth').classList.contains('active')) renderNetWorth();
   if (eid('tab-settings').classList.contains('active')) renderSettings();
   updateSyncPill();
@@ -3274,6 +3534,7 @@ function findLinkArr(ctx) {
   if (kind === 'vac')  { const v = (S.vacations || []).find(x => x.id === id);     return v ? (v.links = v.links || []) : null; }
   if (kind === 'idea') { const i = (S.vacationIdeas || []).find(x => x.id === id); return i ? (i.links = i.links || []) : null; }
   if (kind === 'house'){ const h = (S.houseProjects || []).find(x => x.id === id); return h ? (h.links = h.links || []) : null; }
+  if (kind === 'goal') { const g = (S.goals || []).find(x => x.id === id); return g ? (g.links = g.links || []) : null; }
   return null;
 }
 function removeLink(ctx, lid) {
@@ -3556,6 +3817,308 @@ function saveThingFromAI(json) {
 }
 function aiThingsWeekend() { aiThings('What are the best things to do in and around San Antonio, Texas THIS coming weekend (events, festivals, family-friendly, outdoors, food)?', 'This weekend in San Antonio'); }
 function aiThingsUpcoming() { aiThings('What notable upcoming events, concerts, festivals, and seasonal activities are happening in San Antonio, Texas over the next 1-2 months?', 'Upcoming around San Antonio'); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  GOALS  (financial / motivational / aspirational)
+// ═══════════════════════════════════════════════════════════════════
+const GOAL_KINDS = [['financial','Financial'],['motivational','Motivational'],['aspirational','Aspirational']];
+function renderGoals() {
+  const host = eid('goals-list'); if (!host) return;
+  const list = S.goals || [];
+  if (!list.length) {
+    host.innerHTML = '<div class="plan-empty">No goals yet. Add a <b>financial</b> target (“$10k emergency fund”), a <b>motivational</b> push (“run a 5K”), or an <b>aspirational</b> dream — save links, images and let AI suggest a plan.</div>';
+    return;
+  }
+  host.innerHTML = list.map(g => {
+    const imgs = (g.images || []).map((src, i) =>
+      `<div class="goal-img"><img src="${src}" alt=""><button onclick="deleteGoalImage('${g.id}',${i})" title="Remove">×</button></div>`).join('');
+    return `
+    <div class="plan-card" data-id="${g.id}">
+      <div class="pc-top">
+        <input class="pc-name" type="text" value="${escHTML(g.title||'')}" placeholder="Goal (e.g. $10,000 emergency fund)" oninput="updateGoal('${g.id}','title',this.value)">
+        <button class="btn danger" onclick="deleteGoal('${g.id}')">Delete</button>
+      </div>
+      <div class="status-pick" style="margin-top:10px;">
+        ${GOAL_KINDS.map(k => `<span class="chip ${k[0]==='financial'?'planned':k[0]==='motivational'?'doing':'idea'} ${ (g.kind||'financial')===k[0]?'on':''}" onclick="setGoalKind('${g.id}','${k[0]}')">${k[1]}</span>`).join('')}
+      </div>
+      <div class="plan-meta-row">
+        <label>Target / by when</label>
+        <input class="plan-date" type="text" style="flex:1;min-width:140px;" value="${escHTML(g.target||'')}" placeholder="$ amount, date, or milestone" oninput="updateGoal('${g.id}','target',this.value)">
+      </div>
+      <textarea class="pc-notes" rows="2" placeholder="Why it matters, the plan, the first step…" oninput="updateGoal('${g.id}','notes',this.value)">${escHTML(g.notes||'')}</textarea>
+      <div style="margin-top:12px;">${linkChipsHTML(g.links, 'goal:'+g.id)}</div>
+      <div class="link-add-row">
+        <input type="text" id="glk-l-${g.id}" placeholder="Label" style="flex:1;min-width:120px;">
+        <input type="url" id="glk-u-${g.id}" placeholder="https://…" style="flex:2;min-width:150px;">
+        <button class="btn" onclick="addGoalLink('${g.id}')">+ Save link</button>
+      </div>
+      <div class="goal-img-row">${imgs}
+        <label class="btn" style="cursor:pointer;">+ Image
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadGoalImage('${g.id}',event)">
+        </label>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="aiGoalIdeas('${g.id}')">✦ Ideas, steps &amp; resources</button>
+      </div>
+      <div id="goal-ai-${g.id}" class="ai-region" style="margin-top:10px;${g.ai?'':'display:none;'}">${g.ai ? `<div class="ai-out">${linkify(g.ai).replace(/\n/g,'<br>')}</div>` : ''}</div>
+    </div>`;
+  }).join('');
+}
+function addGoal() { snapshot(); S.goals = S.goals || []; S.goals.unshift({ id: uid(), title:'', kind:'financial', target:'', notes:'', links:[], images:[], ai:'' }); saveAndRender(); }
+function updateGoal(id, f, v) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; maybeSnapshot(); g[f]=v; scheduleSave(); }
+function setGoalKind(id, k) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; snapshot(); g.kind=k; saveAndRender(); }
+function deleteGoal(id) { if(!confirm('Delete this goal?'))return; snapshot(); S.goals=(S.goals||[]).filter(x=>x.id!==id); saveAndRender(); }
+function addGoalLink(id) {
+  const l=eid('glk-l-'+id), u=eid('glk-u-'+id); const url=normUrl(u&&u.value);
+  if(!url){toast('Enter a URL');return;}
+  snapshot(); const g=(S.goals||[]).find(x=>x.id===id); if(!g)return;
+  g.links=g.links||[]; g.links.push({id:uid(),label:(l&&l.value.trim())||url,url}); saveAndRender();
+}
+async function uploadGoalImage(id, ev) {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value='';
+  if (!f) return;
+  const g=(S.goals||[]).find(x=>x.id===id); if(!g)return;
+  if ((g.images||[]).length >= 6) { toast('Up to 6 images per goal'); return; }
+  try {
+    const data = await fileToScaledDataURL(f, 900, 0.72);
+    snapshot(); g.images=g.images||[]; g.images.push(data); saveAndRender(); toast('Image added');
+  } catch { toast('Could not add that image'); }
+}
+function deleteGoalImage(id, idx) {
+  const g=(S.goals||[]).find(x=>x.id===id); if(!g)return;
+  snapshot(); (g.images||[]).splice(idx,1); saveAndRender();
+}
+async function aiGoalIdeas(id) {
+  const g=(S.goals||[]).find(x=>x.id===id); if(!g)return;
+  const t=(g.title||'').trim(); if(!t){toast('Name the goal first');return;}
+  const el=eid('goal-ai-'+id); el.style.display='block';
+  const box=aiBox('goal-ai-'+id); box.loading('Building a plan & resources for "'+t+'"');
+  try {
+    const ans = await aiAsk(
+      `Help me reach this ${g.kind||''} goal: "${t}".${g.target?(' Target: '+g.target+'.'):''}${g.notes?(' Context: '+g.notes):''} Give a short motivating intro, 4-6 concrete steps with a rough timeline, common pitfalls, and 2-3 specific resources or tools (apps, books, sites) to help. Skimmable.`,
+      'You are a supportive, practical coach. Be concrete and encouraging, not preachy.');
+    g.ai = ans; scheduleSave(); box.text(ans);
+  } catch (e) { box.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TO-DO'S  (simple shared checklist)
+// ═══════════════════════════════════════════════════════════════════
+function renderTodos() {
+  const host = eid('todos-list'); if (!host) return;
+  const list = S.todos || [];
+  if (!list.length) { host.innerHTML = '<div class="plan-empty">No to-dos yet. Type a task above and press Enter.</div>'; return; }
+  const open = list.filter(t=>!t.done).length;
+  host.innerHTML =
+    `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">${open} open · ${list.length} total</div>` +
+    list.map(t => `
+    <div class="todo-line ${t.done?'done':''}" data-id="${t.id}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)" title="Done">
+      <input class="tl-text" type="text" value="${escHTML(t.text||'')}" placeholder="Task" oninput="updateTodo('${t.id}',this.value)">
+      <button class="tl-del" onclick="deleteTodo('${t.id}')" title="Delete">×</button>
+    </div>`).join('');
+}
+function addTodo() { snapshot(); S.todos = S.todos || []; S.todos.unshift({ id: uid(), text:'', done:false }); saveAndRender(); }
+function addTodoQuick() {
+  const i = eid('todo-quick'); const v = (i && i.value.trim()); if (!v) return;
+  snapshot(); S.todos = S.todos || []; S.todos.unshift({ id: uid(), text: v, done:false });
+  if (i) i.value=''; saveAndRender();
+}
+function updateTodo(id, v) { const t=(S.todos||[]).find(x=>x.id===id); if(!t)return; maybeSnapshot(); t.text=v; scheduleSave(); }
+function toggleTodo(id, on) { const t=(S.todos||[]).find(x=>x.id===id); if(!t)return; snapshot(); t.done=on; saveAndRender(); }
+function deleteTodo(id) { snapshot(); S.todos=(S.todos||[]).filter(x=>x.id!==id); saveAndRender(); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  SHARED CALENDAR  (month/week/day, recurring, reminders)
+//  Events live in S.calendar.events → synced to the Google Sheet like
+//  everything else, so both spouses see them. Reminders fire while the
+//  app is open (Notification API + in-app). True push when the app is
+//  CLOSED needs a server, which a static site can't do — noted in-app.
+// ═══════════════════════════════════════════════════════════════════
+let calView = 'month';
+let calCursor = new Date(); calCursor.setHours(0,0,0,0);
+const CAL_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const RECUR_OPTS = [['none','Does not repeat'],['daily','Daily'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly']];
+function setCalView(v){ calView=v; renderCalendar(); }
+function calToday(){ calCursor=new Date(); calCursor.setHours(0,0,0,0); renderCalendar(); }
+function calNav(dir){
+  if (calView==='month') calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+dir, 1);
+  else if (calView==='week') calCursor = addDays(calCursor, dir*7);
+  else calCursor = addDays(calCursor, dir);
+  renderCalendar();
+}
+function eventOccursOn(ev, d) {
+  const base = parseISO(ev.date); base.setHours(0,0,0,0);
+  const day = new Date(d); day.setHours(0,0,0,0);
+  if (day < base) return false;
+  const rec = ev.recur || 'none';
+  if (rec === 'none')   return +day === +base;
+  if (rec === 'daily')  return true;
+  if (rec === 'weekly') return day.getDay() === base.getDay();
+  if (rec === 'biweekly') return ((daysBetween(base, day)) % 14) === 0;
+  if (rec === 'monthly') {
+    const dim = new Date(day.getFullYear(), day.getMonth()+1, 0).getDate();
+    return day.getDate() === Math.min(base.getDate(), dim);
+  }
+  if (rec === 'yearly') return day.getDate()===base.getDate() && day.getMonth()===base.getMonth();
+  return false;
+}
+function eventsOn(d) {
+  return (S.calendar.events || [])
+    .filter(ev => eventOccursOn(ev, d))
+    .sort((a,b) => (a.time||'99').localeCompare(b.time||'99'));
+}
+function fmtDate(d){ return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
+function renderCalendar() {
+  document.querySelectorAll('#cal-views .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v===calView));
+  const note = eid('cal-share-note');
+  if (note) note.innerHTML = WEBHOOK_URL
+    ? 'Shared via your synced sheet — events you add appear for everyone on this calendar after their app syncs. Reminders pop on whichever device has the app open. <b>Tip:</b> tap a day to add an event.'
+    : 'Set the Google web-app URL in <b>Settings → Sync</b> so events are shared with your spouse. Reminders pop while the app is open.';
+  const titleEl = eid('cal-title'), body = eid('cal-body');
+  if (!body) return;
+  if (calView === 'month') {
+    const y=calCursor.getFullYear(), m=calCursor.getMonth();
+    titleEl.textContent = calCursor.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const first = new Date(y,m,1); const start = addDays(first, -first.getDay());
+    const todayISO = localISO(new Date());
+    let h = '<div class="cal-grid">' + CAL_DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+    for (let i=0;i<42;i++) {
+      const cell = addDays(start, i);
+      const inMonth = cell.getMonth()===m;
+      const evs = eventsOn(cell);
+      const iso = localISO(cell);
+      h += `<div class="cal-cell ${inMonth?'':'out'} ${iso===todayISO?'today':''}" onclick="addCalEvent('${iso}')">
+        <div class="cd">${cell.getDate()}</div>
+        ${evs.slice(0,3).map(e=>`<div class="ce" onclick="event.stopPropagation();editCalEvent('${e.id}')">${e.time?escHTML(e.time)+' ':''}${escHTML(e.title)}</div>`).join('')}
+        ${evs.length>3?`<div class="cmore">+${evs.length-3} more</div>`:''}
+      </div>`;
+    }
+    body.innerHTML = h + '</div>';
+  } else if (calView === 'week') {
+    const start = addDays(calCursor, -calCursor.getDay());
+    titleEl.textContent = 'Week of ' + start.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    let h = '<div class="cal-list">';
+    for (let i=0;i<7;i++){
+      const d = addDays(start,i); const evs = eventsOn(d);
+      h += `<div><div style="font-weight:700;font-size:13px;margin:6px 0;">${fmtDate(d)}</div>` +
+        (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div style="font-size:12px;color:var(--text-light);padding:2px 0 8px;">—</div>') + '</div>';
+    }
+    body.innerHTML = h + '</div>';
+  } else {
+    titleEl.textContent = calCursor.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const evs = eventsOn(calCursor);
+    body.innerHTML = '<div class="cal-list">' + (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div class="cal-empty">No events. Tap <b>+ Event</b> to add one.</div>') + '</div>';
+  }
+}
+function calEvRow(e) {
+  return `<div class="cal-ev">
+    <div class="cetime">${e.time?escHTML(e.time):'All day'}</div>
+    <div style="flex:1;"><div class="cetitle">${escHTML(e.title)}${e.recur&&e.recur!=='none'?' <span style="font-size:11px;color:var(--text-muted);">(repeats '+escHTML(e.recur)+')</span>':''}</div>
+      ${e.notes?`<div class="cenote">${escHTML(e.notes)}</div>`:''}</div>
+    <div class="cebtns"><button onclick="editCalEvent('${e.id}')" title="Edit">✎</button><button onclick="deleteCalEvent('${e.id}')" title="Delete">🗑</button></div>
+  </div>`;
+}
+function calModal(html) {
+  let host = eid('cal-modal');
+  if (!host) { host = document.createElement('div'); host.id='cal-modal'; document.body.appendChild(host); }
+  host.innerHTML = `<div class="cm-wrap" onclick="if(event.target===this)closeCalModal()"><div class="cm-card">${html}</div></div>`;
+  host.style.display='block';
+}
+function closeCalModal(){ const h=eid('cal-modal'); if(h){ h.style.display='none'; h.innerHTML=''; } }
+function addCalEvent(iso) {
+  const date = (typeof iso==='string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso : localISO(calCursor);
+  openCalForm({ id:'', title:'', date, time:'', notes:'', recur:'none', remindMins:'' });
+}
+function editCalEvent(id) {
+  const e = (S.calendar.events||[]).find(x=>x.id===id); if(!e)return;
+  openCalForm(e);
+}
+function openCalForm(e) {
+  const recOpts = RECUR_OPTS.map(o=>`<option value="${o[0]}" ${ (e.recur||'none')===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  const remOpts = [['','No reminder'],['0','At start time'],['10','10 min before'],['30','30 min before'],['60','1 hour before'],['1440','1 day before']]
+    .map(o=>`<option value="${o[0]}" ${String(e.remindMins??'')===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  calModal(`
+    <div class="cm-title">${e.id?'Edit event':'New event'}</div>
+    <label>Title</label><input id="cm-title" type="text" value="${escHTML(e.title||'')}" placeholder="e.g. Filter change, Insurance due">
+    <div class="cm-row">
+      <div style="flex:1;"><label>Date</label><input id="cm-date" type="date" value="${e.date||''}"></div>
+      <div style="flex:1;"><label>Time</label><input id="cm-time" type="time" value="${e.time||''}"></div>
+    </div>
+    <div class="cm-row">
+      <div style="flex:1;"><label>Repeat</label><select id="cm-recur">${recOpts}</select></div>
+      <div style="flex:1;"><label>Reminder</label><select id="cm-remind">${remOpts}</select></div>
+    </div>
+    <label>Notes</label><textarea id="cm-notes" rows="2" placeholder="Optional details">${escHTML(e.notes||'')}</textarea>
+    <div class="cm-actions">
+      ${e.id?`<button class="btn danger" onclick="deleteCalEvent('${e.id}')">Delete</button>`:'<span></span>'}
+      <span style="display:flex;gap:8px;">
+        <button class="btn subtle" onclick="closeCalModal()">Cancel</button>
+        <button class="btn primary" onclick="saveCalEvent('${e.id||''}')">Save</button>
+      </span>
+    </div>`);
+}
+function saveCalEvent(id) {
+  const title = (eid('cm-title').value||'').trim();
+  const date = eid('cm-date').value;
+  if (!title) { toast('Add a title'); return; }
+  if (!date)  { toast('Pick a date'); return; }
+  const rec = {
+    title, date,
+    time: eid('cm-time').value || '',
+    notes: eid('cm-notes').value || '',
+    recur: eid('cm-recur').value || 'none',
+    remindMins: eid('cm-remind').value === '' ? null : parseInt(eid('cm-remind').value,10),
+    updatedAt: Date.now(),
+  };
+  snapshot();
+  S.calendar = S.calendar || { events: [] }; S.calendar.events = S.calendar.events || [];
+  if (id) {
+    const e = S.calendar.events.find(x=>x.id===id);
+    if (e) Object.assign(e, rec);
+  } else {
+    rec.id = uid(); rec.createdBy = (S.homeLocation && 'this device') || 'user';
+    S.calendar.events.push(rec);
+  }
+  if (rec.remindMins !== null) ensureNotifyPermission();
+  closeCalModal(); saveAndRender(); toast(id?'Event updated':'Event added');
+}
+function deleteCalEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  snapshot();
+  S.calendar.events = (S.calendar.events||[]).filter(x=>x.id!==id);
+  closeCalModal(); saveAndRender();
+}
+function ensureNotifyPermission() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  } catch {}
+}
+// Reminder checker — runs while the app is open.
+const __remindShown = new Set();
+function checkCalReminders() {
+  if (!S.calendar || !S.calendar.events) return;
+  const now = new Date();
+  const todayISO = localISO(now);
+  S.calendar.events.forEach(e => {
+    if (e.remindMins === null || e.remindMins === undefined || !e.time) return;
+    if (!eventOccursOn(e, now)) return;
+    const [hh,mm] = (e.time||'0:0').split(':').map(n=>parseInt(n,10)||0);
+    const evt = new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0);
+    const fireAt = new Date(evt.getTime() - (e.remindMins||0)*60000);
+    const key = e.id + ':' + todayISO;
+    if (__remindShown.has(key)) return;
+    if (now >= fireAt && now <= new Date(evt.getTime()+60000)) {
+      __remindShown.add(key);
+      const msg = e.title + (e.time?(' at '+e.time):'');
+      toast('⏰ Reminder: ' + msg, 6000);
+      try {
+        if ('Notification' in window && Notification.permission === 'granted')
+          new Notification('Reminder', { body: msg + (e.notes?('\n'+e.notes):'') });
+      } catch {}
+    }
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  AROUND THE HOUSE  (Honey-Do — projects, ideas, links, AI quotes)
@@ -4068,8 +4631,11 @@ function boot() {
   if (WEBHOOK_URL) forcePull();
   showOverdueSummary();
   refreshTickerIfStale();
-  centerActiveTab();
-  window.addEventListener('resize', centerActiveTab, { passive: true });
+  updateNavActive('budget');
+  renderActiveVerse();
+  // Calendar reminders while the app is open (every 30s).
+  checkCalReminders();
+  setInterval(checkCalReminders, 30000);
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
