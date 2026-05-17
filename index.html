@@ -176,7 +176,7 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;
   border:1px solid var(--border);border-radius:10px;background:var(--bg);
 }
-.budget-scroll{overflow:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;}
+.budget-scroll{overflow:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;overscroll-behavior:contain;}
 .budget-table{
   border-collapse:separate;border-spacing:0;
   table-layout:fixed;width:max-content;min-width:100%;
@@ -4993,6 +4993,40 @@ function boot() {
   // Re-pin the budget footer if the viewport changes (rotation, keyboard).
   let __lockT;
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(lockBudgetFooter, 120); }, { passive: true });
+  enableBudgetAxisLock();
+}
+
+// Budget grid: lock a scroll gesture to ONE axis (no diagonal). Whichever
+// direction the swipe starts in wins; the other axis is held until the
+// gesture ends. Native momentum on the active axis is preserved.
+function enableBudgetAxisLock() {
+  const el = eid('budget-scroll');
+  if (!el || el.__axisLock) return;
+  el.__axisLock = true;
+  let sx = 0, sy = 0, axis = null;
+  const reset = () => { axis = null; el.style.overflowX = ''; el.style.overflowY = ''; };
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { axis = 'both'; return; }
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; reset();
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (axis || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - sx), dy = Math.abs(t.clientY - sy);
+    if (dx < 6 && dy < 6) return;                 // wait for a clear intent
+    axis = dx > dy ? 'x' : 'y';
+    if (axis === 'x') el.style.overflowY = 'hidden';
+    else el.style.overflowX = 'hidden';
+  }, { passive: true });
+  el.addEventListener('touchend', reset, { passive: true });
+  el.addEventListener('touchcancel', reset, { passive: true });
+  // Trackpad / mouse wheel: move only the dominant axis per event.
+  el.addEventListener('wheel', e => {
+    const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY);
+    if (!ax && !ay) return;
+    if (ax > ay) { e.preventDefault(); el.scrollLeft += e.deltaX; }
+    else { e.preventDefault(); el.scrollTop += e.deltaY; }
+  }, { passive: false });
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
