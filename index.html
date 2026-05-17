@@ -201,11 +201,20 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 .budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 .budget-table tfoot tr.xsave td.cat{z-index:5;background:var(--bg);}
-.budget-table tfoot tr.xsave td.cat .xsave-wrap{display:flex;align-items:center;gap:6px;}
-.budget-table tfoot tr.xsave td.cat input.xsave-name{width:84px;font:inherit;font-size:11px;font-weight:600;
+
+/* Hide-behind-the-label editor for Savings + custom saved rows.
+   Default: just the word shows. Tap it to reveal the input(s). */
+.budget-table td.cat.sv .sv-label{background:none;border:none;padding:0;margin:0;cursor:pointer;
+  font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit;
+  text-align:left;display:inline-block;}
+.budget-table td.cat.sv .sv-label:after{content:" ✎";color:var(--text-light);font-size:10px;}
+.budget-table td.cat.sv .sv-edit{display:none;align-items:center;gap:6px;}
+.budget-table td.cat.sv.sv-open .sv-label{display:none;}
+.budget-table td.cat.sv.sv-open .sv-edit{display:inline-flex;}
+.budget-table td.cat.sv .sv-edit input.xsave-name{width:84px;font:inherit;font-size:11px;font-weight:600;
   border:none;border-bottom:1px dashed var(--border-strong);background:none;color:var(--accent-dim);
-  text-transform:uppercase;letter-spacing:.03em;padding:2px 0;}
-.budget-table tfoot tr.xsave td.cat button.xsave-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:13px;line-height:1;}
+  text-transform:uppercase;letter-spacing:.03em;padding:2px 0;min-height:0;}
+.budget-table td.cat.sv .sv-edit button.xsave-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:13px;line-height:1;}
 
 /* Sticky left: category column. Must be FULLY OPAQUE and above the
    scrolling data cells so $ values vanish behind it when swiping. */
@@ -638,10 +647,7 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   .budget-table th,.budget-table td{padding:8px 8px;font-size:12px;}
   .budget-table thead tr.paycheck th,.budget-table thead tr.paycheck td{font-size:13px;}
   .budget-table th .sub{font-size:9px;}
-  input[type=number].cat-input{width:100%;font-size:16px;height:30px;line-height:28px;padding:0 8px;margin-left:0;}
-  /* Drop the redundant 'Savings' label on phones — the row is identifiable
-     by its green color and bottom-most position. */
-  .budget-table tfoot tr.savings td.cat .cat-label{display:none;}
+  input[type=number].cat-input{width:112px;font-size:16px;height:32px;line-height:30px;padding:0 8px;margin-left:0;}
   .budget-table tr.bill td.cat{padding:8px 6px;}
   .drag-handle{margin-right:4px;font-size:11px;}
   /* Footer row offsets are computed in JS (lockBudgetFooter) — no fixed
@@ -2225,20 +2231,24 @@ function renderBudget() {
   });
   h += '</tr>';
 
-  h += '<tr class="savings"><td class="cat">' +
-       '<span class="cat-label">Savings</span>' +
+  h += '<tr class="savings"><td class="cat sv">' +
+       '<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to set the savings balance">Savings</button>' +
+       '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
        `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
        `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
-       `title="Current savings balance — auto-grows as scheduled savings contributions pass">` +
-       '</td>';
+       `title="Starting / current savings balance — overwrites the auto-grown value">` +
+       '</span></td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
 
   // Custom "saved amount" rows (Crypto, etc.) — informational, constant
-  // across columns, rendered beneath Savings.
+  // across columns, rendered beneath Savings. Same hide-behind-label UX.
   (S.savingsExtra || []).forEach(row => {
     const bal = Number(row.balance) || 0;
-    h += `<tr class="xsave" data-xid="${row.id}"><td class="cat"><span class="xsave-wrap">` +
+    const nm = (row.label && row.label.trim()) || 'Saved';
+    h += `<tr class="xsave" data-xid="${row.id}"><td class="cat sv">` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to edit">${escHTML(nm)}</button>` +
+      `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
       `<input class="xsave-name" type="text" value="${escHTML(row.label||'')}" placeholder="Label" ` +
       `oninput="updateSavingsExtra('${row.id}','label',this.value)">` +
       `<input type="number" step="0.01" class="cat-input" value="${bal.toFixed(2)}" placeholder="0" ` +
@@ -2735,6 +2745,26 @@ function deleteSavingsExtra(id) {
   snapshot();
   S.savingsExtra = (S.savingsExtra || []).filter(x => x.id !== id);
   saveAndRender();
+}
+// Savings / custom-row label is shown by default; tapping it reveals the
+// hidden input(s) so you can set a fixed start value or overwrite the
+// auto-grown one. Collapses back to the word when focus leaves.
+function svOpen(btn) {
+  const td = btn.closest('td.cat.sv'); if (!td) return;
+  td.classList.add('sv-open');
+  const inp = td.querySelector('.cat-input');
+  if (inp) { inp.focus(); try { inp.select(); } catch {} }
+  lockBudgetFooter();
+}
+function svMaybeClose(ev, wrap) {
+  // Wait a tick so focus can move between the name/amount inputs without
+  // collapsing; only close once focus has truly left this editor.
+  setTimeout(() => {
+    if (wrap.contains(document.activeElement)) return;
+    const td = wrap.closest('td.cat.sv'); if (td) td.classList.remove('sv-open');
+    // Re-render so a custom row's label text refreshes and offsets re-lock.
+    if (eid('tab-budget') && eid('tab-budget').classList.contains('active')) renderBudget();
+  }, 60);
 }
 
 function addAdhocColumn() {
