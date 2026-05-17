@@ -67,30 +67,37 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 #chrome{position:sticky;top:0;z-index:50;background:var(--bg);
   box-shadow:0 1px 0 var(--border);}
 
-/* ─── Header (safe-area aware) ─── */
-#hdr{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--bg);
-  padding-top:calc(14px + env(safe-area-inset-top));
-  padding-left:calc(24px + env(safe-area-inset-left));
-  padding-right:calc(24px + env(safe-area-inset-right));}
+/* ─── Header: ONE compact row (theme · nav icons · undo · save · sync) ─ */
+#hdr{display:flex;align-items:center;gap:5px;background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:7px 8px;padding-top:calc(7px + env(safe-area-inset-top));
+  padding-left:calc(8px + env(safe-area-inset-left));
+  padding-right:calc(8px + env(safe-area-inset-right));}
 #hdr-title{font-size:17px;font-weight:600;letter-spacing:-0.01em;color:var(--text);}
-#hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
-.sync-pill{padding:5px 11px;border-radius:999px;font-size:11px;font-weight:600;color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.04em;}
+#theme-btn{font-size:16px;line-height:1;width:34px;height:34px;border-radius:999px;
+  border:1px solid var(--border-strong);background:var(--bg-soft);color:var(--text);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+#theme-btn:hover{background:var(--bg-strong);}
+#btn-undo.icon-btn{flex:0 0 auto;min-width:32px;padding:7px 8px;font-size:15px;min-height:34px;}
+#btn-save{flex:0 0 auto;padding:7px 12px;font-size:13px;min-height:34px;font-weight:700;}
+.sync-pill{flex:0 0 auto;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700;
+  color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.03em;white-space:nowrap;}
 .sync-pill.ok{color:var(--accent-dim);background:var(--accent-soft);}
 .sync-pill.err{color:var(--negative);background:var(--negative-soft);}
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
 
 /* ─── Grouped icon nav (Money / Fun / Chores dropdowns + solos) ─── */
-#tabs{display:flex;gap:8px;background:var(--bg);border-bottom:1px solid var(--border);
-  padding:8px 12px;padding-left:calc(12px + env(safe-area-inset-left));
-  padding-right:calc(12px + env(safe-area-inset-right));flex-wrap:wrap;justify-content:center;}
-.navgrp{position:relative;}
-.grpbtn{display:inline-flex;align-items:center;gap:4px;font-family:inherit;font-size:14px;
-  font-weight:600;padding:9px 13px;background:var(--bg-soft);border:1px solid var(--border-strong);
-  color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+#tabs{display:flex;flex:1 1 auto;min-width:0;gap:4px;background:transparent;
+  justify-content:center;flex-wrap:nowrap;overflow:visible;}
+.navgrp{position:relative;flex:0 0 auto;}
+.grpbtn{display:inline-flex;align-items:center;justify-content:center;font-family:inherit;
+  font-weight:600;padding:5px 7px;background:var(--bg-soft);border:1px solid var(--border-strong);
+  color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;flex:0 0 auto;
+  transition:background .12s,border-color .12s,color .12s;}
 .grpbtn:hover{background:var(--bg-strong);}
-.grpbtn .gi{font-size:20px;line-height:1;}
-.grpbtn .gl{display:none;}   /* icon-only nav */
-.grpbtn .gcaret{font-size:10px;color:var(--text-muted);transition:transform .15s;}
+.grpbtn .gi{font-size:18px;line-height:1;}
+.grpbtn .gl{display:none;}      /* icon-only nav */
+.grpbtn .gcaret{display:none;}  /* dropdown still opens on tap */
 .navgrp.open .grpbtn{background:var(--accent);color:#fff;border-color:var(--accent);}
 .navgrp.open .grpbtn .gcaret{transform:rotate(180deg);color:#fff;}
 .grpbtn.active,.navgrp.active .grpbtn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dim);}
@@ -126,6 +133,17 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .card{background:var(--bg);margin-bottom:20px;}
 .card-hdr{padding:16px 0 12px;font-size:15px;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;letter-spacing:-0.01em;}
 .card-body{padding:0;}
+
+/* Collapsible Settings sections (collapsed by default) */
+.set-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:14px;overflow:hidden;}
+.set-card>summary{list-style:none;cursor:pointer;padding:16px;font-size:15px;font-weight:700;
+  color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.set-card>summary::-webkit-details-marker{display:none;}
+.set-card>summary:after{content:"▾";color:var(--text-muted);font-size:12px;
+  transition:transform .15s;flex:0 0 auto;}
+.set-card[open]>summary:after{transform:rotate(180deg);}
+.set-card>.set-body{padding:0 16px 18px;}
 
 /* ─── Buttons ─── */
 .btn{font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;background:var(--bg);border:1px solid var(--border-strong);color:var(--text);border-radius:6px;cursor:pointer;transition:background .12s,border-color .12s;letter-spacing:0;}
@@ -437,7 +455,8 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .cal-list{display:flex;flex-direction:column;gap:8px;}
 .cal-ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;
   padding:12px 14px;background:var(--bg-soft);}
-.cal-ev .cetime{font-weight:700;font-size:13px;color:var(--accent-dim);min-width:74px;}
+.cal-ev .ceicon{font-size:18px;line-height:1.2;flex:0 0 auto;}
+.cal-ev .cetime{font-weight:700;font-size:13px;color:var(--accent-dim);min-width:64px;}
 .cal-ev .cetitle{flex:1;font-weight:600;font-size:14px;}
 .cal-ev .cenote{font-size:12px;color:var(--text-muted);margin-top:2px;}
 .cal-ev .cebtns{display:flex;gap:6px;}
@@ -776,20 +795,9 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   html,body{font-size:15px;}
   /* Make the pinned bar feel like an app chrome */
   #chrome{box-shadow:0 1px 8px rgba(0,0,0,.06);}
-  #hdr{padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));gap:8px;}
-  #hdr-title{font-size:16px;}
-  #hdr-right{gap:6px;}
-  #hdr-right .btn.green{font-size:14px;padding:9px 16px;font-weight:700;}
-  .icon-btn{padding:9px 11px;min-width:42px;font-size:17px;}
-  .sync-pill{padding:6px 10px;font-size:10px;}
-
-  /* Grouped icon nav: big tap targets, full-width dropdown items */
-  #tabs{gap:6px;}
-  .grpbtn{min-height:46px;font-size:15px;padding:10px 14px;}
-  .grpbtn .gi{font-size:19px;}
-  .grpbtn .gl{font-size:14px;}
-  .grpmenu{min-width:220px;}
-  .grpmenu button{min-height:48px;font-size:15px;}
+  /* One-row header stays compact on phones; keep dropdown items big */
+  .grpmenu{min-width:200px;}
+  .grpmenu button{min-height:46px;font-size:15px;}
 
   .tab-pane{padding:16px 14px;padding-left:calc(14px + env(safe-area-inset-left));
     padding-right:calc(14px + env(safe-area-inset-right));
@@ -859,14 +867,7 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
 <div id="chrome">
   <div id="hdr">
     <button id="theme-btn" onclick="toggleTheme()" title="Switch light / dark" aria-label="Switch theme">🌙</button>
-    <div id="hdr-right">
-      <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↩</button>
-      <button class="btn subtle icon-btn" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)" aria-label="Redo">↪</button>
-      <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
-      <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
-    </div>
-  </div>
-  <div id="tabs">
+    <div id="tabs">
     <div class="navgrp" data-grp="money">
       <button class="grpbtn" onclick="toggleGrp(event,'money')"><span class="gi">💰</span><span class="gl">Money</span><span class="gcaret">▾</span></button>
       <div class="grpmenu" id="grp-money">
@@ -895,6 +896,10 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     </div>
     <button class="grpbtn solo" data-tab="calendar" onclick="goTab('calendar')"><span class="gi">📅</span><span class="gl">Calendar</span></button>
     <button class="grpbtn solo" data-tab="settings" onclick="goTab('settings')"><span class="gi">⚙️</span><span class="gl">Settings</span></button>
+    </div>
+    <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↩</button>
+    <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
+    <span id="last-sync" class="sync-pill local" title="Click to sync">LOCAL</span>
   </div>
 </div>
 
@@ -1174,7 +1179,6 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
       </span>
     </div>
     <div class="card-body">
-      <div id="cal-share-note" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.55;"></div>
       <div class="cal-bar">
         <button class="btn subtle" onclick="calNav(-1)">‹ Prev</button>
         <button class="btn subtle" onclick="calToday()">Today</button>
@@ -1260,12 +1264,11 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-hdr">
-      <span>Income — paychecks</span>
-      <button class="btn primary" onclick="addPaycheck()">+ Add paycheck</button>
-    </div>
-    <div class="card-body" style="overflow:auto;padding:0;">
+  <details class="set-card">
+    <summary>Income — paychecks</summary>
+    <div class="set-body">
+      <button class="btn primary" onclick="addPaycheck()" style="margin-bottom:12px;">+ Add paycheck</button>
+      <div style="overflow:auto;">
       <table class="list-table" id="paychecks-table">
         <thead><tr>
           <th class="col-actions" style="width:24px;"></th>
@@ -1278,17 +1281,18 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
         </tr></thead>
         <tbody id="paychecks-tbody"></tbody>
       </table>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);padding:10px 4px 0;line-height:1.6;">
+        <strong>Day:</strong> for monthly / quarterly / yearly = day of month (1–31).
+        For weekly / biweekly = day of week (<code>0</code>=Sun … <code>4</code>=Thu … <code>6</code>=Sat).
+        For biweekly, set the anchor date in your local data if needed; defaults to start of the current month.
+      </div>
     </div>
-    <div style="font-size:11px;color:var(--text-muted);padding:10px 4px 0;line-height:1.6;">
-      <strong>Day:</strong> for monthly / quarterly / yearly = day of month (1–31).
-      For weekly / biweekly = day of week (<code>0</code>=Sun … <code>4</code>=Thu … <code>6</code>=Sat).
-      For biweekly, set the anchor date in your local data if needed; defaults to start of the current month.
-    </div>
-  </div>
+  </details>
 
-  <div class="card">
-    <div class="card-hdr">Family photos</div>
-    <div class="card-body">
+  <details class="set-card">
+    <summary>Photo Info</summary>
+    <div class="set-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
         Add family photos to use as your homepage splash and as a soft background behind the budget.
         Photos are stored locally in your browser only — they don't sync to the Google Sheet, so each
@@ -1302,11 +1306,11 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
       </div>
       <div class="photo-thumbs" id="photo-thumbs"></div>
     </div>
-  </div>
+  </details>
 
-  <div class="card">
-    <div class="card-hdr"><span>AI assistant — connect (free)</span></div>
-    <div class="card-body">
+  <details class="set-card">
+    <summary>AI assistant — connect (free)</summary>
+    <div class="set-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
         The old no-key AI stopped working for websites, so the ✦ AI buttons (trip ideas, reviews,
         deals, events, home cost estimates, receipt reading) need a <b>free key</b>. <b>Groq</b> is the
@@ -1340,11 +1344,11 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
       </div>
       <div id="ai-test-status" style="font-size:13px;color:var(--text-muted);margin-top:10px;font-weight:600;"></div>
     </div>
-  </div>
+  </details>
 
-  <div class="card">
-    <div class="card-hdr"><span>Home</span></div>
-    <div class="card-body">
+  <details class="set-card">
+    <summary>Home</summary>
+    <div class="set-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
         Used for local cost estimates on the <b>Around the House</b> tab. Stays in this browser.
       </div>
@@ -1353,16 +1357,16 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
       <div class="field" style="margin-bottom:0;"><label>ZIP</label>
         <input id="home-zip" type="text" inputmode="numeric" placeholder="78245" style="max-width:140px;" oninput="updateHomeLoc('zip',this.value)"></div>
     </div>
-  </div>
+  </details>
 
-  <div class="card">
-    <div class="card-hdr">Data</div>
-    <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+  <details class="set-card">
+    <summary>Data</summary>
+    <div class="set-body" style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="exportJSON()">⬇ Export JSON</button>
       <button class="btn" onclick="document.getElementById('import-file').click()">⬆ Import JSON</button>
       <input id="import-file" type="file" accept=".json" style="display:none;" onchange="importJSON(event)">
     </div>
-  </div>
+  </details>
 </div>
 
 <div id="toast"></div>
@@ -4264,12 +4268,45 @@ function eventsOn(d) {
     .sort((a,b) => (a.time||'99').localeCompare(b.time||'99'));
 }
 function fmtDate(d){ return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
+// Pick an emoji that represents the event from its title keywords.
+function eventIcon(t) {
+  const s = (t || '').toLowerCase();
+  const map = [
+    [/birthday|b-?day/, '🎂'],
+    [/anniversary/, '💞'],
+    [/wedding|marri/, '💒'],
+    [/dentist|tooth|teeth|ortho/, '🦷'],
+    [/doctor|dr\.?\b|appt|appointment|checkup|check-up|physical|clinic|medical|surgery|therapy|hospital/, '🩺'],
+    [/vet|veterinar/, '🐾'],
+    [/insurance|premium|policy/, '🛡️'],
+    [/oil change|tire|dmv|registration|inspection|mechanic|car wash/, '🚗'],
+    [/filter|hvac|furnace|air ?filter|ac\b/, '🌬️'],
+    [/paycheck|payday|salary|income|deposit/, '💰'],
+    [/bill|payment|mortgage|rent|due|invoice|utilit/, '💳'],
+    [/flight|airport|fly|airline/, '✈️'],
+    [/trip|vacation|travel|cruise/, '🧳'],
+    [/hotel|airbnb|resort/, '🏨'],
+    [/school|class|exam|test|homework|pta|graduation/, '🎓'],
+    [/work|meeting|interview|conference|standup|1:1|deadline/, '💼'],
+    [/gym|workout|run|yoga|fitness|training|pilates/, '🏋️'],
+    [/church|bible|worship|small group|service|prayer/, '✝️'],
+    [/dinner|lunch|breakfast|brunch|restaurant|date night|reservation/, '🍽️'],
+    [/party|celebrat|reception/, '🎉'],
+    [/christmas|thanksgiving|easter|halloween|holiday/, '🎄'],
+    [/clean|chore|laundry|trash|garbage|yard|lawn|mow|sod/, '🧹'],
+    [/grocery|groceries|shopping|costco|target|walmart|store/, '🛒'],
+    [/call|phone|zoom|facetime|video chat/, '📞'],
+    [/baby|pregnan|ultrasound|newborn/, '👶'],
+    [/movie|concert|game|sports|show|festival|event|ticket/, '🎟️'],
+    [/pet|dog|cat|grooming/, '🐶'],
+    [/haircut|salon|barber|nails|spa/, '💇'],
+    [/garden|plant|water/, '🪴'],
+  ];
+  for (const [re, ic] of map) if (re.test(s)) return ic;
+  return '📌';
+}
 function renderCalendar() {
   document.querySelectorAll('#cal-views .seg-b').forEach(b => b.classList.toggle('on', b.dataset.v===calView));
-  const note = eid('cal-share-note');
-  if (note) note.innerHTML = WEBHOOK_URL
-    ? 'Shared via your synced sheet — events you add appear for everyone on this calendar after their app syncs. Reminders pop on whichever device has the app open. <b>Tip:</b> tap a day to add an event.'
-    : 'Set the Google web-app URL in <b>Settings → Sync</b> so events are shared with your spouse. Reminders pop while the app is open.';
   const titleEl = eid('cal-title'), body = eid('cal-body');
   if (!body) return;
   if (calView === 'month') {
@@ -4285,7 +4322,7 @@ function renderCalendar() {
       const iso = localISO(cell);
       h += `<div class="cal-cell ${inMonth?'':'out'} ${iso===todayISO?'today':''}" onclick="addCalEvent('${iso}')">
         <div class="cd">${cell.getDate()}</div>
-        ${evs.slice(0,3).map(e=>`<div class="ce" onclick="event.stopPropagation();editCalEvent('${e.id}')">${e.time?escHTML(e.time)+' ':''}${escHTML(e.title)}</div>`).join('')}
+        ${evs.slice(0,3).map(e=>`<div class="ce" onclick="event.stopPropagation();editCalEvent('${e.id}')">${eventIcon(e.title)} ${e.time?escHTML(e.time)+' ':''}${escHTML(e.title)}</div>`).join('')}
         ${evs.length>3?`<div class="cmore">+${evs.length-3} more</div>`:''}
       </div>`;
     }
@@ -4317,6 +4354,7 @@ function recurLabel(e) {
 function calEvRow(e) {
   const rl = recurLabel(e);
   return `<div class="cal-ev">
+    <div class="ceicon" aria-hidden="true">${eventIcon(e.title)}</div>
     <div class="cetime">${e.time?escHTML(e.time):'All day'}</div>
     <div style="flex:1;"><div class="cetitle">${escHTML(e.title)}${rl?' <span style="font-size:11px;color:var(--text-muted);">(repeats '+escHTML(rl)+')</span>':''}</div>
       ${e.notes?`<div class="cenote">${escHTML(e.notes)}</div>`:''}</div>
