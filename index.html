@@ -9,25 +9,56 @@
 <meta name="apple-mobile-web-app-title" content="Reed Budget">
 <meta name="format-detection" content="telephone=no">
 <title>Reed Family Budget</title>
+<script>
+  // Apply saved theme before paint to avoid a flash.
+  (function(){
+    try {
+      var t = localStorage.getItem('reed_theme');
+      if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+  })();
+</script>
 <style>
-:root{
+:root, :root[data-theme="light"]{
   --bg:#ffffff;
-  --bg-soft:#fafbfc;
-  --bg-strong:#f7f8fa;
-  --border:#f0f1f4;
-  --border-strong:#e5e6eb;
-  --text:#0f1011;
-  --text-muted:#6b7280;
-  --text-light:#9ca3af;
-  --accent:#00c805;
-  --accent-dim:#00a004;
-  --accent-soft:#e6f9e8;
-  --negative:#f44336;
-  --negative-soft:#fde8e6;
+  --bg-soft:#f4f6f8;
+  --bg-strong:#e9ecf1;
+  --border:#e2e5ea;
+  --border-strong:#cdd2db;
+  --text:#0a0c0f;
+  --text-muted:#586173;
+  --text-light:#949bab;
+  --accent:#00b806;
+  --accent-dim:#008f05;
+  --accent-soft:#e3f7e6;
+  --negative:#e23b2e;
+  --negative-soft:#fbe6e4;
   --warn:#b45309;
-  --highlight:#fffbe6;
+  --highlight:#fff6d6;
+  --shadow:rgba(13,18,28,.10);
   --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
+:root[data-theme="dark"]{
+  --bg:#0e1116;
+  --bg-soft:#171c23;
+  --bg-strong:#1f2630;
+  --border:#262d39;
+  --border-strong:#374252;
+  --text:#e9edf3;
+  --text-muted:#9aa6b6;
+  --text-light:#6b7686;
+  --accent:#27d062;
+  --accent-dim:#1faf51;
+  --accent-soft:#11371f;
+  --negative:#f87171;
+  --negative-soft:#3a2020;
+  --warn:#fbbf24;
+  --highlight:#3a3216;
+  --shadow:rgba(0,0,0,.45);
+}
+html{color-scheme:light;}
+html[data-theme="dark"]{color-scheme:dark;}
 *{box-sizing:border-box;}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--ff);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;}
@@ -53,15 +84,24 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
   padding:8px 12px;padding-left:calc(12px + env(safe-area-inset-left));
   padding-right:calc(12px + env(safe-area-inset-right));flex-wrap:wrap;}
 .navgrp{position:relative;}
-.grpbtn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:14px;
-  font-weight:600;padding:10px 14px;background:var(--bg-soft);border:1px solid var(--border-strong);
+.grpbtn{display:inline-flex;align-items:center;gap:4px;font-family:inherit;font-size:14px;
+  font-weight:600;padding:9px 13px;background:var(--bg-soft);border:1px solid var(--border-strong);
   color:var(--text);cursor:pointer;border-radius:999px;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
 .grpbtn:hover{background:var(--bg-strong);}
-.grpbtn .gi{font-size:17px;line-height:1;}
+.grpbtn .gi{font-size:20px;line-height:1;}
+.grpbtn .gl{display:none;}   /* icon-only nav */
 .grpbtn .gcaret{font-size:10px;color:var(--text-muted);transition:transform .15s;}
-.navgrp.open .grpbtn{background:var(--text);color:#fff;border-color:var(--text);}
+.navgrp.open .grpbtn{background:var(--accent);color:#fff;border-color:var(--accent);}
 .navgrp.open .grpbtn .gcaret{transform:rotate(180deg);color:#fff;}
 .grpbtn.active,.navgrp.active .grpbtn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dim);}
+
+/* Light / dark toggle */
+.theme-toggle{display:inline-flex;border:1px solid var(--border-strong);border-radius:999px;overflow:hidden;}
+.tt-b{font-family:inherit;font-size:15px;line-height:1;padding:7px 11px;background:var(--bg);
+  border:none;color:var(--text-muted);cursor:pointer;}
+.tt-b+.tt-b{border-left:1px solid var(--border-strong);}
+html[data-theme="light"] .tt-b[data-th="light"],
+html[data-theme="dark"]  .tt-b[data-th="dark"]{background:var(--accent);color:#fff;}
 .grpmenu{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--bg);
   border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 12px 30px -8px rgba(0,0,0,.22);
   padding:6px;display:none;z-index:60;}
@@ -148,16 +188,24 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
 .budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:38px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
 
-/* Sticky bottom: 3 footer rows (savings, diff, remainder).
-   Equal explicit heights are required so the sticky `bottom` offsets
-   (0 / 40 / 80) line up cleanly without overlap. */
-.budget-table tfoot tr td{height:40px;box-sizing:border-box;}
-.budget-table tfoot tr.savings td{position:sticky;bottom:0;z-index:3;background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
-.budget-table tfoot tr.diff td{position:sticky;bottom:40px;z-index:3;background:var(--bg);color:var(--text-muted);font-size:12px;}
+/* Sticky bottom footer rows. Their `bottom` offsets are assigned by
+   lockBudgetFooter() from measured heights so Remainder & Difference
+   stay pinned above Savings (and any custom rows) with no drift. */
+.budget-table tfoot tr td{box-sizing:border-box;}
+.budget-table tfoot tr td,.budget-table tfoot tr th{position:sticky;z-index:3;background:var(--bg);}
+.budget-table tfoot tr.savings td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
+.budget-table tfoot tr.diff td{background:var(--bg);color:var(--text-muted);font-size:12px;}
 .budget-table tfoot tr.diff td.pos{color:var(--accent-dim);}
 .budget-table tfoot tr.diff td.neg{color:var(--negative);}
-.budget-table tfoot tr.balance td{position:sticky;bottom:80px;z-index:3;background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
+.budget-table tfoot tr.balance td{background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
+.budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
+.budget-table tfoot tr.xsave td.cat{z-index:5;background:var(--bg);}
+.budget-table tfoot tr.xsave td.cat .xsave-wrap{display:flex;align-items:center;gap:6px;}
+.budget-table tfoot tr.xsave td.cat input.xsave-name{width:84px;font:inherit;font-size:11px;font-weight:600;
+  border:none;border-bottom:1px dashed var(--border-strong);background:none;color:var(--accent-dim);
+  text-transform:uppercase;letter-spacing:.03em;padding:2px 0;}
+.budget-table tfoot tr.xsave td.cat button.xsave-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:13px;line-height:1;}
 
 /* Sticky left: category column. Must be FULLY OPAQUE and above the
    scrolling data cells so $ values vanish behind it when swiping. */
@@ -499,6 +547,16 @@ body.bg-active .budget-wrap{background:rgba(255,255,255,0.92);backdrop-filter:sa
 body.bg-active .budget-table th,body.bg-active .budget-table td{background:rgba(255,255,255,0.85);}
 body.bg-active .budget-table thead tr.paycheck th,body.bg-active .budget-table thead tr.paycheck td,body.bg-active .budget-table tfoot tr.balance td{background:rgba(247,248,250,0.95);}
 body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table tfoot tr td.cat{background:rgba(255,255,255,0.95);}
+/* Dark-mode glass: keep the photo-background readable without washing white */
+html[data-theme="dark"] body.bg-active #chrome,
+html[data-theme="dark"] body.bg-active #hdr,
+html[data-theme="dark"] body.bg-active #tabs,
+html[data-theme="dark"] body.bg-active .card,
+html[data-theme="dark"] body.bg-active .budget-wrap,
+html[data-theme="dark"] body.bg-active .budget-table th,
+html[data-theme="dark"] body.bg-active .budget-table td{background:rgba(14,17,22,0.86) !important;}
+html[data-theme="dark"] body.bg-active .budget-table td.cat,
+html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !important;}
 
 /* ─── Vacation cards ─── */
 .vac-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;}
@@ -586,11 +644,8 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   .budget-table tfoot tr.savings td.cat .cat-label{display:none;}
   .budget-table tr.bill td.cat{padding:8px 6px;}
   .drag-handle{margin-right:4px;font-size:11px;}
-  /* Footer rows on mobile: tall enough to contain the savings input. */
-  .budget-table tfoot tr td{height:48px;}
-  .budget-table tfoot tr.savings td{bottom:0;}
-  .budget-table tfoot tr.diff td{bottom:48px;}
-  .budget-table tfoot tr.balance td{bottom:96px;}
+  /* Footer row offsets are computed in JS (lockBudgetFooter) — no fixed
+     heights/offsets here so they never drift on mobile. */
   /* Stack budget controls */
   .budget-controls{flex-direction:column;align-items:stretch;gap:8px;}
   .budget-controls .ctrl-group{justify-content:stretch;}
@@ -774,6 +829,10 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   <div id="hdr">
     <div id="hdr-title">Reed Family Budget</div>
     <div id="hdr-right">
+      <span class="theme-toggle" role="group" aria-label="Theme">
+        <button class="tt-b" data-th="light" onclick="setTheme('light')" title="Light mode" aria-label="Light mode">☀</button>
+        <button class="tt-b" data-th="dark" onclick="setTheme('dark')" title="Dark mode" aria-label="Dark mode">☾</button>
+      </span>
       <button class="btn subtle icon-btn" id="btn-undo" onclick="undo()" title="Undo (⌘Z)" aria-label="Undo">↶</button>
       <button class="btn subtle icon-btn" id="btn-redo" onclick="redo()" title="Redo (⌘⇧Z)" aria-label="Redo">↷</button>
       <button class="btn green" id="btn-save" onclick="saveNow()" title="Save now (⌘S)">Save</button>
@@ -825,7 +884,8 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
   <div class="budget-controls">
     <div class="ctrl-group">
       <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
-      <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current (paycheck added to balance, unpaid bills carried forward)">→ Advance</button>
+      <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
+      <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
     </div>
     <div class="ctrl-group">
       <button class="btn subtle" onclick="resetCurrentDate()" id="btn-reset-date" title="Reset Current back to today">⤺ Today</button>
@@ -965,7 +1025,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
     <div class="card-body">
       <div id="ai-chat-log" class="ai-chat-log"></div>
       <div class="ai-chat-row">
-        <input type="text" id="ai-chat-input" placeholder="e.g. 4-day budget trip ideas from San Antonio under $1500?" onkeydown="if(event.key==='Enter')sendAIChat()">
+        <input type="text" id="ai-chat-input" placeholder="Ask a question" onkeydown="if(event.key==='Enter')sendAIChat()">
         <button class="btn primary" onclick="sendAIChat()">Ask</button>
         <button class="btn subtle" onclick="clearAIChat()" title="Clear conversation">Clear</button>
       </div>
@@ -1061,7 +1121,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
     </div>
     <div class="card-body">
       <div class="link-add-row" style="margin-bottom:14px;">
-        <input type="text" id="todo-quick" placeholder="Type a task and press Enter…" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')addTodoQuick()">
+        <input type="text" id="todo-quick" placeholder="Add a task" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')addTodoQuick()">
         <button class="btn" onclick="addTodoQuick()">Add</button>
       </div>
       <div id="todos-list"></div>
@@ -1143,8 +1203,21 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
 <!-- ─── SETTINGS ───────────────────────────────────────────────────── -->
 <div class="tab-pane" id="tab-settings">
   <div class="card">
-    <div class="card-hdr">Sync</div>
+    <div class="card-hdr">Sync &amp; sharing</div>
     <div class="card-body">
+      <details style="margin-bottom:14px;font-size:13px;line-height:1.65;color:var(--text-muted);">
+        <summary style="cursor:pointer;font-weight:700;color:var(--text);">Where do I get the Web app URL to share with my spouse?</summary>
+        <ol style="margin:10px 0 0 18px;padding:0;">
+          <li>Create a Google Sheet (any blank one).</li>
+          <li>In it: <b>Extensions → Apps Script</b>.</li>
+          <li>Delete the sample code, paste the contents of <b>apps-script.gs</b> from the project repo, and Save.</li>
+          <li>Click <b>Deploy → New deployment</b> → type <b>Web app</b>.</li>
+          <li>Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then <b>Deploy</b> and authorize.</li>
+          <li>Copy the <b>Web app URL</b> it gives you (ends in <code>/exec</code>) and paste it below, then <b>Save</b>.</li>
+          <li>Share that one URL with your spouse — they paste it into this same box on their device. You both now read/write the same data, so the calendar &amp; everything stays in sync.</li>
+        </ol>
+        <div style="margin-top:8px;">Treat the URL like a password — anyone with it can see your data. Only share it with your spouse.</div>
+      </details>
       <div class="field"><label>Web app URL</label><input id="ss-webhook" type="url" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn primary" onclick="testSync()">Test connection</button>
@@ -1246,7 +1319,7 @@ body.bg-active .budget-table thead tr.dates th.cat,body.bg-active .budget-table 
         Used for local cost estimates on the <b>Around the House</b> tab. Stays in this browser.
       </div>
       <div class="field"><label>Home address / area</label>
-        <input id="home-addr" type="text" placeholder="9003 Rainbow Crk., San Antonio, TX 78245" style="width:100%;" oninput="updateHomeLoc('address',this.value)"></div>
+        <input id="home-addr" type="text" placeholder="Home address" style="width:100%;" oninput="updateHomeLoc('address',this.value)"></div>
       <div class="field" style="margin-bottom:0;"><label>ZIP</label>
         <input id="home-zip" type="text" inputmode="numeric" placeholder="78245" style="max-width:140px;" oninput="updateHomeLoc('zip',this.value)"></div>
     </div>
@@ -1280,6 +1353,7 @@ let S = {
   currentBalance: 0,
   currentDate: null,    // ISO date — when set, the Budget's CURRENT column anchors here instead of today (advanced forward via the Advance button)
   savingsBalance: 0,
+  savingsExtra: [],   // [{id,label,balance}] extra saved-amount rows (Crypto, etc.)
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
   bills: [],
@@ -1361,14 +1435,25 @@ async function aiFetchOnce(messages, model, timeoutMs) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     const custom = aiHasKey();
-    if (S.ai && S.ai.token && S.ai.token.trim()) headers['Authorization'] = 'Bearer ' + S.ai.token.trim();
+    // Only send the bearer to a real configured endpoint — never attach it
+    // to the free Pollinations path (an Authorization header there 500s).
+    if (custom && S.ai.token && S.ai.token.trim()) headers['Authorization'] = 'Bearer ' + S.ai.token.trim();
     const body = JSON.stringify({ model, messages });
     const init = { method: 'POST', headers, body, signal: ctrl.signal };
     // Stripping the Referer keeps the free endpoint on its "anonymous" path.
     if (!custom) { init.referrerPolicy = 'no-referrer'; init.referrer = ''; }
     const r = await fetch(aiEndpoint(), init);
     if (r.status === 429) throw new Error('AI_RATELIMIT');
-    if (!r.ok) throw new Error('AI service returned HTTP ' + r.status);
+    if (!r.ok) {
+      // Surface the provider's real message (bad key, decommissioned model…)
+      let detail = '';
+      try {
+        const errTxt = await r.text();
+        try { const j = JSON.parse(errTxt); detail = (j.error && (j.error.message || j.error)) || j.message || ''; }
+        catch { detail = errTxt.slice(0, 180); }
+      } catch {}
+      throw new Error('HTTP ' + r.status + (detail ? ' — ' + detail : ''));
+    }
     const ct = r.headers.get('content-type') || '';
     let content;
     if (ct.includes('application/json')) {
@@ -1502,6 +1587,12 @@ function toggleGrp(ev, g) {
   if (grp && !wasOpen) grp.classList.add('open');
 }
 function goTab(name) { closeNavMenus(); showTab(name); }
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('reed_theme', t); } catch {}
+  const tc = document.querySelector('meta[name=theme-color]');
+  if (tc) tc.setAttribute('content', t === 'dark' ? '#0e1116' : '#ffffff');
+}
 document.addEventListener('click', e => {
   if (!e.target.closest('#tabs')) closeNavMenus();
 });
@@ -2139,14 +2230,31 @@ function renderBudget() {
        '<span class="cat-label">Savings</span>' +
        `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
        `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
-       `title="Current savings account balance — auto-grows as scheduled savings contributions pass">` +
+       `title="Current savings balance — auto-grows as scheduled savings contributions pass">` +
        '</td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
+
+  // Custom "saved amount" rows (Crypto, etc.) — informational, constant
+  // across columns, rendered beneath Savings.
+  (S.savingsExtra || []).forEach(row => {
+    const bal = Number(row.balance) || 0;
+    h += `<tr class="xsave" data-xid="${row.id}"><td class="cat"><span class="xsave-wrap">` +
+      `<input class="xsave-name" type="text" value="${escHTML(row.label||'')}" placeholder="Label" ` +
+      `oninput="updateSavingsExtra('${row.id}','label',this.value)">` +
+      `<input type="number" step="0.01" class="cat-input" value="${bal.toFixed(2)}" placeholder="0" ` +
+      `oninput="updateSavingsExtra('${row.id}','balance',parseFloat(this.value)||0)">` +
+      `<button class="xsave-del" title="Remove row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
+      `</span></td>`;
+    cols.forEach(() => h += `<td>${fmt$(bal)}</td>`);
+    h += '</tr>';
+  });
   h += '</tfoot></table>';
 
   wrap.innerHTML = h;
   wireBudgetInteractions();
+  requestAnimationFrame(lockBudgetFooter);
+  setTimeout(lockBudgetFooter, 90);   // belt-and-suspenders after layout settles
 
   if (pendingFocus) {
     const { r, c, edit } = pendingFocus;
@@ -2592,6 +2700,42 @@ function updateSavingsBalance(value) {
     running += savingsThis;
     tds[i].textContent = fmt$(running);
   });
+}
+
+// Pin Remainder / Difference / Savings / custom rows to the bottom with
+// offsets measured from real heights so they never drift vertically.
+function lockBudgetFooter() {
+  const wrap = eid('budget-scroll'); if (!wrap) return;
+  const rows = Array.from(wrap.querySelectorAll('.budget-table tfoot tr'));
+  let cum = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const hgt = rows[i].getBoundingClientRect().height;
+    rows[i].querySelectorAll('td,th').forEach(c => { c.style.bottom = cum + 'px'; });
+    cum += hgt;
+  }
+}
+function addSavingsExtra() {
+  snapshot();
+  S.savingsExtra = S.savingsExtra || [];
+  S.savingsExtra.push({ id: uid(), label: 'Crypto', balance: 0 });
+  saveAndRender();
+}
+function updateSavingsExtra(id, field, value) {
+  const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
+  maybeSnapshot();
+  r[field] = (field === 'balance') ? (Number(value) || 0) : value;
+  scheduleSave();
+  if (field === 'balance') {
+    // live-update that row's column cells without a full re-render
+    const wrap = eid('budget-scroll'); if (!wrap) return;
+    const tr = wrap.querySelector(`tfoot tr.xsave[data-xid="${id}"]`);
+    if (tr) tr.querySelectorAll('td:not(.cat)').forEach(td => td.textContent = fmt$(Number(value) || 0));
+  }
+}
+function deleteSavingsExtra(id) {
+  snapshot();
+  S.savingsExtra = (S.savingsExtra || []).filter(x => x.id !== id);
+  saveAndRender();
 }
 
 function addAdhocColumn() {
@@ -3163,7 +3307,7 @@ function renderPaychecks() {
   tbody.innerHTML = S.paychecks.map((p, i) => `
     <tr class="${p.active === false ? 'inactive' : ''}" data-id="${p.id}">
       <td class="drag-cell">⋮⋮</td>
-      <td data-label="Label"><input type="text" value="${escHTML(p.label||'')}" placeholder="e.g. Main job" oninput="updatePaycheck('${p.id}','label',this.value)"></td>
+      <td data-label="Label"><input type="text" value="${escHTML(p.label||'')}" placeholder="Label" oninput="updatePaycheck('${p.id}','label',this.value)"></td>
       <td class="col-amt" data-label="Amount"><input type="number" step="0.01" value="${p.amount||0}" oninput="updatePaycheck('${p.id}','amount',parseFloat(this.value)||0)"></td>
       <td class="col-freq" data-label="Frequency"><select onchange="updatePaycheck('${p.id}','frequency',this.value)">
         ${['monthly','weekly','biweekly','semi','quarterly','yearly','once'].map(f => `<option value="${f}" ${p.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
@@ -3320,6 +3464,7 @@ function loadLocal() {
   S.houseProjects = S.houseProjects || [];
   S.goals = S.goals || [];
   S.todos = S.todos || [];
+  S.savingsExtra = S.savingsExtra || [];
   S.calendar = S.calendar || { events: [] };
   S.calendar.events = S.calendar.events || [];
   S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
@@ -3680,12 +3825,12 @@ function renderVacationIdeas() {
   host.innerHTML = list.map(it => `
     <div class="idea-card" data-id="${it.id}">
       <div class="idea-top">
-        <input class="place" type="text" value="${escHTML(it.place||'')}" placeholder="Place I'm thinking of visiting" oninput="updateVacationIdea('${it.id}','place',this.value)">
+        <input class="place" type="text" value="${escHTML(it.place||'')}" placeholder="Place" oninput="updateVacationIdea('${it.id}','place',this.value)">
         <button class="btn" onclick="aiIdeaSuggest('${it.id}')">✦ Things to do &amp; reviews</button>
         <button class="btn" onclick="aiIdeaBudget('${it.id}')">✦ Budget &amp; deals</button>
         <button class="btn danger" onclick="deleteVacationIdea('${it.id}')">Delete</button>
       </div>
-      <input type="text" value="${escHTML(it.notes||'')}" placeholder="Notes (dates, who's going, must-sees…)" style="width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:13px;" oninput="updateVacationIdea('${it.id}','notes',this.value)">
+      <input type="text" value="${escHTML(it.notes||'')}" placeholder="Notes" style="width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:13px;" oninput="updateVacationIdea('${it.id}','notes',this.value)">
       <div style="margin-top:10px;">${linkChipsHTML(it.links, 'idea:'+it.id)}</div>
       <div class="link-add-row">
         <input type="text" id="ilk-l-${it.id}" placeholder="Label" style="flex:1;min-width:120px;">
@@ -3779,9 +3924,9 @@ function renderThings() {
     <div class="todo-row ${t.done?'done':''}" data-id="${t.id}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleThing('${t.id}',this.checked)" title="Mark done">
       <div class="todo-main">
-        <input type="text" value="${escHTML(t.title||'')}" placeholder="What to do" oninput="updateThing('${t.id}','title',this.value)">
+        <input type="text" value="${escHTML(t.title||'')}" placeholder="Title" oninput="updateThing('${t.id}','title',this.value)">
         <div class="todo-sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;">
-          <input type="text" value="${escHTML(t.when||'')}" placeholder="When (e.g. Sat 7pm / this weekend)" style="flex:1;min-width:120px;" oninput="updateThing('${t.id}','when',this.value)">
+          <input type="text" value="${escHTML(t.when||'')}" placeholder="When" style="flex:1;min-width:120px;" oninput="updateThing('${t.id}','when',this.value)">
           <input type="url" value="${escHTML(t.url||'')}" placeholder="Link (optional)" style="flex:2;min-width:140px;" oninput="updateThing('${t.id}','url',this.value)">
           ${t.url?`<a href="${escHTML(normUrl(t.url))}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;align-self:center;">open ↗</a>`:''}
         </div>
@@ -3835,7 +3980,7 @@ function renderGoals() {
     return `
     <div class="plan-card" data-id="${g.id}">
       <div class="pc-top">
-        <input class="pc-name" type="text" value="${escHTML(g.title||'')}" placeholder="Goal (e.g. $10,000 emergency fund)" oninput="updateGoal('${g.id}','title',this.value)">
+        <input class="pc-name" type="text" value="${escHTML(g.title||'')}" placeholder="Goal" oninput="updateGoal('${g.id}','title',this.value)">
         <button class="btn danger" onclick="deleteGoal('${g.id}')">Delete</button>
       </div>
       <div class="status-pick" style="margin-top:10px;">
@@ -3843,9 +3988,9 @@ function renderGoals() {
       </div>
       <div class="plan-meta-row">
         <label>Target / by when</label>
-        <input class="plan-date" type="text" style="flex:1;min-width:140px;" value="${escHTML(g.target||'')}" placeholder="$ amount, date, or milestone" oninput="updateGoal('${g.id}','target',this.value)">
+        <input class="plan-date" type="text" style="flex:1;min-width:140px;" value="${escHTML(g.target||'')}" placeholder="Target" oninput="updateGoal('${g.id}','target',this.value)">
       </div>
-      <textarea class="pc-notes" rows="2" placeholder="Why it matters, the plan, the first step…" oninput="updateGoal('${g.id}','notes',this.value)">${escHTML(g.notes||'')}</textarea>
+      <textarea class="pc-notes" rows="2" placeholder="Notes" oninput="updateGoal('${g.id}','notes',this.value)">${escHTML(g.notes||'')}</textarea>
       <div style="margin-top:12px;">${linkChipsHTML(g.links, 'goal:'+g.id)}</div>
       <div class="link-add-row">
         <input type="text" id="glk-l-${g.id}" placeholder="Label" style="flex:1;min-width:120px;">
@@ -3938,7 +4083,7 @@ function deleteTodo(id) { snapshot(); S.todos=(S.todos||[]).filter(x=>x.id!==id)
 let calView = 'month';
 let calCursor = new Date(); calCursor.setHours(0,0,0,0);
 const CAL_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const RECUR_OPTS = [['none','Does not repeat'],['daily','Daily'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly']];
+const RECUR_OPTS = [['none','Does not repeat'],['daily','Daily'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly'],['custom','Custom…']];
 function setCalView(v){ calView=v; renderCalendar(); }
 function calToday(){ calCursor=new Date(); calCursor.setHours(0,0,0,0); renderCalendar(); }
 function calNav(dir){
@@ -3961,6 +4106,21 @@ function eventOccursOn(ev, d) {
     return day.getDate() === Math.min(base.getDate(), dim);
   }
   if (rec === 'yearly') return day.getDate()===base.getDate() && day.getMonth()===base.getMonth();
+  if (rec === 'custom') {
+    const n = Math.max(1, parseInt(ev.recurEvery,10) || 1);
+    const unit = ev.recurUnit || 'day';
+    if (unit === 'day')  return (daysBetween(base, day) % n) === 0;
+    if (unit === 'week') return day.getDay() === base.getDay() && (daysBetween(base, day) % (7*n)) === 0;
+    if (unit === 'month') {
+      const mdiff = (day.getFullYear()-base.getFullYear())*12 + (day.getMonth()-base.getMonth());
+      const dim = new Date(day.getFullYear(), day.getMonth()+1, 0).getDate();
+      return mdiff >= 0 && (mdiff % n) === 0 && day.getDate() === Math.min(base.getDate(), dim);
+    }
+    if (unit === 'year') {
+      const ydiff = day.getFullYear()-base.getFullYear();
+      return ydiff >= 0 && (ydiff % n) === 0 && day.getDate()===base.getDate() && day.getMonth()===base.getMonth();
+    }
+  }
   return false;
 }
 function eventsOn(d) {
@@ -4011,10 +4171,19 @@ function renderCalendar() {
     body.innerHTML = '<div class="cal-list">' + (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div class="cal-empty">No events. Tap <b>+ Event</b> to add one.</div>') + '</div>';
   }
 }
+function recurLabel(e) {
+  if (!e.recur || e.recur === 'none') return '';
+  if (e.recur === 'custom') {
+    const n = Math.max(1, parseInt(e.recurEvery,10)||1);
+    return 'every ' + (n===1?'':n+' ') + (e.recurUnit||'month') + (n===1?'':'s');
+  }
+  return e.recur;
+}
 function calEvRow(e) {
+  const rl = recurLabel(e);
   return `<div class="cal-ev">
     <div class="cetime">${e.time?escHTML(e.time):'All day'}</div>
-    <div style="flex:1;"><div class="cetitle">${escHTML(e.title)}${e.recur&&e.recur!=='none'?' <span style="font-size:11px;color:var(--text-muted);">(repeats '+escHTML(e.recur)+')</span>':''}</div>
+    <div style="flex:1;"><div class="cetitle">${escHTML(e.title)}${rl?' <span style="font-size:11px;color:var(--text-muted);">(repeats '+escHTML(rl)+')</span>':''}</div>
       ${e.notes?`<div class="cenote">${escHTML(e.notes)}</div>`:''}</div>
     <div class="cebtns"><button onclick="editCalEvent('${e.id}')" title="Edit">✎</button><button onclick="deleteCalEvent('${e.id}')" title="Delete">🗑</button></div>
   </div>`;
@@ -4038,18 +4207,26 @@ function openCalForm(e) {
   const recOpts = RECUR_OPTS.map(o=>`<option value="${o[0]}" ${ (e.recur||'none')===o[0]?'selected':''}>${o[1]}</option>`).join('');
   const remOpts = [['','No reminder'],['0','At start time'],['10','10 min before'],['30','30 min before'],['60','1 hour before'],['1440','1 day before']]
     .map(o=>`<option value="${o[0]}" ${String(e.remindMins??'')===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  const unitOpts = [['day','days'],['week','weeks'],['month','months'],['year','years']]
+    .map(o=>`<option value="${o[0]}" ${(e.recurUnit||'month')===o[0]?'selected':''}>${o[1]}</option>`).join('');
+  const customShow = (e.recur==='custom') ? '' : 'display:none;';
   calModal(`
     <div class="cm-title">${e.id?'Edit event':'New event'}</div>
-    <label>Title</label><input id="cm-title" type="text" value="${escHTML(e.title||'')}" placeholder="e.g. Filter change, Insurance due">
+    <label>Title</label><input id="cm-title" type="text" value="${escHTML(e.title||'')}" placeholder="Title">
     <div class="cm-row">
       <div style="flex:1;"><label>Date</label><input id="cm-date" type="date" value="${e.date||''}"></div>
       <div style="flex:1;"><label>Time</label><input id="cm-time" type="time" value="${e.time||''}"></div>
     </div>
     <div class="cm-row">
-      <div style="flex:1;"><label>Repeat</label><select id="cm-recur">${recOpts}</select></div>
+      <div style="flex:1;"><label>Repeat</label><select id="cm-recur" onchange="document.getElementById('cm-custom').style.display=this.value==='custom'?'':'none'">${recOpts}</select></div>
       <div style="flex:1;"><label>Reminder</label><select id="cm-remind">${remOpts}</select></div>
     </div>
-    <label>Notes</label><textarea id="cm-notes" rows="2" placeholder="Optional details">${escHTML(e.notes||'')}</textarea>
+    <div id="cm-custom" class="cm-row" style="${customShow}align-items:flex-end;">
+      <div><label>Every</label><input id="cm-rev" type="number" min="1" step="1" value="${parseInt(e.recurEvery,10)||1}" style="width:80px;"></div>
+      <div style="flex:1;"><label>Unit</label><select id="cm-runit">${unitOpts}</select></div>
+      <div style="flex:1;font-size:11px;color:var(--text-muted);padding-bottom:12px;">starting from the date above</div>
+    </div>
+    <label>Notes</label><textarea id="cm-notes" rows="2" placeholder="Notes">${escHTML(e.notes||'')}</textarea>
     <div class="cm-actions">
       ${e.id?`<button class="btn danger" onclick="deleteCalEvent('${e.id}')">Delete</button>`:'<span></span>'}
       <span style="display:flex;gap:8px;">
@@ -4063,11 +4240,14 @@ function saveCalEvent(id) {
   const date = eid('cm-date').value;
   if (!title) { toast('Add a title'); return; }
   if (!date)  { toast('Pick a date'); return; }
+  const recur = eid('cm-recur').value || 'none';
   const rec = {
     title, date,
     time: eid('cm-time').value || '',
     notes: eid('cm-notes').value || '',
-    recur: eid('cm-recur').value || 'none',
+    recur,
+    recurEvery: recur === 'custom' ? Math.max(1, parseInt(eid('cm-rev').value,10)||1) : null,
+    recurUnit:  recur === 'custom' ? (eid('cm-runit').value || 'month') : null,
     remindMins: eid('cm-remind').value === '' ? null : parseInt(eid('cm-remind').value,10),
     updatedAt: Date.now(),
   };
@@ -4147,20 +4327,20 @@ function renderHouse() {
     return `
     <div class="plan-card ${st==='done'?'is-done':''}" data-id="${p.id}">
       <div class="pc-top">
-        <input class="pc-name" type="text" value="${escHTML(p.name||'')}" placeholder="Project (e.g. Redo the porch)" oninput="updateHouseProject('${p.id}','name',this.value)">
+        <input class="pc-name" type="text" value="${escHTML(p.name||'')}" placeholder="Project" oninput="updateHouseProject('${p.id}','name',this.value)">
         <button class="btn danger" onclick="deleteHouseProject('${p.id}')">Delete</button>
       </div>
       <div class="status-pick" style="margin-top:10px;">
         ${HOUSE_STATUSES.map(s => `<span class="chip ${s.k} ${st===s.k?'on':''}" onclick="setHouseStatus('${p.id}','${s.k}')">${s.label}</span>`).join('')}
       </div>
-      <textarea class="pc-notes" rows="2" placeholder="Ideas, materials, who to call, the vision in your head…" oninput="updateHouseProject('${p.id}','notes',this.value)">${escHTML(p.notes||'')}</textarea>
+      <textarea class="pc-notes" rows="2" placeholder="Notes" oninput="updateHouseProject('${p.id}','notes',this.value)">${escHTML(p.notes||'')}</textarea>
       <div class="plan-meta-row">
         <label>Goal date</label>
         <input class="plan-date" type="date" value="${p.goalDate||''}" onchange="updateHouseProject('${p.id}','goalDate',this.value)">
       </div>
       <div style="margin-top:12px;">${linkChipsHTML(p.links, 'house:'+p.id)}</div>
       <div class="link-add-row">
-        <input type="text" id="hlk-l-${p.id}" placeholder="Label (e.g. Roofing quote)" style="flex:1;min-width:130px;">
+        <input type="text" id="hlk-l-${p.id}" placeholder="Label" style="flex:1;min-width:130px;">
         <input type="url" id="hlk-u-${p.id}" placeholder="https://…" style="flex:2;min-width:160px;">
         <button class="btn" onclick="addHouseLink('${p.id}')">+ Save link</button>
       </div>
@@ -4412,7 +4592,7 @@ function renderVacations() {
             <div><label>Target $</label><input type="number" step="0.01" value="${target||0}" oninput="updateVacField('${v.id}','targetAmount',parseFloat(this.value)||0)"></div>
             <div><label>Saved so far $</label><input type="number" step="0.01" value="${saved||0}" oninput="updateVacField('${v.id}','savedAmount',parseFloat(this.value)||0)"></div>
             <div><label>Target date</label><input type="date" value="${v.targetDate||''}" oninput="updateVacField('${v.id}','targetDate',this.value)"></div>
-            <div><label>Notes</label><input type="text" value="${escHTML(v.notes||'')}" placeholder="hotel preferences, etc." oninput="updateVacField('${v.id}','notes',this.value)"></div>
+            <div><label>Notes</label><input type="text" value="${escHTML(v.notes||'')}" placeholder="Notes" oninput="updateVacField('${v.id}','notes',this.value)"></div>
           </div>
           <table class="vac-items">
             <thead><tr><th></th><th>Item</th><th>Category</th><th>Amount</th><th>Paid</th><th></th></tr></thead>
@@ -4435,7 +4615,7 @@ function renderVacations() {
             <h4 class="sec-h">Saved links — events &amp; sites to check out</h4>
             ${linkChipsHTML(v.links, `vac:${v.id}`)}
             <div class="link-add-row">
-              <input type="text" id="vlk-l-${v.id}" placeholder="Label (e.g. Things to do)" style="flex:1;min-width:130px;">
+              <input type="text" id="vlk-l-${v.id}" placeholder="Label" style="flex:1;min-width:130px;">
               <input type="url" id="vlk-u-${v.id}" placeholder="https://…" style="flex:2;min-width:170px;">
               <button class="btn" onclick="addVacLink('${v.id}')">+ Save link</button>
             </div>
@@ -4636,6 +4816,9 @@ function boot() {
   // Calendar reminders while the app is open (every 30s).
   checkCalReminders();
   setInterval(checkCalReminders, 30000);
+  // Re-pin the budget footer if the viewport changes (rotation, keyboard).
+  let __lockT;
+  window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(lockBudgetFooter, 120); }, { passive: true });
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
