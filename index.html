@@ -1446,8 +1446,8 @@ const BUDGET_WEEKS = 52;
 
 let S = {
   // Legacy single-rule fields — kept for migration only. New code uses S.paychecks (list).
-  paycheckMonthly: 3750,
-  paycheckWeekly: 1597,
+  paycheckMonthly: 0,
+  paycheckWeekly: 0,
   paychecks: [],   // [{id, label, amount, frequency, dueDay, active, notes}]
   currentBalance: 0,
   currentDate: null,    // ISO date — when set, the Budget's CURRENT column anchors here instead of today (advanced forward via the Advance button)
@@ -1460,7 +1460,7 @@ let S = {
   billLastConfirmed: {},   // billId → ISO date a value was last typed for this bill (drives overdue reminders)
   billSnoozed: {},         // billId → ISO date until which overdue popups are suppressed
   adhocColumns: [],   // [{id, date, amount, label, type:'income'|'expense'}]
-  mortgage: { balance:205032.92, rate:2.99, pi:979.12, nextPayment:'2026-06-01', extraWeekly:0, onceAmount:0, onceDate:'' },
+  mortgage: { balance:0, rate:0, pi:0, nextPayment:'', extraWeekly:0, onceAmount:0, onceDate:'' },
   accounts: [],
   nwHistory: [],
   vacations: [],      // [{id, name, targetAmount, targetDate, savedAmount, notes, expanded, items:[...], links:[{id,label,url}]}]
@@ -1470,7 +1470,7 @@ let S = {
   goals: [],          // [{id, title, kind, target, notes, links:[{id,label,url}], images:[dataURL], ai:''}]
   todos: [],          // [{id, text, done}]
   calendar: { events: [] },  // events:[{id,title,date,time,notes,recur,remindMins,createdBy,updatedAt}]
-  homeLocation: { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' },
+  homeLocation: { address:'', zip:'' },
   grocery: { purchases: [], lastReceiptNote: '' },   // purchases:[{id,name,date,qty}]
   tickerCache: { items: [], ts: null },
   ai: { endpoint:'', token:'', model:'', account:'' },  // optional override; blank = free Pollinations no-key
@@ -3497,7 +3497,7 @@ function renderSettings() {
   if (eid('ai-tok')) eid('ai-tok').value = S.ai.token || '';
   if (eid('ai-mdl')) eid('ai-mdl').value = S.ai.model || '';
   renderAIHowto();
-  S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
+  S.homeLocation = S.homeLocation || { address:'', zip:'' };
   if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
   if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
   renderPaychecks();
@@ -3703,7 +3703,7 @@ function loadLocal() {
   S.savingsExtra = S.savingsExtra || [];
   S.calendar = S.calendar || { events: [] };
   S.calendar.events = S.calendar.events || [];
-  S.homeLocation = S.homeLocation || { address:'9003 Rainbow Crk., San Antonio, TX 78245', zip:'78245' };
+  S.homeLocation = S.homeLocation || { address:'', zip:'' };
   S.grocery = S.grocery || { purchases: [], lastReceiptNote: '' };
   S.grocery.purchases = S.grocery.purchases || [];
   S.tickerCache = S.tickerCache || { items: [], ts: null };
@@ -5046,49 +5046,8 @@ function deleteVacItem(vid, iid) {
 //  SEED
 // ═══════════════════════════════════════════════════════════════════
 function seedIfEmpty() {
-  if (!S.paychecks || !S.paychecks.length) {
-    S.paychecks = [
-      { id: uid(), label:'Monthly (1st)', amount:3750, frequency:'monthly', dueDay:1, active:true, notes:'' },
-      { id: uid(), label:'Weekly (Thu)',  amount:1597, frequency:'weekly',  dueDay:4, active:true, notes:'' },
-    ];
-  }
-  if (S.bills.length === 0 && S.accounts.length === 0) {
-    S.bills = [
-      { id: uid(), name:'Mortgage',      amount:1585.93, frequency:'monthly',  dueDay:1,  category:'housing',     active:true, notes:'' },
-      { id: uid(), name:'AT&T',          amount:81,      frequency:'monthly',  dueDay:1,  category:'utilities',   active:true, notes:'' },
-      { id: uid(), name:'HOA',           amount:113.58,  frequency:'monthly',  dueDay:1,  category:'housing',     active:true, notes:'' },
-      { id: uid(), name:'Low T',         amount:108.83,  frequency:'biweekly', dueDay:1,  category:'health',      active:true, notes:'' },
-      { id: uid(), name:'TV',            amount:98,      frequency:'monthly',  dueDay:11, category:'subscriptions',active:true, notes:'' },
-      { id: uid(), name:'Electric',      amount:200,     frequency:'monthly',  dueDay:25, category:'utilities',   active:true, notes:'' },
-      { id: uid(), name:'T-Mobile',      amount:248,     frequency:'monthly',  dueDay:14, category:'utilities',   active:true, notes:'' },
-      { id: uid(), name:'YouTube',       amount:20,      frequency:'monthly',  dueDay:7,  category:'subscriptions',active:true, notes:'' },
-      { id: uid(), name:'Water',         amount:50,      frequency:'monthly',  dueDay:28, category:'utilities',   active:true, notes:'' },
-      { id: uid(), name:'Aptive',        amount:112.58,  frequency:'quarterly',dueDay:1,  category:'home',        active:true, notes:'' },
-      { id: uid(), name:'Trash',         amount:126,     frequency:'quarterly',dueDay:1,  category:'utilities',   active:true, notes:'' },
-      { id: uid(), name:'Groceries',     amount:200,     frequency:'weekly',   dueDay:4,  category:'food',        active:true, notes:'' },
-      { id: uid(), name:'Gas',           amount:100,     frequency:'weekly',   dueDay:4,  category:'transport',   active:true, notes:'' },
-      { id: uid(), name:'Daycare',       amount:201.40,  frequency:'weekly',   dueDay:4,  category:'kids',        active:true, notes:'' },
-      { id: uid(), name:'Bianca',        amount:250,     frequency:'biweekly', dueDay:1,  category:'family',      active:true, notes:'' },
-      { id: uid(), name:'Emergency Fund',amount:500,     frequency:'weekly',   dueDay:4,  category:'savings',     active:true, notes:'' },
-    ];
-    S.accounts = [
-      { id: uid(), name:'PNC Checking',     balance:0,         type:'asset',     category:'cash' },
-      { id: uid(), name:'PNC Savings',      balance:0,         type:'asset',     category:'cash' },
-      { id: uid(), name:'Joint Robinhood',  balance:0,         type:'asset',     category:'brokerage' },
-      { id: uid(), name:'Hood Trading',     balance:0,         type:'asset',     category:'brokerage' },
-      { id: uid(), name:'Bianca Individual',balance:0,         type:'asset',     category:'brokerage' },
-      { id: uid(), name:'Alex Roth IRA',    balance:0,         type:'asset',     category:'retirement' },
-      { id: uid(), name:'Bianca Roth IRA',  balance:0,         type:'asset',     category:'retirement' },
-      { id: uid(), name:'529',              balance:0,         type:'asset',     category:'kids' },
-      { id: uid(), name:'Home (est.)',      balance:0,         type:'asset',     category:'real estate' },
-      { id: uid(), name:'Mortgage',         balance:205032.92, type:'liability', category:'mortgage' },
-      { id: uid(), name:'Coin CC',          balance:0,         type:'liability', category:'credit card' },
-      { id: uid(), name:'Gold CC',          balance:488,       type:'liability', category:'credit card' },
-      { id: uid(), name:'Amazon CC',        balance:10,        type:'liability', category:'credit card' },
-      { id: uid(), name:'Ross CC',          balance:0,         type:'liability', category:'credit card' },
-    ];
-    saveLocal();
-  }
+  // Public URL ships empty — visitors / fresh devices start with no
+  // bills, accounts or paychecks. Existing browsers keep their data.
 }
 
 // ═══════════════════════════════════════════════════════════════════
