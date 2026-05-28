@@ -962,7 +962,8 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     <button id="ba-toggle" class="btn subtle" onclick="toggleBudgetActions()" aria-expanded="false">Actions ▾</button>
     <div id="budget-actions" class="ba-collapsed">
       <div class="ctrl-group">
-        <button class="btn" onclick="addAdhocColumn()">+ One-time</button>
+        <button class="btn" onclick="openOneTimeIncome()" title="Add a one-time income column">+ One-time</button>
+        <button class="btn" onclick="openOneTimeExpense()" title="Add a one-time expense row">+ Exp</button>
         <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
         <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
       </div>
@@ -2998,37 +2999,79 @@ function svMaybeClose(ev, wrap) {
   }, 60);
 }
 
-function addAdhocColumn() {
-  const dateStr = prompt('Date for one-time entry (MM/DD/YYYY):', fmtMDY(localISO(addDays(new Date(), 7))));
-  if (!dateStr) return;
-  const iso = parseMDYorISO(dateStr);
-  if (!iso) { alert('Invalid date. Use MM/DD/YYYY.'); return; }
-  const label = prompt('Label:', '') || '';
-  const typeAns = prompt('Type — type "income" or "expense":', 'income');
-  const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
-  const amtStr = prompt('Amount ($):', '500');
-  const amt = parseFloat(amtStr); if (isNaN(amt) || amt <= 0) return;
+// ── + One-time INCOME column ─────────────────────────────────────
+// Single popup (no chained prompts), date defaults to today.
+function openOneTimeIncome(existing) {
+  const a = existing || { id:'', date: localISO(new Date()), label:'', amount:0, type:'income' };
+  calModal(`
+    <div class="cm-title">${a.id?'Edit one-time income':'One-time income'}</div>
+    <label>Date</label><input id="ot-date" type="date" value="${a.date||localISO(new Date())}">
+    <label>Label</label><input id="ot-label" type="text" placeholder="Label" value="${escHTML(a.label||'')}">
+    <label>Amount ($)</label><input id="ot-amt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${a.amount?Number(a.amount):''}">
+    <div class="cm-actions">
+      ${a.id?`<button class="btn danger" onclick="deleteAdhocColumn('${a.id}')">Delete</button>`:'<span></span>'}
+      <span style="display:flex;gap:8px;">
+        <button class="btn subtle" onclick="closeCalModal()">Cancel</button>
+        <button class="btn primary" onclick="saveOneTimeIncome('${a.id||''}')">Save</button>
+      </span>
+    </div>`);
+}
+function saveOneTimeIncome(id) {
+  const date = eid('ot-date').value;
+  const label = (eid('ot-label').value||'').trim();
+  const amt = Math.abs(parseFloat(eid('ot-amt').value) || 0);
+  if (!date) { toast('Pick a date'); return; }
+  if (!amt)  { toast('Enter an amount'); return; }
   snapshot();
   S.adhocColumns = S.adhocColumns || [];
-  S.adhocColumns.push({ id: uid(), date: iso, amount: amt, label, type });
-  saveAndRender();
-  toast('One-time entry added');
+  if (id) {
+    const a = S.adhocColumns.find(x => x.id === id);
+    if (a) { a.date = date; a.label = label; a.amount = amt; a.type = 'income'; }
+  } else {
+    S.adhocColumns.push({ id: uid(), date, amount: amt, label, type: 'income' });
+  }
+  closeCalModal(); saveAndRender(); toast(id?'Updated':'One-time income added');
 }
+// Legacy alias for any code paths still calling the old name (header clicks etc.)
+function addAdhocColumn() { openOneTimeIncome(); }
 function editAdhocColumn(id) {
   const a = (S.adhocColumns || []).find(x => x.id === id);
   if (!a) return;
-  const dateStr = prompt('Date (MM/DD/YYYY):', fmtMDY(a.date));
-  if (!dateStr) return;
-  const iso = parseMDYorISO(dateStr);
-  if (!iso) { alert('Invalid date. Use MM/DD/YYYY.'); return; }
-  const label = prompt('Label:', a.label || '');
-  const typeAns = prompt('Type — "income" or "expense":', a.type || 'income');
-  const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
-  const amtStr = prompt('Amount ($):', String(a.amount));
-  const amt = parseFloat(amtStr); if (isNaN(amt)) return;
+  if (a.type === 'expense') {
+    // Migrate any legacy adhoc-expense to a one-time bill row
+    return openOneTimeExpense({ id:'', name:a.label||'Expense', date:a.date, amount:a.amount, category:'' });
+  }
+  openOneTimeIncome(a);
+}
+
+// ── + Exp: quick ONE-TIME EXPENSE row (creates a bill, freq='once') ──
+function openOneTimeExpense(seed) {
+  const e = seed || { id:'', name:'', date: localISO(new Date()), amount:0, category:'' };
+  calModal(`
+    <div class="cm-title">One-time expense</div>
+    <label>Name</label><input id="ote-name" type="text" placeholder="What was it" value="${escHTML(e.name||'')}">
+    <label>Date</label><input id="ote-date" type="date" value="${e.date||localISO(new Date())}">
+    <label>Amount ($)</label><input id="ote-amt" type="number" step="0.01" inputmode="decimal" placeholder="0" value="${e.amount?Number(e.amount):''}">
+    <label>Category (optional)</label><input id="ote-cat" type="text" placeholder="Category" value="${escHTML(e.category||'')}">
+    <div class="cm-actions">
+      <span></span>
+      <span style="display:flex;gap:8px;">
+        <button class="btn subtle" onclick="closeCalModal()">Cancel</button>
+        <button class="btn primary" onclick="saveOneTimeExpense()">Save</button>
+      </span>
+    </div>`);
+}
+function saveOneTimeExpense() {
+  const name = (eid('ote-name').value || '').trim();
+  const date = eid('ote-date').value;
+  const amt  = Math.abs(parseFloat(eid('ote-amt').value) || 0);
+  const cat  = (eid('ote-cat').value || '').trim();
+  if (!name) { toast('Name it'); return; }
+  if (!date) { toast('Pick a date'); return; }
+  if (!amt)  { toast('Enter an amount'); return; }
   snapshot();
-  a.date = iso; a.label = label || ''; a.type = type; a.amount = Math.abs(amt);
-  saveAndRender();
+  S.bills.push({ id: uid(), name, amount: amt, frequency:'once', dueDay:1, category:cat, active:true, notes: date });
+  closeCalModal(); saveAndRender(); toast('One-time expense added');
 }
 function deleteAdhocColumn(id) {
   if (!confirm('Delete this one-time entry?')) return;
