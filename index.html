@@ -5205,6 +5205,13 @@ function boot() {
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 120); }, { passive: true });
   enableBudgetAxisLock();
   sizeBudgetPane();
+  // Tap anywhere outside the expanded Actions panel to collapse it back.
+  document.addEventListener('click', (ev) => {
+    const box = eid('budget-actions');
+    if (!box || box.classList.contains('ba-collapsed')) return;
+    if (ev.target.closest && ev.target.closest('.budget-controls')) return;   // inside the panel/toggle
+    toggleBudgetActions();
+  });
   // Auto-save safety net: flush whenever the app is backgrounded or closed
   // (in addition to the debounced save on every edit). Also auto-pull on
   // becoming visible again so the spouse's edits show up immediately.
