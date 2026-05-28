@@ -1496,6 +1496,26 @@ const isoDate = d => { const dt = (typeof d === 'string') ? new Date(d) : d; ret
 const localISO = d => { const x = d ? new Date(d) : new Date();
   return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0'); };
 const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+// User-facing US date format. Accepts ISO (YYYY-MM-DD) or a Date.
+const fmtMDY = (s) => {
+  if (!s) return '';
+  if (s instanceof Date) return (s.getMonth()+1) + '/' + s.getDate() + '/' + s.getFullYear();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s));
+  if (m) return Number(m[2]) + '/' + Number(m[3]) + '/' + m[1];
+  const d = new Date(s); return isNaN(d) ? String(s) : ((d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear());
+};
+// Accept MM/DD/YYYY or YYYY-MM-DD → returns local ISO YYYY-MM-DD or null.
+const parseMDYorISO = (s) => {
+  if (!s) return null;
+  s = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(s);
+  if (!m) return null;
+  let [, mo, da, yr] = m;
+  if (yr.length === 2) yr = '20' + yr;
+  mo = String(mo).padStart(2,'0'); da = String(da).padStart(2,'0');
+  return yr + '-' + mo + '-' + da;
+};
 const addDays = (d,n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
 const addMonths = (d,n) => { const r = new Date(d); r.setMonth(r.getMonth()+n); return r; };
 const daysBetween = (a,b) => Math.round((b-a) / 86400000);
@@ -1897,6 +1917,31 @@ function currentBudgetDate() {
   return d > realToday ? d : realToday;
 }
 
+// When the CURRENT date moves (natural day pass OR the user taps Advance),
+// move any per-date overrides typed in the prior current column forward
+// to the new current date so the values stay visible until the user
+// deletes them manually.
+function carryOverridesToCurrent() {
+  const nowISO = isoDate(currentBudgetDate());
+  const prevISO = S.lastCurrentISO;
+  if (prevISO && prevISO !== nowISO) {
+    if (S.billOverrides) {
+      Object.keys(S.billOverrides).forEach(bid => {
+        const ov = S.billOverrides[bid];
+        if (ov && ov[prevISO] !== undefined) {
+          ov[nowISO] = ov[prevISO];
+          delete ov[prevISO];
+        }
+      });
+    }
+    if (S.paycheckOverrides && S.paycheckOverrides[prevISO] !== undefined) {
+      S.paycheckOverrides[nowISO] = S.paycheckOverrides[prevISO];
+      delete S.paycheckOverrides[prevISO];
+    }
+  }
+  S.lastCurrentISO = nowISO;
+}
+
 function generatePaychecks(weeks) {
   const out = [];
   const today = currentBudgetDate();
@@ -2012,21 +2057,7 @@ function recurrenceDays(bill) {
 // A bill is overdue when more than 1.25 × its recurrence period has elapsed
 // since the last time the user typed a value into one of its cells (or, if
 // never confirmed, since today). Snoozed bills are quiet until the snooze date.
-function billOverdueInfo(bill, todayISO) {
-  if (!bill || bill.active === false) return null;
-  const period = recurrenceDays(bill);
-  if (!isFinite(period)) return null;
-  const today = parseISO(todayISO);
-  const snoozedUntil = (S.billSnoozed || {})[bill.id];
-  if (snoozedUntil && parseISO(snoozedUntil) >= today) return null;
-  const lastISO = (S.billLastConfirmed || {})[bill.id];
-  if (!lastISO) return null;   // never confirmed = brand-new bill, don't pester
-  const last = parseISO(lastISO);
-  const days = daysBetween(last, today);
-  const threshold = Math.ceil(period * 1.25);
-  if (days <= threshold) return null;
-  return { days, period, threshold };
-}
+function billOverdueInfo(bill, todayISO) { return null; }   // disabled — no overdue badge or notification
 
 // First column whose date >= due. Bills due before any column collapse into Current.
 function colCoveringDate(cols, due) {
@@ -2195,6 +2226,7 @@ function addLinkedAccount(kind) {
 function buildBudget(weeks) {
   autoAdvanceSavings();
   autoAdvanceMortgage();
+  carryOverridesToCurrent();      // values typed in the Current column persist when the date moves
   const today = currentBudgetDate();
   const todayISO = isoDate(today);
   const future = generatePaychecks(weeks);
@@ -2967,33 +2999,35 @@ function svMaybeClose(ev, wrap) {
 }
 
 function addAdhocColumn() {
-  const dateStr = prompt('Date for one-time entry (YYYY-MM-DD):', isoDate(addDays(new Date(), 7)));
+  const dateStr = prompt('Date for one-time entry (MM/DD/YYYY):', fmtMDY(localISO(addDays(new Date(), 7))));
   if (!dateStr) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) { alert('Invalid date format. Use YYYY-MM-DD.'); return; }
-  const label = prompt('Label (e.g. "Tax refund", "Wedding gift"):', '') || '';
+  const iso = parseMDYorISO(dateStr);
+  if (!iso) { alert('Invalid date. Use MM/DD/YYYY.'); return; }
+  const label = prompt('Label:', '') || '';
   const typeAns = prompt('Type — type "income" or "expense":', 'income');
   const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
   const amtStr = prompt('Amount ($):', '500');
   const amt = parseFloat(amtStr); if (isNaN(amt) || amt <= 0) return;
   snapshot();
   S.adhocColumns = S.adhocColumns || [];
-  S.adhocColumns.push({ id: uid(), date: dateStr, amount: amt, label, type });
+  S.adhocColumns.push({ id: uid(), date: iso, amount: amt, label, type });
   saveAndRender();
   toast('One-time entry added');
 }
 function editAdhocColumn(id) {
   const a = (S.adhocColumns || []).find(x => x.id === id);
   if (!a) return;
-  const dateStr = prompt('Date (YYYY-MM-DD):', a.date);
+  const dateStr = prompt('Date (MM/DD/YYYY):', fmtMDY(a.date));
   if (!dateStr) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) { alert('Invalid date format.'); return; }
+  const iso = parseMDYorISO(dateStr);
+  if (!iso) { alert('Invalid date. Use MM/DD/YYYY.'); return; }
   const label = prompt('Label:', a.label || '');
   const typeAns = prompt('Type — "income" or "expense":', a.type || 'income');
   const type = (typeAns && typeAns.toLowerCase().startsWith('e')) ? 'expense' : 'income';
   const amtStr = prompt('Amount ($):', String(a.amount));
   const amt = parseFloat(amtStr); if (isNaN(amt)) return;
   snapshot();
-  a.date = dateStr; a.label = label || ''; a.type = type; a.amount = Math.abs(amt);
+  a.date = iso; a.label = label || ''; a.type = type; a.amount = Math.abs(amt);
   saveAndRender();
 }
 function deleteAdhocColumn(id) {
@@ -3668,11 +3702,13 @@ function importJSON(ev) {
 //  PERSISTENCE
 // ═══════════════════════════════════════════════════════════════════
 let saveTimer = null;
+let lastEditMs = 0;     // touched on every scheduled save → throttles auto-pull
 function scheduleSave() {
+  lastEditMs = Date.now();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { saveLocal(); if (WEBHOOK_URL) backgroundPush(); }, 800);
 }
-function saveAndRender() { saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll(); }
+function saveAndRender() { lastEditMs = Date.now(); saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll(); }
 function saveLocal() {
   S.meta = S.meta || {};
   S.meta.modified = new Date().toISOString();
@@ -3687,6 +3723,34 @@ async function backgroundPush() {
     if (j.ok) LAST_PULL = j.updated;
   } catch { SYNC_STATE = 'err'; }
   updateSyncPill();
+}
+
+// Quiet pull every ~25s and on tab focus. Pulls only when the remote
+// has changed AND no edit is in progress / no recent local edit. This
+// is what makes spouse-side edits appear automatically here.
+let __pullBusy = false;
+async function backgroundPull() {
+  if (!WEBHOOK_URL || __pullBusy || document.hidden) return;
+  if (typeof activeCell !== 'undefined' && activeCell) return;     // never yank state while a cell is open
+  if (Date.now() - lastEditMs < 4000) return;                      // recent local edit — let push settle first
+  __pullBusy = true;
+  try {
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'read' }) });
+    const j = await r.json();
+    if (!j || !j.ok || !j.data) { return; }
+    const remoteMod = (j.data.meta && j.data.meta.modified) || '';
+    const localMod  = (S.meta && S.meta.modified) || '';
+    if (remoteMod && localMod && remoteMod <= localMod) {
+      LAST_PULL = j.updated; SYNC_STATE = 'ok'; updateSyncPill(); return;
+    }
+    // Server is newer (spouse pushed). Merge in and re-render.
+    S = Object.assign({}, S, j.data);
+    LAST_PULL = j.updated;
+    localStorage.setItem(LS_KEY, JSON.stringify(S));     // persist without bumping meta.modified
+    renderAll();
+    SYNC_STATE = 'ok'; updateSyncPill();
+  } catch { SYNC_STATE = 'err'; updateSyncPill(); }
+  finally { __pullBusy = false; }
 }
 function loadLocal() {
   const raw = localStorage.getItem(LS_KEY);
@@ -4353,7 +4417,13 @@ function eventOccursOn(ev, d) {
   const day = new Date(d); day.setHours(0,0,0,0);
   if (day < base) return false;
   const rec = ev.recur || 'none';
-  if (rec === 'none')   return +day === +base;
+  if (rec === 'none') {
+    if (ev.endDate) {
+      const end = parseISO(ev.endDate); end.setHours(0,0,0,0);
+      return day >= base && day <= end;       // multi-day event spans From..To
+    }
+    return +day === +base;
+  }
   if (rec === 'daily')  return true;
   if (rec === 'weekly') return day.getDay() === base.getDay();
   if (rec === 'biweekly') return ((daysBetween(base, day)) % 14) === 0;
@@ -4504,7 +4574,10 @@ function openCalForm(e) {
     <div class="cm-title">${e.id?'Edit event':'New event'}</div>
     <label>Title</label><input id="cm-title" type="text" value="${escHTML(e.title||'')}" placeholder="Title">
     <div class="cm-row">
-      <div style="flex:1;"><label>Date</label><input id="cm-date" type="date" value="${e.date||''}"></div>
+      <div style="flex:1;"><label>From</label><input id="cm-date" type="date" value="${e.date||''}"></div>
+      <div style="flex:1;"><label>To</label><input id="cm-end" type="date" value="${e.endDate||e.date||''}"></div>
+    </div>
+    <div class="cm-row">
       <div style="flex:1;"><label>Time</label><input id="cm-time" type="time" value="${e.time||''}"></div>
     </div>
     <div class="cm-row">
@@ -4528,11 +4601,14 @@ function openCalForm(e) {
 function saveCalEvent(id) {
   const title = (eid('cm-title').value||'').trim();
   const date = eid('cm-date').value;
+  let endDate = (eid('cm-end') && eid('cm-end').value) || '';
   if (!title) { toast('Add a title'); return; }
-  if (!date)  { toast('Pick a date'); return; }
+  if (!date)  { toast('Pick a From date'); return; }
+  if (endDate && endDate < date) endDate = date;
+  if (!endDate || endDate === date) endDate = '';   // single-day if blank or equal
   const recur = eid('cm-recur').value || 'none';
   const rec = {
-    title, date,
+    title, date, endDate,
     time: eid('cm-time').value || '',
     notes: eid('cm-notes').value || '',
     recur,
@@ -4792,8 +4868,8 @@ function renderGrocery() {
         : r.status==='soon' ? '<span class="gro-badge soon">SOON</span>'
         : r.status==='new' ? '<span class="gro-badge ok">NEW</span>'
         : '<span class="gro-badge ok">OK</span>';
-      const meta = r.avg ? `every ~${r.avg}d · last ${r.last} · ${r.dueIn<=0?('due '+Math.abs(r.dueIn)+'d ago'):('in '+r.dueIn+'d')}`
-                          : `bought ${r.count}× · last ${r.last} · need 2+ to predict`;
+      const meta = r.avg ? `every ~${r.avg}d · last ${fmtMDY(r.last)} · ${r.dueIn<=0?('due '+Math.abs(r.dueIn)+'d ago'):('in '+r.dueIn+'d')}`
+                          : `bought ${r.count}× · last ${fmtMDY(r.last)} · need 2+ to predict`;
       return `<div class="gro-row">
         <input type="checkbox" title="Bought it today (logs a purchase)" onchange="if(this.checked)markBoughtToday('${escHTML(r.name).replace(/'/g,"\\'")}')">
         <span class="gro-name">${escHTML(r.name)}</span>
@@ -4805,14 +4881,14 @@ function renderGrocery() {
   const ph = (S.grocery.purchases || []).slice().sort((a,b) => b.date.localeCompare(a.date));
   hist.innerHTML = !ph.length ? '<div style="color:var(--text-muted);font-size:12px;">No history.</div>' :
     '<table class="list-table"><thead><tr><th>Item</th><th>Date</th><th>Qty</th><th></th></tr></thead><tbody>' +
-    ph.map(p => `<tr><td>${escHTML(p.name)}</td><td>${p.date}</td><td>${p.qty||1}</td>
+    ph.map(p => `<tr><td>${escHTML(p.name)}</td><td>${fmtMDY(p.date)}</td><td>${p.qty||1}</td>
       <td><button class="btn danger" style="padding:3px 8px;font-size:11px;" onclick="deletePurchase('${p.id}')">×</button></td></tr>`).join('') +
     '</tbody></table>';
 }
 function addGroceryManual() {
-  const name = prompt('Item name (e.g. Milk):'); if (!name || !name.trim()) return;
-  const when = prompt('Date bought (YYYY-MM-DD), blank = today:', isoDate(new Date()));
-  const date = (when && /^\d{4}-\d{2}-\d{2}$/.test(when.trim())) ? when.trim() : isoDate(new Date());
+  const name = prompt('Item name:'); if (!name || !name.trim()) return;
+  const when = prompt('Date bought (MM/DD/YYYY), blank = today:', '');
+  const date = parseMDYorISO(when) || localISO(new Date());
   snapshot();
   S.grocery.purchases = S.grocery.purchases || [];
   S.grocery.purchases.push({ id: uid(), name: name.trim(), date, qty: 1 });
@@ -4849,8 +4925,10 @@ function renderVacations() {
     const target = Number(v.targetAmount) || 0;
     const saved = Number(v.savedAmount) || 0;
     const pct = target > 0 ? Math.min(100, Math.round(saved / target * 100)) : 0;
-    const targetDateLbl = v.targetDate ? new Date(v.targetDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'No date';
-    const daysOut = v.targetDate ? daysBetween(new Date(), parseISO(v.targetDate)) : null;
+    const tripLbl = (v.tripStart || v.tripEnd) ? (fmtMDY(v.tripStart||v.tripEnd) + (v.tripEnd && v.tripEnd !== v.tripStart ? ' – ' + fmtMDY(v.tripEnd) : '')) : '';
+    const targetDateLbl = tripLbl || (v.targetDate ? fmtMDY(v.targetDate) : 'No dates');
+    const ref = v.tripStart || v.targetDate || '';
+    const daysOut = ref ? daysBetween(new Date(), parseISO(ref)) : null;
     const daysLbl = (daysOut !== null) ? (daysOut > 0 ? daysOut + ' days out' : daysOut === 0 ? 'today' : Math.abs(daysOut) + ' days ago') : '';
 
     const itemsHTML = items.map((it, ii) => `
@@ -4885,9 +4963,11 @@ function renderVacations() {
         </div>
         <div class="vac-body">
           <div class="vac-fields">
+            <div><label>From</label><input type="date" value="${v.tripStart||''}" oninput="updateVacField('${v.id}','tripStart',this.value)"></div>
+            <div><label>To</label><input type="date" value="${v.tripEnd||''}" oninput="updateVacField('${v.id}','tripEnd',this.value)"></div>
             <div><label>Target $</label><input type="number" step="0.01" value="${target||0}" oninput="updateVacField('${v.id}','targetAmount',parseFloat(this.value)||0)"></div>
             <div><label>Saved so far $</label><input type="number" step="0.01" value="${saved||0}" oninput="updateVacField('${v.id}','savedAmount',parseFloat(this.value)||0)"></div>
-            <div><label>Target date</label><input type="date" value="${v.targetDate||''}" oninput="updateVacField('${v.id}','targetDate',this.value)"></div>
+            <div><label>Save-by date</label><input type="date" value="${v.targetDate||''}" oninput="updateVacField('${v.id}','targetDate',this.value)"></div>
             <div><label>Notes</label><input type="text" value="${escHTML(v.notes||'')}" placeholder="Notes" oninput="updateVacField('${v.id}','notes',this.value)"></div>
           </div>
           <table class="vac-items">
@@ -4975,7 +5055,7 @@ function renderVacations() {
 function addVacation() {
   snapshot();
   S.vacations = S.vacations || [];
-  S.vacations.push({ id: uid(), name: 'New vacation', targetAmount: 0, savedAmount: 0, targetDate: '', notes: '', expanded: false, items: [] });
+  S.vacations.push({ id: uid(), name: 'New vacation', tripStart:'', tripEnd:'', targetAmount: 0, savedAmount: 0, targetDate: '', notes: '', expanded: false, items: [] });
   saveAndRender();
 }
 function deleteVacation(id) {
@@ -5064,7 +5144,6 @@ function boot() {
   // Splash on first load of the session (if photos are configured)
   if (!sessionStorage.getItem('splash_dismissed')) showSplash();
   if (WEBHOOK_URL) forcePull();
-  showOverdueSummary();
   refreshTickerIfStale();
   updateNavActive('budget');
   renderActiveVerse();
@@ -5079,11 +5158,17 @@ function boot() {
   enableBudgetAxisLock();
   sizeBudgetPane();
   // Auto-save safety net: flush whenever the app is backgrounded or closed
-  // (in addition to the debounced save on every edit).
+  // (in addition to the debounced save on every edit). Also auto-pull on
+  // becoming visible again so the spouse's edits show up immediately.
   const flush = () => { try { saveLocal(); if (WEBHOOK_URL) backgroundPush(); } catch {} };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+    else if (WEBHOOK_URL) backgroundPull();
+  });
   window.addEventListener('pagehide', flush);
   window.addEventListener('beforeunload', flush);
+  // Quiet 2-way sync: poll the Sheet so the spouse's edits appear here.
+  if (WEBHOOK_URL) setInterval(backgroundPull, 25000);
 }
 
 // Budget grid: lock a scroll gesture to ONE axis (no diagonal). Whichever
