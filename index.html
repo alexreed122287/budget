@@ -467,11 +467,16 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .goal-img img{width:100%;height:100%;object-fit:cover;}
 .goal-img button{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:none;
   width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;line-height:1;padding:0;}
-.todo-line{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);}
+.todo-line{display:flex;align-items:flex-start;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);}
 .todo-line.done .tl-text{text-decoration:line-through;color:var(--text-light);}
-.todo-line input[type=checkbox]{width:24px;height:24px;flex:0 0 auto;accent-color:var(--accent);}
-.todo-line .tl-text{flex:1;border:none;background:none;font:inherit;font-size:15px;color:var(--text);padding:4px 0;}
-.todo-line .tl-del{border:none;background:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;}
+.todo-line input[type=checkbox]{width:24px;height:24px;flex:0 0 auto;accent-color:var(--accent);margin-top:2px;}
+.todo-line .todo-body{flex:1;min-width:0;display:flex;flex-direction:column;}
+.todo-line .tl-text{border:none;background:none;font:inherit;font-size:15px;color:var(--text);padding:4px 0;width:100%;}
+.todo-line .todo-meta{font-size:11px;color:var(--text-muted);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.todo-line .tl-bell,.todo-line .tl-del{border:none;background:none;color:var(--text-muted);
+  font-size:16px;cursor:pointer;padding:6px 6px;flex:0 0 auto;}
+.todo-line .tl-bell:hover,.todo-line .tl-del:hover{color:var(--accent-dim);}
 
 /* ─── Calendar ─── */
 .seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;flex:0 0 auto;}
@@ -4446,6 +4451,61 @@ async function aiGoalIdeas(id) {
 // ═══════════════════════════════════════════════════════════════════
 //  TO-DO'S  (simple shared checklist)
 // ═══════════════════════════════════════════════════════════════════
+// ── To-Do reminder presets (iOS-style) ────────────────────────────
+// Each preset computes a single fire time relative to the to-do's
+// due date (and optional due time). Default for new todos is the
+// "night before" at 7:00 PM (local — Central in San Antonio).
+const TODO_REMIND_OPTS = [
+  { id:'none',     label:'No reminder' },
+  { id:'eod-1d',   label:'Night before · 7:00 PM' },
+  { id:'morning',  label:'Morning of · 8:00 AM' },
+  { id:'attime',   label:'At due time' },
+  { id:'1h',       label:'1 hour before' },
+  { id:'30m',      label:'30 minutes before' },
+  { id:'2d-19',    label:'2 days before · 7:00 PM' },
+  { id:'1w-19',    label:'1 week before · 7:00 PM' },
+];
+const TODO_REPEAT_OPTS = [
+  { id:'none',     label:'Does not repeat' },
+  { id:'daily',    label:'Daily' },
+  { id:'weekly',   label:'Weekly' },
+  { id:'biweekly', label:'Every 2 weeks' },
+  { id:'monthly',  label:'Monthly' },
+  { id:'yearly',   label:'Yearly' },
+];
+function todoRemindLabel(id) { const o = TODO_REMIND_OPTS.find(x => x.id === id); return o ? o.label : ''; }
+function todoRepeatLabel(id) { const o = TODO_REPEAT_OPTS.find(x => x.id === id); return o ? o.label : ''; }
+function todoFireDate(t) {
+  if (!t || !t.dueDate || !t.remind || t.remind === 'none') return null;
+  const [y, m, d] = t.dueDate.split('-').map(Number);
+  const time = t.dueTime || '09:00';
+  const [hh, mm] = time.split(':').map(n => parseInt(n,10)||0);
+  const due = new Date(y, m-1, d, hh, mm, 0, 0);
+  switch (t.remind) {
+    case 'eod-1d':  return new Date(y, m-1, d-1, 19, 0, 0, 0);
+    case 'morning': return new Date(y, m-1, d,   8, 0, 0, 0);
+    case 'attime':  return due;
+    case '1h':      return new Date(due.getTime() - 60*60000);
+    case '30m':     return new Date(due.getTime() - 30*60000);
+    case '2d-19':   return new Date(y, m-1, d-2, 19, 0, 0, 0);
+    case '1w-19':   return new Date(y, m-1, d-7, 19, 0, 0, 0);
+  }
+  return null;
+}
+function nextRepeatISO(dateISO, repeat) {
+  if (!dateISO || !repeat || repeat === 'none') return null;
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  switch (repeat) {
+    case 'daily':    dt.setDate(dt.getDate()+1); break;
+    case 'weekly':   dt.setDate(dt.getDate()+7); break;
+    case 'biweekly': dt.setDate(dt.getDate()+14); break;
+    case 'monthly':  dt.setMonth(dt.getMonth()+1); break;
+    case 'yearly':   dt.setFullYear(dt.getFullYear()+1); break;
+    default: return null;
+  }
+  return localISO(dt);
+}
 function renderTodos() {
   const host = eid('todos-list'); if (!host) return;
   const list = S.todos || [];
@@ -4453,22 +4513,134 @@ function renderTodos() {
   const open = list.filter(t=>!t.done).length;
   host.innerHTML =
     `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">${open} open · ${list.length} total</div>` +
-    list.map(t => `
+    list.map(t => {
+      const meta = [];
+      if (t.dueDate) meta.push(fmtMDY(t.dueDate) + (t.dueTime ? ' · ' + t.dueTime : ''));
+      if (t.repeat && t.repeat !== 'none') meta.push('repeats ' + t.repeat);
+      if (t.remind && t.remind !== 'none') meta.push('🔔 ' + todoRemindLabel(t.remind));
+      const metaLine = meta.length ? `<div class="todo-meta">${escHTML(meta.join(' · '))}</div>` : '';
+      return `
     <div class="todo-line ${t.done?'done':''}" data-id="${t.id}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)" title="Done">
-      <input class="tl-text" type="text" value="${escHTML(t.text||'')}" placeholder="Task" oninput="updateTodo('${t.id}',this.value)">
+      <div class="todo-body">
+        <input class="tl-text" type="text" value="${escHTML(t.text||'')}" placeholder="Task" oninput="updateTodo('${t.id}',this.value)">
+        ${metaLine}
+      </div>
+      <button class="tl-bell" onclick="openTodoForm('${t.id}')" title="Set due date &amp; reminder" aria-label="Reminder details">🔔</button>
       <button class="tl-del" onclick="deleteTodo('${t.id}')" title="Delete">×</button>
-    </div>`).join('');
+    </div>`;
+    }).join('');
 }
-function addTodo() { snapshot(); S.todos = S.todos || []; S.todos.unshift({ id: uid(), text:'', done:false }); saveAndRender(); }
+function addTodo() { openTodoForm(''); }     // opens the iOS-style details modal for a new to-do
 function addTodoQuick() {
   const i = eid('todo-quick'); const v = (i && i.value.trim()); if (!v) return;
-  snapshot(); S.todos = S.todos || []; S.todos.unshift({ id: uid(), text: v, done:false });
+  snapshot(); S.todos = S.todos || [];
+  // Quick adds are text-only with NO reminder by default — they're meant
+  // to be a fast jot. Use the 🔔 button on the row to add a due date later.
+  S.todos.unshift({ id: uid(), text: v, done:false, dueDate:'', dueTime:'', repeat:'none', remind:'none', notes:'' });
   if (i) i.value=''; saveAndRender();
 }
 function updateTodo(id, v) { const t=(S.todos||[]).find(x=>x.id===id); if(!t)return; maybeSnapshot(); t.text=v; scheduleSave(); }
-function toggleTodo(id, on) { const t=(S.todos||[]).find(x=>x.id===id); if(!t)return; snapshot(); t.done=on; saveAndRender(); }
+function toggleTodo(id, on) {
+  const t = (S.todos||[]).find(x => x.id === id); if (!t) return;
+  snapshot();
+  if (on && t.repeat && t.repeat !== 'none' && t.dueDate) {
+    // Repeating to-do: don't actually mark it done — bump the due date
+    // to the next occurrence and let it fire again then.
+    const next = nextRepeatISO(t.dueDate, t.repeat);
+    if (next) {
+      t.dueDate = next;
+      t.done = false;
+      // Remove any old "already notified" keys for this todo so the next
+      // occurrence can fire when its time comes.
+      Array.from(__remindShown).forEach(k => { if (k.startsWith(t.id + ':')) __remindShown.delete(k); });
+      toast('Next occurrence: ' + fmtMDY(next));
+      saveAndRender(); return;
+    }
+  }
+  t.done = on;
+  saveAndRender();
+}
 function deleteTodo(id) { snapshot(); S.todos=(S.todos||[]).filter(x=>x.id!==id); saveAndRender(); }
+
+// ── To-Do details modal (iOS Reminders-style) ────────────────────
+function openTodoForm(id) {
+  const isNew = !id;
+  const t = isNew
+    ? { id:'', text:'', dueDate: localISO(new Date()), dueTime:'', repeat:'none', remind:'eod-1d', notes:'' }
+    : Object.assign({ dueDate:'', dueTime:'', repeat:'none', remind:'eod-1d', notes:'' }, S.todos.find(x => x.id === id) || {});
+  const remOpts = TODO_REMIND_OPTS.map(o => `<option value="${o.id}" ${t.remind===o.id?'selected':''}>${escHTML(o.label)}</option>`).join('');
+  const repOpts = TODO_REPEAT_OPTS.map(o => `<option value="${o.id}" ${t.repeat===o.id?'selected':''}>${escHTML(o.label)}</option>`).join('');
+  calModal(`
+    <div class="cm-title">${isNew?'New to-do':'To-do details'}</div>
+    <label>Task</label><input id="td-text" type="text" placeholder="Task" value="${escHTML(t.text||'')}">
+    <div class="cm-row">
+      <div style="flex:1;"><label>Due date</label><input id="td-date" type="date" value="${t.dueDate||''}"></div>
+      <div style="flex:1;"><label>Time</label><input id="td-time" type="time" value="${t.dueTime||''}"></div>
+    </div>
+    <div class="cm-row">
+      <div style="flex:1;"><label>Repeat (how often)</label><select id="td-repeat">${repOpts}</select></div>
+    </div>
+    <label>Remind me</label>
+    <select id="td-remind">${remOpts}</select>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Times are local (Central in San Antonio).</div>
+    <label>Notes</label><textarea id="td-notes" rows="2" placeholder="Optional">${escHTML(t.notes||'')}</textarea>
+    <div class="cm-actions">
+      ${isNew?'<span></span>':`<button class="btn danger" onclick="deleteTodoFromForm('${t.id}')">Delete</button>`}
+      <span style="display:flex;gap:8px;">
+        <button class="btn subtle" onclick="closeCalModal()">Cancel</button>
+        <button class="btn primary" onclick="saveTodoDetails('${t.id||''}')">Save</button>
+      </span>
+    </div>`);
+}
+function saveTodoDetails(id) {
+  const text   = (eid('td-text').value || '').trim();
+  const date   = eid('td-date').value || '';
+  const time   = eid('td-time').value || '';
+  const repeat = eid('td-repeat').value || 'none';
+  const remind = eid('td-remind').value || 'none';
+  const notes  = eid('td-notes').value || '';
+  if (!text) { toast('Add a task'); return; }
+  snapshot();
+  S.todos = S.todos || [];
+  if (id) {
+    const t = S.todos.find(x => x.id === id);
+    if (t) { t.text=text; t.dueDate=date; t.dueTime=time; t.repeat=repeat; t.remind=remind; t.notes=notes; }
+    // Force any prior notification key to clear so changes (date / remind) re-arm.
+    Array.from(__remindShown).forEach(k => { if (k.startsWith(id + ':')) __remindShown.delete(k); });
+  } else {
+    S.todos.unshift({ id: uid(), text, done:false, dueDate:date, dueTime:time, repeat, remind, notes });
+  }
+  if (remind && remind !== 'none') ensureNotifyPermission();
+  closeCalModal(); saveAndRender(); toast(id?'Updated':'To-do added');
+}
+function deleteTodoFromForm(id) {
+  if (!confirm('Delete this to-do?')) return;
+  closeCalModal(); deleteTodo(id);
+}
+
+// Fires while the app is open — every 30 s. Matches the calendar reminder.
+function checkTodoReminders() {
+  if (!S.todos || !S.todos.length) return;
+  const now = new Date();
+  S.todos.forEach(t => {
+    if (t.done || !t.dueDate || !t.remind || t.remind === 'none') return;
+    const fire = todoFireDate(t); if (!fire) return;
+    const winEnd = new Date(fire.getTime() + 5*60000);
+    const key = t.id + ':' + t.dueDate + ':' + t.remind;
+    if (__remindShown.has(key)) return;
+    if (now >= fire && now <= winEnd) {
+      __remindShown.add(key);
+      const dueLbl = ' · due ' + fmtMDY(t.dueDate) + (t.dueTime ? (' ' + t.dueTime) : '');
+      toast('⏰ ' + (t.text || 'To-do') + dueLbl, 6000);
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('To-Do reminder', { body: (t.text||'To-do') + dueLbl + (t.notes?('\n'+t.notes):'') });
+        }
+      } catch {}
+    }
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  SHARED CALENDAR  (month/week/day, recurring, reminders)
@@ -5291,8 +5463,8 @@ function boot() {
   { const tb = eid('theme-btn'); if (tb) tb.innerHTML = (document.documentElement.getAttribute('data-theme')==='dark') ? ICONS.sun : ICONS.moon; }
   applySeason();
   // Calendar reminders while the app is open (every 30s).
-  checkCalReminders();
-  setInterval(checkCalReminders, 30000);
+  checkCalReminders(); checkTodoReminders();
+  setInterval(() => { checkCalReminders(); checkTodoReminders(); }, 30000);
   // Re-pin the budget footer if the viewport changes (rotation, keyboard).
   let __lockT;
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 120); }, { passive: true });
