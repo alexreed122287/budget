@@ -722,6 +722,47 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
 .photo-thumb img{width:100%;height:100%;object-fit:cover;}
 .photo-thumb button{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;padding:0;}
 
+/* ─── Cell-selection sum bar (long-press a budget cell to select; tap more to add) ─── */
+.budget-table td.cell-sel{
+  background:var(--accent-soft)!important;
+  box-shadow:inset 0 0 0 2px var(--accent);
+  position:relative;z-index:1;
+}
+body.cell-select-mode .budget-scroll{cursor:cell;}
+body.cell-select-mode .budget-table td.editable,
+body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
+#sel-bar{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  z-index:900;display:none;align-items:center;gap:14px;
+  padding:9px 12px 9px 16px;
+  background:var(--bg);
+  border:1px solid var(--accent-soft);
+  border-radius:999px;
+  box-shadow:0 10px 30px -10px rgba(0,0,0,.22),0 2px 6px rgba(0,0,0,.06);
+  font-variant-numeric:tabular-nums;
+  max-width:calc(100vw - 24px);
+  animation:selBarIn .18s ease-out;
+}
+#sel-bar.show{display:flex;}
+#sel-bar .sb-cells{font-weight:700;color:var(--accent-dim);font-size:13px;display:flex;align-items:center;gap:5px;}
+#sel-bar .sb-cells .sb-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+#sel-bar .sb-stat{display:flex;align-items:baseline;gap:5px;font-size:13px;color:var(--text);}
+#sel-bar .sb-stat label{font-size:9px;color:var(--text-light);text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+#sel-bar .sb-stat strong{font-weight:700;color:var(--text);font-size:14px;}
+#sel-bar .sb-stat strong.neg{color:var(--negative);}
+#sel-bar .sb-x{
+  border:none;background:var(--bg-strong);color:var(--text-muted);
+  width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;
+  display:flex;align-items:center;justify-content:center;padding:0;
+}
+#sel-bar .sb-x:hover{color:var(--text);background:var(--border);}
+@keyframes selBarIn{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translate(-50%,0);}}
+@media (max-width:640px){
+  #sel-bar{gap:10px;padding:8px 10px 8px 14px;}
+  #sel-bar .sb-stat strong{font-size:13px;}
+}
+
 /* ─── Toast ─── */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:1000;display:none;}
 #toast.show{display:block;animation:fadein .2s;}
@@ -974,6 +1015,13 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     <div class="budget-scroll" id="budget-scroll">
       <div style="padding:30px;color:var(--text-muted);text-align:center;">Loading…</div>
     </div>
+  </div>
+  <!-- Cell-selection sum bar: long-press a number cell to start, tap more to add -->
+  <div id="sel-bar" role="status" aria-live="polite">
+    <div class="sb-cells"><span class="sb-dot"></span><span id="sb-n">0</span> cells</div>
+    <div class="sb-stat"><label>Sum</label> <strong id="sb-sum">$0</strong></div>
+    <div class="sb-stat"><label>Avg</label> <strong id="sb-avg">$0</strong></div>
+    <button type="button" class="sb-x" onclick="clearCellSelection()" title="Clear selection (Esc)" aria-label="Clear selection">×</button>
   </div>
   <div class="budget-controls">
     <button id="ba-toggle" class="btn subtle" onclick="toggleBudgetActions()" aria-expanded="false">Actions ▾</button>
@@ -2382,6 +2430,10 @@ function buildBudget(weeks) {
 function renderBudget() {
   const wrap = eid('budget-scroll');
   if (!wrap) return;
+  // The render below regenerates every <td>, so any selected cell references
+  // become detached DOM nodes. Drop the selection so the sum bar reflects the
+  // visible state and we don't hold onto garbage references.
+  if (selSet && selSet.size) clearCellSelection();
   const { cols, matrix } = buildBudget(BUDGET_WEEKS);
   if (!cols.length) { wrap.innerHTML = '<div style="padding:30px;color:var(--text-muted);text-align:center;">No data</div>'; return; }
 
@@ -2517,6 +2569,15 @@ function wireBudgetInteractions() {
   const wrap = eid('budget-scroll');
   if (!wrap) return;
   wrap.onclick = onBudgetClick;
+  // Cell-selection: long-press (touch) and shift/cmd/ctrl + click (mouse).
+  wrap.addEventListener('touchstart',  onSelTouchStart,  { passive: true });
+  wrap.addEventListener('touchmove',   onSelTouchMove,   { passive: true });
+  wrap.addEventListener('touchend',    onSelTouchEnd,    { passive: true });
+  wrap.addEventListener('touchcancel', onSelTouchEnd,    { passive: true });
+  wrap.addEventListener('mousedown',   onSelMouseDown);
+  wrap.addEventListener('mouseup',     onSelMouseUp);
+  wrap.addEventListener('mouseleave',  onSelMouseUp);
+  wrap.addEventListener('contextmenu', onSelContextMenu);
   // Row drag (reorder)
   wrap.querySelectorAll('tr.bill').forEach(tr => {
     tr.addEventListener('dragstart', onBillRowDragStart);
@@ -2549,11 +2610,180 @@ function onBudgetClick(ev) {
     acknowledgeOverdueBill(badge.dataset.overdueBill);
     return;
   }
+  // In selection mode, a tap toggles the cell instead of opening the editor.
+  if (selMode) {
+    const td = ev.target.closest('td');
+    if (!td || td.classList.contains('cat')) return;
+    if (!isSelectableCell(td)) return;
+    ev.preventDefault(); ev.stopPropagation();
+    // Long-press just added this cell — swallow the synthetic click so we
+    // don't immediately un-select it.
+    if (selSwallowTd === td && Date.now() < selSwallowUntil) {
+      selSwallowTd = null; selSwallowUntil = 0; return;
+    }
+    toggleSelectCell(td);
+    return;
+  }
+  // A long-press outside select mode (rare — set was emptied between events).
+  if (selSwallowTd && Date.now() < selSwallowUntil) {
+    selSwallowTd = null; selSwallowUntil = 0;
+    ev.preventDefault(); ev.stopPropagation(); return;
+  }
   const td = ev.target.closest('td[data-cell-type]');
   if (!td) return;
   if (activeCell && activeCell.td === td) return;
   enterCellEdit(td);
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  CELL SELECTION (Excel-style multi-select with sum/avg/count bar)
+//  Long-press a number cell to enter selection mode; tap more cells to
+//  add/remove; the floating bar updates live. Tap × or press Esc to clear.
+// ═══════════════════════════════════════════════════════════════════
+let selMode = false;
+let selSet  = new Set();      // holds <td> references currently selected
+let selPressTimer = null;
+let selPressOrigin = null;    // { x, y, td } — for long-press cancel-on-scroll
+let selSwallowTd = null;      // suppress the click that fires right after a long-press
+let selSwallowUntil = 0;
+const SEL_LONGPRESS_MS = 380;
+const SEL_MOVE_CANCEL_PX = 9;
+
+// Any number-bearing cell counts: editable bill/paycheck/current/adhoc cells,
+// PLUS the footer (Remainder / Difference / Savings / Saved-row) totals.
+// We skip the Category column (.cat) and cells whose text doesn't parse.
+function isSelectableCell(td) {
+  if (!td || td.classList.contains('cat')) return false;
+  // Inside the budget table?
+  if (!td.closest('.budget-table')) return false;
+  return parseTdAmount(td) !== null;
+}
+function parseTdAmount(td) {
+  if (!td) return null;
+  // While editing, the cell has a child <input>; prefer its value.
+  const inp = td.querySelector('input.cell-edit');
+  let raw = inp ? inp.value : (td.textContent || '');
+  raw = String(raw).trim();
+  if (!raw || raw === '·' || raw === '—' || raw === '–') return null;
+  // Strip $, commas, spaces, %; normalize unicode minus.
+  const s = raw.replace(/[\s,$%]/g, '').replace(/[−–]/g, '-');
+  if (!/[0-9]/.test(s)) return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function onSelTouchStart(ev) {
+  if (ev.touches.length !== 1) return;
+  const t = ev.touches[0];
+  const td = ev.target.closest && ev.target.closest('td');
+  if (!td || !isSelectableCell(td)) return;
+  selPressOrigin = { x: t.clientX, y: t.clientY, td };
+  clearTimeout(selPressTimer);
+  selPressTimer = setTimeout(() => {
+    selPressTimer = null;
+    if (!selPressOrigin) return;
+    // Enter select mode and add this cell.
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch {} }
+    enterSelectMode();
+    toggleSelectCell(selPressOrigin.td, /*forceAdd*/ true);
+    // The synthetic click that fires ~300ms after touchend would otherwise
+    // immediately un-select the cell we just added. Swallow it.
+    selSwallowTd = selPressOrigin.td;
+    selSwallowUntil = Date.now() + 900;
+  }, SEL_LONGPRESS_MS);
+}
+function onSelTouchMove(ev) {
+  if (!selPressOrigin || !ev.touches.length) return;
+  const t = ev.touches[0];
+  const dx = t.clientX - selPressOrigin.x, dy = t.clientY - selPressOrigin.y;
+  if (Math.hypot(dx, dy) > SEL_MOVE_CANCEL_PX) {
+    clearTimeout(selPressTimer); selPressTimer = null; selPressOrigin = null;
+  }
+}
+function onSelTouchEnd() {
+  clearTimeout(selPressTimer); selPressTimer = null; selPressOrigin = null;
+}
+
+function onSelMouseDown(ev) {
+  if (ev.button !== 0) return;
+  const td = ev.target.closest && ev.target.closest('td');
+  if (!td || !isSelectableCell(td)) return;
+  // Shift/Cmd/Ctrl + click → toggle immediately (and enter mode if needed).
+  if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
+    ev.preventDefault(); ev.stopPropagation();
+    if (!selMode) enterSelectMode();
+    toggleSelectCell(td);
+    return;
+  }
+  // Long mousedown also enters select mode.
+  selPressOrigin = { x: ev.clientX, y: ev.clientY, td };
+  clearTimeout(selPressTimer);
+  selPressTimer = setTimeout(() => {
+    selPressTimer = null;
+    if (!selPressOrigin) return;
+    enterSelectMode();
+    toggleSelectCell(selPressOrigin.td, true);
+    selSwallowTd = selPressOrigin.td;
+    selSwallowUntil = Date.now() + 900;
+  }, SEL_LONGPRESS_MS);
+}
+function onSelMouseUp() {
+  clearTimeout(selPressTimer); selPressTimer = null; selPressOrigin = null;
+}
+function onSelContextMenu(ev) {
+  // Right-click on a cell = toggle into the selection (no native menu).
+  const td = ev.target.closest && ev.target.closest('td');
+  if (!td || !isSelectableCell(td)) return;
+  ev.preventDefault();
+  if (!selMode) enterSelectMode();
+  toggleSelectCell(td);
+}
+
+function enterSelectMode() {
+  if (selMode) return;
+  selMode = true;
+  document.body.classList.add('cell-select-mode');
+  // If a cell editor was open, close it without changing the value.
+  if (activeCell) commitCellEdit({ silent: true });
+}
+function toggleSelectCell(td, forceAdd) {
+  if (!td) return;
+  if (selSet.has(td) && !forceAdd) {
+    selSet.delete(td);
+    td.classList.remove('cell-sel');
+  } else if (!selSet.has(td)) {
+    selSet.add(td);
+    td.classList.add('cell-sel');
+  }
+  updateSelBar();
+  if (selSet.size === 0) clearCellSelection();
+}
+function clearCellSelection() {
+  selSet.forEach(td => { try { td.classList.remove('cell-sel'); } catch {} });
+  selSet.clear();
+  selMode = false;
+  document.body.classList.remove('cell-select-mode');
+  updateSelBar();
+}
+function updateSelBar() {
+  const bar = eid('sel-bar'); if (!bar) return;
+  if (selSet.size === 0) { bar.classList.remove('show'); return; }
+  let sum = 0, n = 0;
+  selSet.forEach(td => { const v = parseTdAmount(td); if (v !== null) { sum += v; n++; } });
+  const avg = n ? sum / n : 0;
+  const sumEl = eid('sb-sum'), avgEl = eid('sb-avg'), nEl = eid('sb-n');
+  if (nEl)   nEl.textContent   = String(n);
+  if (sumEl) { sumEl.textContent = fmt$2(sum); sumEl.classList.toggle('neg', sum < 0); }
+  if (avgEl) { avgEl.textContent = fmt$2(avg); avgEl.classList.toggle('neg', avg < 0); }
+  bar.classList.add('show');
+}
+// Esc clears the selection.
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && (selMode || selSet.size)) {
+    ev.preventDefault();
+    clearCellSelection();
+  }
+});
 
 function acknowledgeOverdueBill(billId) {
   const bill = S.bills.find(b => b.id === billId);
