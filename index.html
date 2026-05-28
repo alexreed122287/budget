@@ -1447,6 +1447,28 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
   </details>
 
   <details class="set-card">
+    <summary>Push notifications</summary>
+    <div class="set-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        Real OS notifications that fire <b>even when the app is closed</b> — for To-Do reminders and Calendar events.
+        Requires one-time setup (see <code>PUSH.md</code>): generate a VAPID key pair with
+        <code>./make-vapid.sh</code>, deploy <code>push-worker.js</code> as a Cloudflare Worker, then paste the
+        Worker URL + public key below and tap Enable. On iPhone the app must be added to your Home Screen first.
+      </div>
+      <div class="field"><label>Push worker URL</label>
+        <input id="push-url" type="url" placeholder="https://your-worker.workers.dev" style="width:100%;" oninput="updatePushSetting('workerUrl',this.value)"></div>
+      <div class="field"><label>VAPID public key</label>
+        <input id="push-vapid" type="text" placeholder="paste the public key from make-vapid.sh" style="width:100%;" oninput="updatePushSetting('vapidPublic',this.value)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+        <button class="btn primary" onclick="enablePush()">Enable push on this device</button>
+        <button class="btn" onclick="disablePush()">Disable on this device</button>
+        <button class="btn" onclick="testPush()" title="Sends a test push via the Worker">Send test</button>
+      </div>
+      <div id="push-status" style="font-size:13px;color:var(--text-muted);margin-top:10px;font-weight:600;"></div>
+    </div>
+  </details>
+
+  <details class="set-card">
     <summary>Data</summary>
     <div class="set-body" style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="exportJSON()">⬇ Export JSON</button>
@@ -3616,9 +3638,18 @@ function renderSettings() {
   S.homeLocation = S.homeLocation || { address:'', zip:'' };
   if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
   if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
+  S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
+  if (eid('push-url'))   eid('push-url').value   = S.pushConfig.workerUrl || '';
+  if (eid('push-vapid')) eid('push-vapid').value = S.pushConfig.vapidPublic || '';
+  renderPushStatus();
   renderPaychecks();
   renderPhotoThumbs();
   updateSyncPill();
+}
+function updatePushSetting(field, value) {
+  S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
+  S.pushConfig[field] = (value || '').trim();
+  scheduleSave();
 }
 function updateAISetting(field, value) {
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
@@ -3646,6 +3677,96 @@ async function testAI() {
   } catch (e) {
     el.style.color = 'var(--negative)'; el.textContent = '✗ ' + aiErrText(e);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PUSH NOTIFICATIONS  (closed-app reminders via VAPID + Worker)
+// ═══════════════════════════════════════════════════════════════════
+function urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function pushStatus(msg, color) {
+  const el = eid('push-status'); if (!el) return;
+  el.style.color = (color === 'err' ? 'var(--negative)' : color === 'ok' ? 'var(--accent-dim)' : 'var(--text-muted)');
+  el.textContent = msg;
+}
+function renderPushStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    pushStatus('Push not supported in this browser. On iPhone you must Add to Home Screen first.', 'err'); return;
+  }
+  if (!S.pushConfig || !S.pushConfig.workerUrl || !S.pushConfig.vapidPublic) {
+    pushStatus('Set the Worker URL + VAPID public key, then tap Enable.', ''); return;
+  }
+  navigator.serviceWorker.getRegistration().then(reg => {
+    if (!reg) { pushStatus('Service worker not yet registered.', ''); return; }
+    reg.pushManager.getSubscription().then(sub => {
+      pushStatus(sub ? '✓ Push enabled on this device' : 'Not subscribed — tap Enable.', sub ? 'ok' : '');
+    });
+  });
+}
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return null;
+  try { return await navigator.serviceWorker.register('sw.js'); } catch (e) { return null; }
+}
+async function enablePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { pushStatus('Push not supported here.', 'err'); return; }
+  const cfg = S.pushConfig || {};
+  if (!cfg.workerUrl || !cfg.vapidPublic) { pushStatus('Fill in the Worker URL + VAPID public key first.', 'err'); return; }
+  if (!WEBHOOK_URL) { pushStatus('Set the Sheet webhook (Settings → Sync) first — that\'s how the server learns of this device.', 'err'); return; }
+  pushStatus('Requesting permission…');
+  let perm = Notification.permission;
+  if (perm !== 'granted') perm = await Notification.requestPermission();
+  if (perm !== 'granted') { pushStatus('✗ Permission denied.', 'err'); return; }
+  let reg = await navigator.serviceWorker.getRegistration();
+  if (!reg) reg = await registerServiceWorker();
+  if (!reg)  { pushStatus('Could not register the service worker.', 'err'); return; }
+  pushStatus('Subscribing…');
+  let sub;
+  try {
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(cfg.vapidPublic) });
+  } catch (e) { pushStatus('Subscribe failed: ' + (e.message || e), 'err'); return; }
+  // Tell the Sheet so the cron knows where to push.
+  try {
+    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'subscribePush', subscription: sub.toJSON ? sub.toJSON() : JSON.parse(JSON.stringify(sub)), deviceLabel: navigator.userAgent.slice(0,60) }) });
+    const j = await r.json();
+    if (j && j.ok) { pushStatus('✓ Enabled — ' + (j.count || 1) + ' device(s) registered.', 'ok'); }
+    else { pushStatus('Subscribed locally but the Sheet didn\'t accept the registration.', 'err'); }
+  } catch (e) { pushStatus('Subscribed locally — Sheet sync failed: ' + e.message, 'err'); }
+}
+async function disablePush() {
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (!reg) { pushStatus('No subscription to disable.', ''); return; }
+  const sub = await reg.pushManager.getSubscription();
+  if (sub) {
+    try { await sub.unsubscribe(); } catch {}
+    try {
+      if (WEBHOOK_URL) await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'unsubscribePush', endpoint: sub.endpoint }) });
+    } catch {}
+  }
+  pushStatus('Disabled on this device.', '');
+}
+async function testPush() {
+  const cfg = S.pushConfig || {};
+  if (!cfg.workerUrl) { pushStatus('Fill in Worker URL first.', 'err'); return; }
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = reg && (await reg.pushManager.getSubscription());
+  if (!sub) { pushStatus('Subscribe first (Enable push on this device).', 'err'); return; }
+  pushStatus('Sending test push…');
+  try {
+    const r = await fetch(cfg.workerUrl.replace(/\/$/,'') + '/send', { method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : JSON.parse(JSON.stringify(sub)),
+        payload: { title: 'Test push', body: 'It works — closed-app reminders are wired up.', url: '/' } }) });
+    const j = await r.json();
+    pushStatus(j && j.ok ? '✓ Sent (Worker status ' + j.status + ').' : ('✗ Worker said: ' + JSON.stringify(j)), j && j.ok ? 'ok' : 'err');
+  } catch (e) { pushStatus('✗ ' + e.message, 'err'); }
 }
 
 // ─── Paycheck list (Settings → Income) ───
@@ -5465,6 +5586,9 @@ function boot() {
   // Calendar reminders while the app is open (every 30s).
   checkCalReminders(); checkTodoReminders();
   setInterval(() => { checkCalReminders(); checkTodoReminders(); }, 30000);
+  // Register the service worker (no-op if it can't, e.g. file://). Closed-app
+  // push delivery is wired up via Settings → Push notifications.
+  registerServiceWorker();
   // Re-pin the budget footer if the viewport changes (rotation, keyboard).
   let __lockT;
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 120); }, { passive: true });
