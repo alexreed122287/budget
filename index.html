@@ -962,8 +962,12 @@ html[data-theme="dark"] body.bg-active .budget-table th.cat{background:#0e1116 !
     <button id="ba-toggle" class="btn subtle" onclick="toggleBudgetActions()" aria-expanded="false">Actions ▾</button>
     <div id="budget-actions" class="ba-collapsed">
       <div class="ctrl-group">
-        <button class="btn" onclick="openOneTimeIncome()" title="Add a one-time income column">+ One-time</button>
-        <button class="btn" onclick="openOneTimeExpense()" title="Add a one-time expense row">+ Exp</button>
+        <select class="btn" id="ot-pick" title="Add a one-time entry"
+          onchange="if(this.value){pickOneTime(this.value);this.value='';}">
+          <option value="">+ Add ▾</option>
+          <option value="income">Income (column)</option>
+          <option value="expense">Expense (row)</option>
+        </select>
         <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
         <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
       </div>
@@ -3034,6 +3038,7 @@ function saveOneTimeIncome(id) {
 }
 // Legacy alias for any code paths still calling the old name (header clicks etc.)
 function addAdhocColumn() { openOneTimeIncome(); }
+function pickOneTime(kind) { (kind === 'expense') ? openOneTimeExpense() : openOneTimeIncome(); }
 function editAdhocColumn(id) {
   const a = (S.adhocColumns || []).find(x => x.id === id);
   if (!a) return;
