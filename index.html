@@ -2920,7 +2920,78 @@ function enterCellEdit(td) {
   inp.addEventListener('blur', () => {
     if (activeCell && activeCell.td === td) commitCellEdit({ silent: false });
   });
+  // Keep the value legible as the user types and as the viewport changes
+  // size (rotation, on-screen keyboard, desktop resize): shrink the font
+  // just enough that the entire value fits the cell's current width.
+  inp.addEventListener('input', () => fitInputText(inp));
+  requestAnimationFrame(() => fitInputText(inp));
   activeCell = { td, type, billId, adhocId, date, r, c, inp, originalValue: curVal };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KEEP-LEGIBLE: shrink-to-fit for any inline input that overlays a
+//  fixed-size cell or sits in the narrow Category column. Re-runs on
+//  every keystroke and on every viewport / visualViewport resize so a
+//  value like "12,345,678" stays readable when the window narrows or
+//  the iOS keyboard slides up.
+// ═══════════════════════════════════════════════════════════════════
+function fitInputText(inp, opts) {
+  if (!inp || !inp.isConnected) return;
+  const cs = getComputedStyle(inp);
+  // Discover the input's intrinsic ("base") font size by reading the rule
+  // value the first time we touch it — that way we can grow back up to it
+  // when the user deletes characters or the viewport widens again.
+  if (!inp.__baseFs) {
+    // We may have already set inline style.fontSize from a previous call;
+    // strip it before measuring the stylesheet value.
+    const inline = inp.style.fontSize;
+    inp.style.fontSize = '';
+    inp.__baseFs = parseFloat(getComputedStyle(inp).fontSize) || 13;
+    if (inline) inp.style.fontSize = inline;
+  }
+  const base  = (opts && opts.base)  || inp.__baseFs;
+  const floor = (opts && opts.floor) || 10;
+  const txt   = inp.value || inp.placeholder || '';
+  if (!txt) { inp.style.fontSize = ''; return; }
+  const padL = parseFloat(cs.paddingLeft)  || 0;
+  const padR = parseFloat(cs.paddingRight) || 0;
+  const avail = Math.max(20, inp.clientWidth - padL - padR);
+  const ctx = fitInputText._c || (fitInputText._c = document.createElement('canvas').getContext('2d'));
+  let size = base;
+  ctx.font = cs.fontWeight + ' ' + size + 'px ' + cs.fontFamily;
+  let guard = 0;
+  while (size > floor && ctx.measureText(txt).width > avail && guard++ < 60) {
+    size -= 0.5;
+    ctx.font = cs.fontWeight + ' ' + size + 'px ' + cs.fontFamily;
+  }
+  inp.style.fontSize = size + 'px';
+  // Keep the caret end visible after shrinking.
+  if (document.activeElement === inp) {
+    try { inp.scrollLeft = inp.scrollWidth; } catch {}
+  }
+}
+function fitOpenInputs() {
+  // Invalidate the cached "natural" font-size — after a resize the active
+  // CSS media query may have switched (e.g. ≤480px → desktop) and the rule
+  // value the input wants to start from is now different. Re-measure.
+  document.querySelectorAll('.cell-edit, .budget-table td.cat.sv.sv-open input').forEach(inp => {
+    inp.__baseFs = 0;                            // forces re-read on next fit
+    fitInputText(inp);
+  });
+}
+// Debounced refit on viewport changes — both the visual viewport (covers
+// the iOS keyboard show/hide) and the layout viewport (rotation, desktop
+// drag-to-resize). 90ms is a touch slower than a typical reflow.
+let __fitT;
+function __scheduleFit() {
+  clearTimeout(__fitT);
+  __fitT = setTimeout(fitOpenInputs, 90);
+}
+window.addEventListener('resize', __scheduleFit, { passive: true });
+window.addEventListener('orientationchange', __scheduleFit, { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', __scheduleFit, { passive: true });
+  window.visualViewport.addEventListener('scroll', __scheduleFit, { passive: true });
 }
 
 function commitCellEdit(opts = {}) {
@@ -3321,9 +3392,22 @@ function deleteSavingsExtra(id) {
 function svOpen(btn) {
   const td = btn.closest('td.cat.sv'); if (!td) return;
   td.classList.add('sv-open');
-  const inp = td.querySelector('.cat-input');
-  if (inp) { inp.focus(); try { inp.select(); } catch {} }
+  // Focus the name field if present (Remainder / Difference / Savings now
+  // open into rename mode), otherwise the balance field. Either way, fit
+  // every input inside the editor to whatever width the viewport allows
+  // right now, and keep them fit as the user types.
+  const inputs = Array.from(td.querySelectorAll('.sv-edit input'));
+  inputs.forEach(inp => {
+    fitInputText(inp);
+    if (!inp.__fitWired) {
+      inp.addEventListener('input', () => fitInputText(inp));
+      inp.__fitWired = true;
+    }
+  });
+  const first = td.querySelector('.xsave-name') || td.querySelector('.cat-input');
+  if (first) { first.focus(); try { first.select(); } catch {} }
   lockBudgetFooter();
+  requestAnimationFrame(fitOpenInputs);
 }
 function svMaybeClose(ev, wrap) {
   // Wait a tick so focus can move between the name/amount inputs without
