@@ -277,13 +277,23 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
   font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit;
   text-align:left;display:inline-block;}
 .budget-table td.cat.sv .sv-label:after{content:" ✎";color:var(--text-light);font-size:10px;}
-.budget-table td.cat.sv .sv-edit{display:none;align-items:center;gap:6px;}
+.budget-table td.cat.sv .sv-edit{display:none;align-items:center;gap:6px;flex-wrap:wrap;}
 .budget-table td.cat.sv.sv-open .sv-label{display:none;}
 .budget-table td.cat.sv.sv-open .sv-edit{display:inline-flex;}
-.budget-table td.cat.sv .sv-edit input.xsave-name{width:84px;font:inherit;font-size:11px;font-weight:600;
+.budget-table td.cat.sv.sv-open{overflow:visible;z-index:6;}
+.budget-table td.cat.sv .sv-edit input.xsave-name{width:110px;font:inherit;font-size:12px;font-weight:600;
   border:none;border-bottom:1px dashed var(--border-strong);background:none;color:var(--accent-dim);
-  text-transform:uppercase;letter-spacing:.03em;padding:2px 0;min-height:0;}
+  text-transform:uppercase;letter-spacing:.03em;padding:2px 4px;min-height:0;}
+.budget-table td.cat.sv .sv-edit input.xsave-name:focus{outline:none;border-bottom-color:var(--accent);color:var(--text);}
+.budget-table td.cat.sv .sv-edit input.cat-input{margin-left:0;}
 .budget-table td.cat.sv .sv-edit button.xsave-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:13px;line-height:1;}
+/* On narrow screens stack the row-title editor vertically so name + balance
+   inputs don't run off the right edge of the (slim) Category column. */
+@media (max-width:560px){
+  .budget-table td.cat.sv .sv-edit{flex-direction:column;align-items:flex-start;gap:4px;}
+  .budget-table td.cat.sv .sv-edit input.xsave-name{width:130px;font-size:16px;letter-spacing:0;text-transform:none;color:var(--text);}
+  .budget-table td.cat.sv .sv-edit button.xsave-del{align-self:flex-end;}
+}
 
 /* Sticky left: category column. Must be FULLY OPAQUE and above the
    scrolling data cells so $ values vanish behind it when swiping. */
@@ -2501,12 +2511,27 @@ function renderBudget() {
   h += '</tbody>';
 
   // Footer rows: balance, diff, savings (sticky bottom in this stacking order)
+  // Row titles are now tap-to-rename. Stored as overrides in S.rowLabels.
   h += '<tfoot>';
-  h += '<tr class="balance"><td class="cat">Remainder</td>';
+  S.rowLabels = S.rowLabels || { remainder:'', difference:'', savings:'' };
+  const rTitle = rowTitle('remainder', 'Remainder');
+  const dTitle = rowTitle('difference', 'Difference');
+  const sTitle = rowTitle('savings', 'Savings');
+  h += '<tr class="balance"><td class="cat sv">' +
+       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename this row">${escHTML(rTitle)}</button>` +
+       '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
+       `<input type="text" class="xsave-name" value="${escHTML(rTitle)}" placeholder="Remainder" ` +
+       `oninput="updateRowLabel('remainder',this.value)" title="Row title">` +
+       '</span></td>';
   cols.forEach(c => h += `<td class="${c.remainder < 0 ? 'neg' : ''}">${fmt$(c.remainder)}</td>`);
   h += '</tr>';
 
-  h += '<tr class="diff"><td class="cat">Difference</td>';
+  h += '<tr class="diff"><td class="cat sv">' +
+       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename this row">${escHTML(dTitle)}</button>` +
+       '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
+       `<input type="text" class="xsave-name" value="${escHTML(dTitle)}" placeholder="Difference" ` +
+       `oninput="updateRowLabel('difference',this.value)" title="Row title">` +
+       '</span></td>';
   cols.forEach((c, i) => {
     if (i === 0 || c.diff === null || c.diff === undefined) { h += '<td>—</td>'; }
     else {
@@ -2518,8 +2543,10 @@ function renderBudget() {
   h += '</tr>';
 
   h += '<tr class="savings"><td class="cat sv">' +
-       '<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to set the savings balance">Savings</button>' +
+       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the balance">${escHTML(sTitle)}</button>` +
        '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
+       `<input type="text" class="xsave-name" value="${escHTML(sTitle)}" placeholder="Savings" ` +
+       `oninput="updateRowLabel('savings',this.value)" title="Row title">` +
        `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
        `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
        `title="Starting / current savings balance — overwrites the auto-grown value">` +
@@ -2533,8 +2560,10 @@ function renderBudget() {
     const bal = Number(row.balance) || 0;
     const nm = (row.label && row.label.trim()) || 'Saved';
     h += `<tr class="xsave" data-xid="${row.id}"><td class="cat sv">` +
-      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to set the amount">${escHTML(nm)}</button>` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the amount">${escHTML(nm)}</button>` +
       `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
+      `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Saved" ` +
+      `oninput="updateSavingsExtra('${row.id}','label',this.value)" title="Row title">` +
       `<input type="number" step="0.01" class="cat-input" value="${bal.toFixed(2)}" placeholder="0" ` +
       `oninput="updateSavingsExtra('${row.id}','balance',parseFloat(this.value)||0)" ` +
       `title="${escHTML(nm)} balance">` +
@@ -3142,6 +3171,24 @@ function resetCurrentDate() {
   S.currentDate = null;
   saveAndRender();
   toast('Current reset to today');
+}
+
+// Custom labels for the fixed footer rows. Empty / missing = use the default
+// word ("Remainder" / "Difference" / "Savings"). Persisted to the Sheet.
+function rowTitle(key, def) {
+  const v = S.rowLabels && S.rowLabels[key];
+  return (v && String(v).trim()) ? String(v) : def;
+}
+function updateRowLabel(key, value) {
+  S.rowLabels = S.rowLabels || { remainder:'', difference:'', savings:'' };
+  maybeSnapshot();
+  S.rowLabels[key] = (value || '').trim();
+  scheduleSave();
+  // Reflect the new title on the collapsed button without re-rendering (so the
+  // input the user is typing in keeps focus).
+  const sel = `.budget-table tr.${ key === 'remainder' ? 'balance' : key === 'difference' ? 'diff' : 'savings' } td.cat.sv .sv-label`;
+  const btn = document.querySelector(sel);
+  if (btn) btn.textContent = (value && value.trim()) ? value : (key === 'remainder' ? 'Remainder' : key === 'difference' ? 'Difference' : 'Savings');
 }
 
 function updateSavingsBalance(value) {
