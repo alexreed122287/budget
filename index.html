@@ -575,7 +575,7 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 
 /* Inline input next to a cat-cell label (e.g. Savings current balance).
    Constrained height so it doesn't push the sticky footer row taller. */
-input[type=number].cat-input{
+.cat-input{
   width:130px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
   height:26px;padding:0 10px;margin-left:8px;
   border:1px solid var(--border-strong);border-radius:5px;
@@ -812,7 +812,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
   .budget-table th,.budget-table td{padding:8px 8px;font-size:12px;}
   .budget-table thead tr.paycheck th,.budget-table thead tr.paycheck td{font-size:13px;}
   .budget-table th .sub{font-size:9px;}
-  input[type=number].cat-input{width:112px;font-size:16px;height:32px;line-height:30px;padding:0 8px;margin-left:0;}
+  .cat-input{width:112px;font-size:16px;height:32px;line-height:30px;padding:0 8px;margin-left:0;}
   .budget-table tr.bill td.cat{padding:8px 6px;}
   .drag-handle{margin-right:4px;font-size:11px;}
   /* Footer row offsets are computed in JS (lockBudgetFooter) — no fixed
@@ -1129,9 +1129,9 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
     <div class="card-hdr">Mortgage payoff</div>
     <div class="card-body">
       <div class="field-row">
-        <div class="field"><label>Current balance ($)</label><input id="m-balance" type="number" step="0.01" oninput="renderMortgage()"></div>
+        <div class="field"><label>Current balance ($)</label><input id="m-balance" type="text" inputmode="decimal" class="money" oninput="renderMortgage()"></div>
         <div class="field"><label>APR (%)</label><input id="m-rate" type="number" step="0.001" oninput="renderMortgage()"></div>
-        <div class="field"><label>Monthly P&I ($)</label><input id="m-pi" type="number" step="0.01" oninput="renderMortgage()"></div>
+        <div class="field"><label>Monthly P&I ($)</label><input id="m-pi" type="text" inputmode="decimal" class="money" oninput="renderMortgage()"></div>
         <div class="field"><label>Next payment date</label><input id="m-next" type="date" oninput="renderMortgage()"></div>
       </div>
       <div class="field" style="margin-top:8px;">
@@ -1144,7 +1144,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">≈ <span id="m-extra-mo">$0/mo</span> applied month-end.</div>
       </div>
       <div class="field-row" style="margin-top:8px;">
-        <div class="field"><label>One-time extra principal ($)</label><input id="m-once-amt" type="number" step="100" value="0" oninput="renderMortgage()"></div>
+        <div class="field"><label>One-time extra principal ($)</label><input id="m-once-amt" type="text" inputmode="decimal" class="money" value="$0.00" oninput="renderMortgage()"></div>
         <div class="field"><label>Apply on date</label><input id="m-once-date" type="date" oninput="renderMortgage()"></div>
       </div>
       <div class="stat-grid" style="margin-top:18px;">
@@ -1600,8 +1600,15 @@ let LAST_PULL = null;
 //  UTIL
 // ═══════════════════════════════════════════════════════════════════
 const eid = id => document.getElementById(id);
-const fmt$ = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
-const fmt$2 = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+// Currency formatter: always $, thousands commas, and full cents (2 dp).
+// Negatives render as -$1,234.56. fmt$ and fmt$2 are intentionally identical
+// so every dollar figure across the app reads as a proper currency amount.
+const fmt$2 = n => (Number(n) < 0 ? '-$' : '$') + Math.abs(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt$ = fmt$2;
+// Parse a currency-ish string ("$1,234.56", "-$1,234", "1234.5") to a number.
+// Function declaration (not const) so inline oninput="…parseMoney(this.value)"
+// handlers can resolve it from the global scope.
+function parseMoney(s) { if (typeof s === 'number') return s; const n = parseFloat(String(s).replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; }
 const isoDate = d => { const dt = (typeof d === 'string') ? new Date(d) : d; return dt.toISOString().slice(0,10); };
 // LOCAL calendar date (no UTC shift) — used by the shared calendar so an
 // evening entry never rolls to the next day.
@@ -2493,7 +2500,7 @@ function renderBudget() {
     else if (c.isAdhoc) { cellType = 'adhoc'; amt = c.amount * (c.adhocType === 'expense' ? -1 : 1); cls = 'editable adhoc-cell'; }
     else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : ''); }
     const dataAdhoc = c.isAdhoc ? ` data-adhoc-id="${c.adhocId}"` : '';
-    const display = (amt < 0 ? '-$' : '$') + Math.abs(amt).toLocaleString();
+    const display = fmt$2(amt);
     h += `<td class="${cls}" data-cell-type="${cellType}" data-date="${c.date}" data-r="0" data-c="${ci}"${dataAdhoc} tabindex="0">${display}</td>`;
   });
   h += '</tr></thead>';
@@ -2515,7 +2522,7 @@ function renderBudget() {
       const isOverride = overrides[c.date] !== undefined;
       const hasValue = amt > 0;
       const cls = 'bill-cell ' + (amt === 0 ? 'zero ' : 'has-value ') + 'editable' + (isOverride ? ' override' : '');
-      const display = hasValue ? '$' + amt.toLocaleString() : '·';
+      const display = hasValue ? fmt$2(amt) : '·';
       const dragAttr = hasValue ? ' draggable="true"' : '';
       h += `<td class="${cls}" data-cell-type="bill" data-bill-id="${bill.id}" data-date="${c.date}" data-r="${bi+1}" data-c="${ci}" tabindex="0"${dragAttr}>${display}</td>`;
     });
@@ -2560,8 +2567,8 @@ function renderBudget() {
        '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
        `<input type="text" class="xsave-name" value="${escHTML(sTitle)}" placeholder="Savings" ` +
        `oninput="updateRowLabel('savings',this.value)" title="Row title">` +
-       `<input type="number" step="0.01" class="cat-input" value="${(Number(S.savingsBalance)||0).toFixed(2)}" ` +
-       `placeholder="0" oninput="updateSavingsBalance(parseFloat(this.value)||0)" ` +
+       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.savingsBalance)||0)}" ` +
+       `placeholder="$0.00" oninput="updateSavingsBalance(parseMoney(this.value))" ` +
        `title="Starting / current savings balance — overwrites the auto-grown value">` +
        '</span></td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
@@ -2577,8 +2584,8 @@ function renderBudget() {
       `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
       `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Saved" ` +
       `oninput="updateSavingsExtra('${row.id}','label',this.value)" title="Row title">` +
-      `<input type="number" step="0.01" class="cat-input" value="${bal.toFixed(2)}" placeholder="0" ` +
-      `oninput="updateSavingsExtra('${row.id}','balance',parseFloat(this.value)||0)" ` +
+      `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(bal)}" placeholder="$0.00" ` +
+      `oninput="updateSavingsExtra('${row.id}','balance',parseMoney(this.value))" ` +
       `title="${escHTML(nm)} balance">` +
       `<button class="xsave-del" title="Remove this row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
       `</span></td>`;
@@ -2952,7 +2959,7 @@ function enterCellEdit(td) {
 //  tab switch, so text stays readable as the window changes size.
 // ═══════════════════════════════════════════════════════════════════
 // Selector for every input this system manages.
-const FIT_SELECTOR = '.cell-edit, .budget-table td.cat.sv.sv-open input, ' +
+const FIT_SELECTOR = '.cell-edit, .budget-table td.cat.sv.sv-open input, input.money, ' +
   '.list-table input[type="text"], .list-table input[type="url"], .list-table input[type="number"]';
 // "Active editors" shrink even while focused (you're typing a number into a
 // fixed-size cell). Everything else restores to full size while focused.
@@ -3046,6 +3053,27 @@ function startFitObserver() {
   __fitObserver = new MutationObserver(() => __scheduleFit());
   __fitObserver.observe(document.body, { childList: true, subtree: true });
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  CURRENCY INPUTS: any <input class="money"> shows a formatted dollar
+//  amount ($1,234.56) at rest and the raw editable number while focused.
+//  The field's existing oninput handler keeps writing to state via
+//  parseMoney(this.value); on blur we reformat. Editable balances thus
+//  read as proper currency everywhere without breaking number entry.
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('focusin', (ev) => {
+  const t = ev.target;
+  if (!t || !t.classList || !t.classList.contains('money') || t.readOnly) return;
+  const n = parseMoney(t.value);
+  t.value = n ? String(n) : '';                 // raw digits for editing
+  fitInputText(t);                              // back to full size for editing
+  requestAnimationFrame(() => { try { t.select(); } catch {} });
+}, true);
+document.addEventListener('focusout', (ev) => {
+  const t = ev.target;
+  if (!t || !t.classList || !t.classList.contains('money') || t.readOnly) return;
+  t.value = fmt$2(parseMoney(t.value));         // reformat as currency
+}, true);
 
 function commitCellEdit(opts = {}) {
   if (!activeCell) return;
@@ -3629,7 +3657,7 @@ function renderBills() {
     <tr class="${b.active === false ? 'inactive' : ''}" data-id="${b.id}" draggable="true">
       <td class="drag-cell">⋮⋮</td>
       <td class="col-name" data-label="Name"><input type="text" value="${escHTML(b.name)}" oninput="updateBill('${b.id}','name',this.value)"></td>
-      <td class="col-amt" data-label="Amount"><input type="number" step="0.01" value="${b.amount}" oninput="updateBill('${b.id}','amount',parseFloat(this.value)||0)"></td>
+      <td class="col-amt" data-label="Amount"><input type="text" inputmode="decimal" class="money" value="${fmt$2(b.amount||0)}" oninput="updateBill('${b.id}','amount',parseMoney(this.value))"></td>
       <td class="col-freq" data-label="Frequency"><select onchange="updateBill('${b.id}','frequency',this.value)">
         ${['monthly','weekly','biweekly','quarterly','semi','yearly','once'].map(f => `<option value="${f}" ${b.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
       </select></td>
@@ -3816,16 +3844,22 @@ function renderMortgage() {
   const onceA = eid('m-once-amt'), onceD = eid('m-once-date');
   // If auto-paydown changed the balance, ignore the now-stale input value.
   if (__mortgageSynced) { balanceI.value = ''; __mortgageSynced = false; }
-  if (balanceI.value !== '') m.balance = parseFloat(balanceI.value) || 0;
+  if (balanceI.value !== '') m.balance = parseMoney(balanceI.value);
   if (rateI.value !== '') m.rate = parseFloat(rateI.value) || 0;
-  if (piI.value !== '') m.pi = parseFloat(piI.value) || 0;
+  if (piI.value !== '') m.pi = parseMoney(piI.value);
   if (nextI.value !== '') m.nextPayment = nextI.value;
   m.extraWeekly = parseFloat(extraI.value) || 0;
-  m.onceAmount = parseFloat(onceA.value) || 0;
+  m.onceAmount = parseMoney(onceA.value);
   m.onceDate = onceD.value || '';
-  balanceI.value = m.balance; rateI.value = m.rate; piI.value = m.pi; nextI.value = m.nextPayment;
+  // Write back, but never overwrite a money field the user is mid-typing in
+  // (that would strip a trailing "." or reformat under the caret).
+  if (document.activeElement !== balanceI) balanceI.value = fmt$2(m.balance);
+  rateI.value = m.rate;
+  if (document.activeElement !== piI) piI.value = fmt$2(m.pi);
+  nextI.value = m.nextPayment;
   extraI.value = m.extraWeekly; eid('m-extra-num').value = m.extraWeekly;
-  onceA.value = m.onceAmount; onceD.value = m.onceDate;
+  if (document.activeElement !== onceA) onceA.value = fmt$2(m.onceAmount);
+  onceD.value = m.onceDate;
   eid('m-extra-val').textContent = '$' + m.extraWeekly + '/wk';
   eid('m-extra-mo').textContent = '$' + (m.extraWeekly * 52 / 12).toFixed(0) + '/mo';
   const startDate = m.nextPayment ? parseISO(m.nextPayment) : new Date();
@@ -3876,7 +3910,7 @@ function renderNetWorth() {
       <tr data-id="${a.id}" class="nw-linked">
         <td class="drag-cell" title="Linked rows stay in place">🔗</td>
         <td class="col-name" data-label="Account"><span class="nw-linked-name">${escHTML(a.name)}<span class="linked-badge" title="Auto-synced from ${escHTML(src)}">LINKED</span></span></td>
-        <td data-label="Balance"><input type="number" value="${(a.balance||0).toFixed(2)}" readonly tabindex="-1" title="Linked to ${escHTML(src)} — change it there"></td>
+        <td data-label="Balance"><input type="text" class="money" value="${fmt$2(a.balance||0)}" readonly tabindex="-1" title="Linked to ${escHTML(src)} — change it there"></td>
         <td data-label="Type">${a.type==='asset'?'Asset':'Liability'}</td>
         <td data-label="Category">${escHTML(a.category||'')}</td>
         <td data-label="Auto +$">—</td>
@@ -3890,13 +3924,13 @@ function renderNetWorth() {
       <tr data-id="${a.id}" draggable="true">
         <td class="drag-cell">⋮⋮</td>
         <td class="col-name" data-label="Account"><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
-        <td data-label="Balance"><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
+        <td data-label="Balance"><input type="text" inputmode="decimal" class="money" value="${fmt$2(a.balance||0)}" oninput="updateAccount('${a.id}','balance',parseMoney(this.value))"></td>
         <td data-label="Type"><select onchange="updateAccount('${a.id}','type',this.value)">
           <option value="asset" ${a.type==='asset'?'selected':''}>Asset</option>
           <option value="liability" ${a.type==='liability'?'selected':''}>Liability</option>
         </select></td>
         <td data-label="Category"><input type="text" value="${escHTML(a.category||'')}" placeholder="cash, brokerage, retirement, mortgage…" oninput="updateAccount('${a.id}','category',this.value)"></td>
-        <td data-label="Auto +$"><input type="number" step="0.01" value="${a.contribAmount||0}" placeholder="0" oninput="updateAccount('${a.id}','contribAmount',parseFloat(this.value)||0)" title="Amount auto-added each cadence"></td>
+        <td data-label="Auto +$"><input type="text" inputmode="decimal" class="money" value="${fmt$2(a.contribAmount||0)}" placeholder="$0.00" oninput="updateAccount('${a.id}','contribAmount',parseMoney(this.value))" title="Amount auto-added each cadence"></td>
         <td data-label="Cadence"><select onchange="updateAccount('${a.id}','contribFrequency',this.value)">
           ${['none','weekly','biweekly','monthly','quarterly','yearly'].map(f => `<option value="${f}" ${ (a.contribFrequency||'none')===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
         </select></td>
@@ -4195,7 +4229,7 @@ function renderPaychecks() {
     <tr class="${p.active === false ? 'inactive' : ''}" data-id="${p.id}">
       <td class="drag-cell">⋮⋮</td>
       <td data-label="Label"><input type="text" value="${escHTML(p.label||'')}" placeholder="Label" oninput="updatePaycheck('${p.id}','label',this.value)"></td>
-      <td class="col-amt" data-label="Amount"><input type="number" step="0.01" value="${p.amount||0}" oninput="updatePaycheck('${p.id}','amount',parseFloat(this.value)||0)"></td>
+      <td class="col-amt" data-label="Amount"><input type="text" inputmode="decimal" class="money" value="${fmt$2(p.amount||0)}" oninput="updatePaycheck('${p.id}','amount',parseMoney(this.value))"></td>
       <td class="col-freq" data-label="Frequency"><select onchange="updatePaycheck('${p.id}','frequency',this.value)">
         ${['monthly','weekly','biweekly','semi','quarterly','yearly','once'].map(f => `<option value="${f}" ${p.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
       </select></td>
@@ -5783,7 +5817,7 @@ function renderVacations() {
         <td class="drag-c">⋮⋮</td>
         <td data-label="Item"><input type="text" value="${escHTML(it.name||'')}" placeholder="Item name" oninput="updateVacItem('${v.id}','${it.id}','name',this.value)"></td>
         <td class="cat" data-label="Category"><select onchange="updateVacItem('${v.id}','${it.id}','category',this.value)">${VAC_CATEGORIES.map(c => `<option value="${c}" ${it.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
-        <td class="amt" data-label="Amount"><input type="number" step="0.01" value="${it.amount||0}" placeholder="0" oninput="updateVacItem('${v.id}','${it.id}','amount',parseFloat(this.value)||0)"></td>
+        <td class="amt" data-label="Amount"><input type="text" inputmode="decimal" class="money" value="${fmt$2(it.amount||0)}" placeholder="$0.00" oninput="updateVacItem('${v.id}','${it.id}','amount',parseMoney(this.value))"></td>
         <td class="paid" data-label="Paid"><input type="checkbox" ${it.paid?'checked':''} onchange="updateVacItem('${v.id}','${it.id}','paid',this.checked)"></td>
         <td class="del">
           <span class="row-move">
@@ -5812,8 +5846,8 @@ function renderVacations() {
           <div class="vac-fields">
             <div><label>From</label><input type="date" value="${v.tripStart||''}" oninput="updateVacField('${v.id}','tripStart',this.value)"></div>
             <div><label>To</label><input type="date" value="${v.tripEnd||''}" oninput="updateVacField('${v.id}','tripEnd',this.value)"></div>
-            <div><label>Target $</label><input type="number" step="0.01" value="${target||0}" oninput="updateVacField('${v.id}','targetAmount',parseFloat(this.value)||0)"></div>
-            <div><label>Saved so far $</label><input type="number" step="0.01" value="${saved||0}" oninput="updateVacField('${v.id}','savedAmount',parseFloat(this.value)||0)"></div>
+            <div><label>Target $</label><input type="text" inputmode="decimal" class="money" value="${fmt$2(target||0)}" oninput="updateVacField('${v.id}','targetAmount',parseMoney(this.value))"></div>
+            <div><label>Saved so far $</label><input type="text" inputmode="decimal" class="money" value="${fmt$2(saved||0)}" oninput="updateVacField('${v.id}','savedAmount',parseMoney(this.value))"></div>
             <div><label>Save-by date</label><input type="date" value="${v.targetDate||''}" oninput="updateVacField('${v.id}','targetDate',this.value)"></div>
             <div><label>Notes</label><input type="text" value="${escHTML(v.notes||'')}" placeholder="Notes" oninput="updateVacField('${v.id}','notes',this.value)"></div>
           </div>
@@ -5954,13 +5988,30 @@ function updateVacItem(vid, iid, field, value) {
   it[field] = value;
   scheduleSave();
   if (field === 'amount' || field === 'paid') {
-    // re-render to recompute totals, but only for this card
-    const card = document.querySelector('.vac-card[data-id="'+vid+'"]');
-    if (card) {
-      // Simple approach: full re-render (focus on a numeric input is fine to lose)
-      renderVacations();
+    // Update this card's totals in place — a full re-render would steal focus
+    // from (and reformat) the amount field the user is still typing in.
+    refreshVacTotals(vid);
+    if (field === 'paid') {
+      const card = document.querySelector('.vac-card[data-id="'+vid+'"]');
+      const tr = card && card.querySelector('tr[data-id="'+iid+'"]');
+      if (tr) tr.classList.toggle('vac-paid', !!value);
     }
   }
+}
+// Recompute and write the Estimated / Paid / Remaining / Gap figures for one
+// vacation card without re-rendering its inputs.
+function refreshVacTotals(vid) {
+  const v = (S.vacations||[]).find(x => x.id === vid); if (!v) return;
+  const items = v.items || [];
+  const estimated = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const paid = items.filter(i => i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const target = Number(v.targetAmount) || 0, saved = Number(v.savedAmount) || 0;
+  const card = document.querySelector('.vac-card[data-id="'+vid+'"]'); if (!card) return;
+  const vals = card.querySelectorAll('.vac-totals .val');
+  if (vals[0]) vals[0].textContent = fmt$(estimated);
+  if (vals[1]) vals[1].textContent = fmt$(paid);
+  if (vals[2]) vals[2].textContent = fmt$(estimated - paid);
+  if (vals[3]) vals[3].textContent = saved >= target ? 'Funded ✓' : fmt$(target - saved) + ' to save';
 }
 function deleteVacItem(vid, iid) {
   const v = (S.vacations||[]).find(x => x.id === vid); if (!v) return;
