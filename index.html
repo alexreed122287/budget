@@ -622,6 +622,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .list-table .col-day{width:80px;}
 .list-table .col-cat{width:130px;}
 .list-table .col-actions{width:90px;text-align:right;}
+/* In the grid (non-stacked) layout, keep columns at readable widths. Auto
+   table-layout otherwise compresses every column proportionally to honor
+   width:100%, crushing names/values to an illegible width. Giving the TABLE
+   a min-width (honored, unlike per-cell min-width) makes it overflow its
+   overflow:auto card-body and scroll horizontally instead — so text stays
+   full-size and legible at any window width. */
+@media (min-width:641px){
+  .list-table{min-width:860px;}
+  .list-table .col-name{min-width:200px;}
+}
 .list-table td.drag-cell{width:24px;text-align:center;cursor:grab;color:var(--text-light);user-select:none;font-size:14px;line-height:1;padding:10px 6px;}
 /* Up/Down move buttons — tiny inline pair next to Delete in row actions */
 .row-move{display:inline-flex;gap:4px;margin-right:8px;vertical-align:middle;}
@@ -1337,7 +1347,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
       <table class="list-table" id="nw-table">
         <thead><tr>
           <th class="col-actions" style="width:24px;"></th>
-          <th>Account</th>
+          <th class="col-name">Account</th>
           <th class="col-amt">Balance</th>
           <th class="col-cat">Type</th>
           <th class="col-cat">Category</th>
@@ -1909,6 +1919,9 @@ function showTab(name) {
   if (name === 'calendar') renderCalendar();
   if (name === 'networth') renderNetWorth();
   if (name === 'settings') renderSettings();
+  // The newly-shown tab's text fields were laid out with width=0 while hidden;
+  // fit them now that they have real width.
+  requestAnimationFrame(fitAllVisibleInputs);
 }
 
 // ── Bible verses (NIV) per category ──────────────────────────────
@@ -2929,28 +2942,49 @@ function enterCellEdit(td) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  KEEP-LEGIBLE: shrink-to-fit for any inline input that overlays a
-//  fixed-size cell or sits in the narrow Category column. Re-runs on
-//  every keystroke and on every viewport / visualViewport resize so a
-//  value like "12,345,678" stays readable when the window narrows or
-//  the iOS keyboard slides up.
+//  KEEP-LEGIBLE: shrink-to-fit for text inputs so a value never gets
+//  clipped by a narrow column or cell. Covers (a) the budget cell editor
+//  and footer row-title editors — which shrink live as you type — and
+//  (b) every always-on text field in the list tables (account names,
+//  bill names, paychecks, etc.), which shrink at rest and pop back to
+//  full size while focused for comfortable editing. Re-runs on every
+//  keystroke, viewport / visualViewport resize, table re-render, and
+//  tab switch, so text stays readable as the window changes size.
 // ═══════════════════════════════════════════════════════════════════
+// Selector for every input this system manages.
+const FIT_SELECTOR = '.cell-edit, .budget-table td.cat.sv.sv-open input, ' +
+  '.list-table input[type="text"], .list-table input[type="url"], .list-table input[type="number"]';
+// "Active editors" shrink even while focused (you're typing a number into a
+// fixed-size cell). Everything else restores to full size while focused.
+function __isActiveEditor(inp) {
+  return inp.classList.contains('cell-edit') || !!inp.closest('td.cat.sv.sv-open');
+}
 function fitInputText(inp, opts) {
   if (!inp || !inp.isConnected) return;
+  // Skip inputs that aren't actually laid out (hidden tab, collapsed editor) —
+  // clientWidth is 0 there and we'd wrongly shrink them to the floor. They get
+  // re-fit when their tab/editor becomes visible.
+  if (inp.offsetParent === null && inp !== document.activeElement) return;
+  if (inp.clientWidth === 0) return;
+  // Focused non-editor field: show at its natural size so editing is
+  // comfortable and (on iOS) a sub-16px field can't trigger zoom-on-focus.
+  // It re-fits on blur via the delegated focusout handler.
+  if (!__isActiveEditor(inp) && document.activeElement === inp) {
+    inp.style.fontSize = '';
+    return;
+  }
   const cs = getComputedStyle(inp);
-  // Discover the input's intrinsic ("base") font size by reading the rule
-  // value the first time we touch it — that way we can grow back up to it
-  // when the user deletes characters or the viewport widens again.
+  // Discover the input's intrinsic ("base") font size the first time we touch
+  // it, so we can grow back up to it when characters are deleted or the
+  // viewport widens again.
   if (!inp.__baseFs) {
-    // We may have already set inline style.fontSize from a previous call;
-    // strip it before measuring the stylesheet value.
     const inline = inp.style.fontSize;
     inp.style.fontSize = '';
     inp.__baseFs = parseFloat(getComputedStyle(inp).fontSize) || 13;
     if (inline) inp.style.fontSize = inline;
   }
   const base  = (opts && opts.base)  || inp.__baseFs;
-  const floor = (opts && opts.floor) || 10;
+  const floor = (opts && opts.floor) || 9;
   const txt   = inp.value || inp.placeholder || '';
   if (!txt) { inp.style.fontSize = ''; return; }
   const padL = parseFloat(cs.paddingLeft)  || 0;
@@ -2965,33 +2999,52 @@ function fitInputText(inp, opts) {
     ctx.font = cs.fontWeight + ' ' + size + 'px ' + cs.fontFamily;
   }
   inp.style.fontSize = size + 'px';
-  // Keep the caret end visible after shrinking.
+  // Keep the caret end visible after shrinking an active editor.
   if (document.activeElement === inp) {
     try { inp.scrollLeft = inp.scrollWidth; } catch {}
   }
 }
-function fitOpenInputs() {
-  // Invalidate the cached "natural" font-size — after a resize the active
-  // CSS media query may have switched (e.g. ≤480px → desktop) and the rule
-  // value the input wants to start from is now different. Re-measure.
-  document.querySelectorAll('.cell-edit, .budget-table td.cat.sv.sv-open input').forEach(inp => {
-    inp.__baseFs = 0;                            // forces re-read on next fit
+// Re-fit every managed input. Invalidate the cached "natural" size first —
+// after a resize the active CSS media query may have changed (≤480px ⇄
+// desktop), so the size each input wants to start from is different.
+function fitAllVisibleInputs() {
+  document.querySelectorAll(FIT_SELECTOR).forEach(inp => {
+    inp.__baseFs = 0;                            // force a re-read on next fit
     fitInputText(inp);
   });
 }
-// Debounced refit on viewport changes — both the visual viewport (covers
-// the iOS keyboard show/hide) and the layout viewport (rotation, desktop
-// drag-to-resize). 90ms is a touch slower than a typical reflow.
+// Back-compat alias (older call sites).
+function fitOpenInputs() { fitAllVisibleInputs(); }
+// Debounced refit on viewport changes — visual viewport covers the iOS
+// keyboard show/hide; layout viewport covers rotation and desktop resize.
 let __fitT;
 function __scheduleFit() {
   clearTimeout(__fitT);
-  __fitT = setTimeout(fitOpenInputs, 90);
+  __fitT = setTimeout(fitAllVisibleInputs, 90);
 }
 window.addEventListener('resize', __scheduleFit, { passive: true });
 window.addEventListener('orientationchange', __scheduleFit, { passive: true });
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', __scheduleFit, { passive: true });
   window.visualViewport.addEventListener('scroll', __scheduleFit, { passive: true });
+}
+// Live re-fit while typing in any managed field, and re-fit a list field the
+// moment it loses focus (it was at full size while focused).
+document.addEventListener('input', (ev) => {
+  const t = ev.target;
+  if (t && t.matches && t.matches(FIT_SELECTOR)) fitInputText(t);
+}, true);
+document.addEventListener('focusout', (ev) => {
+  const t = ev.target;
+  if (t && t.matches && t.matches(FIT_SELECTOR)) requestAnimationFrame(() => fitInputText(t));
+}, true);
+// Tables are rebuilt by innerHTML on render; observe the document so freshly
+// rendered inputs get fitted automatically without wiring each render fn.
+let __fitObserver;
+function startFitObserver() {
+  if (__fitObserver || typeof MutationObserver === 'undefined') return;
+  __fitObserver = new MutationObserver(() => __scheduleFit());
+  __fitObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 function commitCellEdit(opts = {}) {
@@ -3822,7 +3875,7 @@ function renderNetWorth() {
         return `
       <tr data-id="${a.id}" class="nw-linked">
         <td class="drag-cell" title="Linked rows stay in place">🔗</td>
-        <td data-label="Account"><span class="nw-linked-name">${escHTML(a.name)}<span class="linked-badge" title="Auto-synced from ${escHTML(src)}">LINKED</span></span></td>
+        <td class="col-name" data-label="Account"><span class="nw-linked-name">${escHTML(a.name)}<span class="linked-badge" title="Auto-synced from ${escHTML(src)}">LINKED</span></span></td>
         <td data-label="Balance"><input type="number" value="${(a.balance||0).toFixed(2)}" readonly tabindex="-1" title="Linked to ${escHTML(src)} — change it there"></td>
         <td data-label="Type">${a.type==='asset'?'Asset':'Liability'}</td>
         <td data-label="Category">${escHTML(a.category||'')}</td>
@@ -3836,7 +3889,7 @@ function renderNetWorth() {
       return `
       <tr data-id="${a.id}" draggable="true">
         <td class="drag-cell">⋮⋮</td>
-        <td data-label="Account"><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
+        <td class="col-name" data-label="Account"><input type="text" value="${escHTML(a.name)}" oninput="updateAccount('${a.id}','name',this.value)"></td>
         <td data-label="Balance"><input type="number" step="0.01" value="${a.balance||0}" oninput="updateAccount('${a.id}','balance',parseFloat(this.value)||0)"></td>
         <td data-label="Type"><select onchange="updateAccount('${a.id}','type',this.value)">
           <option value="asset" ${a.type==='asset'?'selected':''}>Asset</option>
@@ -5950,6 +6003,9 @@ function boot() {
   // Register the service worker (no-op if it can't, e.g. file://). Closed-app
   // push delivery is wired up via Settings → Push notifications.
   registerServiceWorker();
+  // Keep every text field legible as tables re-render / the window resizes.
+  startFitObserver();
+  requestAnimationFrame(fitAllVisibleInputs);
   // Re-pin the budget footer if the viewport changes (rotation, keyboard).
   let __lockT;
   window.addEventListener('resize', () => { clearTimeout(__lockT); __lockT = setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 120); }, { passive: true });
