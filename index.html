@@ -121,7 +121,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 @keyframes spin{to{transform:rotate(360deg);}}
 #btn-save{flex:0 0 auto;padding:7px 12px;font-size:13px;min-height:34px;font-weight:700;}
 .sync-pill{flex:0 0 auto;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700;
-  color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.03em;white-space:nowrap;}
+  color:var(--text-muted);background:var(--bg-strong);border:none;letter-spacing:.03em;white-space:nowrap;
+  /* Fixed width + centered text so the pill (and the header row) never shifts
+     as the status cycles IDLE → SYNCED → SAVED → ERROR. */
+  min-width:70px;box-sizing:border-box;text-align:center;display:inline-block;}
 .sync-pill.ok{color:var(--accent-dim);background:var(--accent-soft);}
 .sync-pill.err{color:var(--negative);background:var(--negative-soft);}
 .sync-pill.local{color:var(--warn);background:#fffbeb;}
@@ -482,6 +485,33 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .goal-img img{width:100%;height:100%;object-fit:cover;}
 .goal-img button{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:none;
   width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;line-height:1;padding:0;}
+/* ─── Goal progress tracker ─── */
+.gtrack{margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--bg-soft);}
+.gtrack-fields{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.gtrack-fields > div{display:flex;flex-direction:column;gap:4px;flex:1 1 110px;min-width:96px;}
+.gtrack-fields label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-light);}
+.gtrack-fields input{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);color:var(--text);width:100%;box-sizing:border-box;}
+.gtrack-fields input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.gbar{height:10px;background:var(--bg-strong);border-radius:6px;overflow:hidden;margin:4px 0 10px;}
+.gbar-fill{height:100%;background:var(--accent);border-radius:6px;transition:width .35s ease;}
+.gtrack-stats{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--text-muted);}
+.gtrack-stats b{color:var(--text);font-weight:700;}
+.gtrack-stats .big{font-size:15px;color:var(--accent-dim);font-weight:700;}
+.gtrack-log{margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+.gtrack-log-add{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.gtrack-log-add input{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px;background:var(--bg);color:var(--text);}
+.gtrack-log-add input[type=date]{flex:0 0 auto;}
+.gtrack-log-add input[type=text]{flex:1;min-width:120px;}
+.gtrack-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+.gtrack-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-light);padding:4px 8px;border-bottom:1px solid var(--border);}
+.gtrack-table td{padding:6px 8px;border-bottom:1px solid var(--border);}
+.gtrack-table td:last-child,.gtrack-table th:last-child{text-align:right;width:32px;}
+.gtrack-table .delta-down{color:var(--accent-dim);font-weight:600;}
+.gtrack-table .delta-up{color:var(--negative);font-weight:600;}
+.gtrack-empty{font-size:13px;color:var(--text-muted);padding:8px 0;}
+.gtrack-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:15px;line-height:1;padding:0;}
+.gtrack-del:hover{color:var(--negative);}
+.cc-pct{flex:0 0 auto;margin-left:auto;margin-right:10px;font-size:12px;font-weight:700;color:var(--accent-dim);background:var(--accent-soft);padding:2px 9px;border-radius:999px;}
 .todo-line{display:flex;align-items:flex-start;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);}
 .todo-line.done .tl-text{text-decoration:line-through;color:var(--text-light);}
 .todo-line input[type=checkbox]{width:24px;height:24px;flex:0 0 auto;accent-color:var(--accent);margin-top:2px;}
@@ -4992,10 +5022,13 @@ function renderGoals() {
   host.innerHTML = list.map(g => {
     const imgs = (g.images || []).map((src, i) =>
       `<div class="goal-img"><img src="${src}" alt=""><button onclick="deleteGoalImage('${g.id}',${i})" title="Remove">×</button></div>`).join('');
+    const gp = goalProgress(g);
+    const pctBadge = gp ? `<span class="cc-pct">${gp.pct}%</span>` : '';
     return `
     <div class="plan-card ${g.collapsed?'cc-collapsed':''}" data-id="${g.id}">
       <div class="card-collapse-hdr" onclick="toggleCollapse('goal','${g.id}')">
         <span class="cc-title">${escHTML(g.title||'New goal')}</span>
+        ${pctBadge}
         <span class="cc-caret">▾</span>
       </div>
       <div class="cc-body">
@@ -5006,6 +5039,7 @@ function renderGoals() {
       <div class="status-pick" style="margin-top:10px;">
         ${GOAL_KINDS.map(k => `<span class="chip ${k[0]==='financial'?'planned':k[0]==='motivational'?'doing':'idea'} ${ (g.kind||'financial')===k[0]?'on':''}" onclick="setGoalKind('${g.id}','${k[0]}')">${k[1]}</span>`).join('')}
       </div>
+      ${goalTrackerHTML(g)}
       <div class="plan-meta-row">
         <label>Target / by when</label>
         <input class="plan-date" type="text" style="flex:1;min-width:140px;" value="${escHTML(g.target||'')}" placeholder="Target" oninput="updateGoal('${g.id}','target',this.value)">
@@ -5030,7 +5064,171 @@ function renderGoals() {
     </div>`;
   }).join('');
 }
-function addGoal() { snapshot(); S.goals = S.goals || []; S.goals.unshift({ id: uid(), title:'', kind:'financial', target:'', notes:'', links:[], images:[], ai:'', collapsed:true }); saveAndRender(); }
+function addGoal() { snapshot(); S.goals = S.goals || []; S.goals.unshift({ id: uid(), title:'', kind:'financial', target:'', notes:'', links:[], images:[], ai:'', collapsed:true, trackType:'none', startValue:'', currentValue:'', targetValue:'', unit:'', deadline:'', log:[] }); saveAndRender(); }
+
+// ─── Goal progress tracker ───────────────────────────────────────────
+const fmtNum = n => (Math.round((Number(n)||0)*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
+// Returns {pct, ...} for a tracked goal, or null if no tracker is set.
+function goalProgress(g) {
+  const t = g.trackType || 'none';
+  if (t === 'amount') {
+    const s = Number(g.startValue)||0, c = Number(g.currentValue)||0, tg = Number(g.targetValue)||0;
+    const span = tg - s;
+    const pct = span !== 0 ? Math.max(0, Math.min(100, Math.round((c - s)/span*100))) : 0;
+    return { pct, current:c, target:tg, remaining: tg - c };
+  }
+  if (t === 'weight') {
+    const s = Number(g.startValue)||0, tg = Number(g.targetValue)||0;
+    const log = goalSortedLog(g);
+    const current = log.length ? (Number(log[log.length-1].weight)||0) : s;
+    const need = s - tg, lost = s - current;
+    const pct = need > 0 ? Math.max(0, Math.min(100, Math.round(lost/need*100))) : 0;
+    return { pct, current, target:tg, start:s, lost, remaining: current - tg, log };
+  }
+  return null;
+}
+function goalSortedLog(g) {
+  return (g.log || []).slice().filter(e => e && e.date).sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+function progressBar(pct) {
+  return `<div class="gbar"><div class="gbar-fill" style="width:${Math.max(0,Math.min(100,pct))}%;"></div></div>`;
+}
+// Static field inputs (rendered once; not refreshed on each keystroke so they
+// keep focus). The dynamic bar/stats/log live in .gtrack-dyn.
+function goalTrackerHTML(g) {
+  const type = g.trackType || 'none';
+  const typePick = `<div class="status-pick" style="margin-top:12px;">
+      ${[['none','No tracker'],['amount','Amount / count'],['weight','Weight loss']].map(o =>
+        `<span class="chip ${ (g.trackType||'none')===o[0]?'on':''}" onclick="setGoalTrack('${g.id}','${o[0]}')">${o[1]}</span>`).join('')}
+    </div>`;
+  if (type === 'none') return typePick;
+  let fields;
+  if (type === 'amount') {
+    fields = `<div class="gtrack-fields">
+      <div><label>Start</label><input type="text" inputmode="decimal" value="${escHTML(String(g.startValue??''))}" placeholder="0" oninput="updateGoalNum('${g.id}','startValue',this.value)"></div>
+      <div><label>Current</label><input type="text" inputmode="decimal" value="${escHTML(String(g.currentValue??''))}" placeholder="0" oninput="updateGoalNum('${g.id}','currentValue',this.value)"></div>
+      <div><label>Target</label><input type="text" inputmode="decimal" value="${escHTML(String(g.targetValue??''))}" placeholder="0" oninput="updateGoalNum('${g.id}','targetValue',this.value)"></div>
+      <div><label>Unit</label><input type="text" value="${escHTML(g.unit||'')}" placeholder="$, lbs, mi…" oninput="updateGoalStr('${g.id}','unit',this.value)"></div>
+    </div>`;
+  } else { // weight
+    fields = `<div class="gtrack-fields">
+      <div><label>Start weight</label><input type="text" inputmode="decimal" value="${escHTML(String(g.startValue??''))}" placeholder="lbs" oninput="updateGoalNum('${g.id}','startValue',this.value)"></div>
+      <div><label>Goal weight</label><input type="text" inputmode="decimal" value="${escHTML(String(g.targetValue??''))}" placeholder="lbs" oninput="updateGoalNum('${g.id}','targetValue',this.value)"></div>
+      <div><label>Target date</label><input type="date" value="${g.deadline||''}" oninput="updateGoalStr('${g.id}','deadline',this.value)"></div>
+    </div>`;
+  }
+  return `${typePick}<div class="gtrack">${fields}<div class="gtrack-dyn">${goalDynHTML(g)}</div></div>`;
+}
+// The live part: progress bar, computed stats, and (weight) the log.
+function goalDynHTML(g) {
+  const type = g.trackType || 'none';
+  const p = goalProgress(g);
+  if (!p) return '';
+  if (type === 'amount') {
+    const unit = g.unit ? (' ' + escHTML(g.unit)) : '';
+    const remTxt = p.remaining > 0 ? `${fmtNum(p.remaining)}${unit} to go` : 'Target reached ✓';
+    return progressBar(p.pct) +
+      `<div class="gtrack-stats"><span class="big">${p.pct}% complete</span><span>Now <b>${fmtNum(p.current)}${unit}</b></span><span>Target <b>${fmtNum(p.target)}${unit}</b></span><span>${remTxt}</span></div>`;
+  }
+  // weight
+  const stats = [];
+  stats.push(`<span class="big">${p.pct}% there</span>`);
+  stats.push(`<span>Now <b>${fmtNum(p.current)} lbs</b></span>`);
+  stats.push(`<span>Lost <b>${fmtNum(p.lost)} lbs</b> of ${fmtNum(p.start - p.target)}</span>`);
+  stats.push(p.remaining > 0 ? `<span><b>${fmtNum(p.remaining)} lbs</b> to go</span>` : `<span><b>Goal met ✓</b></span>`);
+  if (g.deadline) {
+    const days = daysBetween(new Date(), parseISO(g.deadline));
+    const weeks = days / 7;
+    if (days > 0) {
+      stats.push(`<span>${days} days left (${weeks.toFixed(1)} wks)</span>`);
+      if (p.remaining > 0 && weeks >= 0.1) stats.push(`<span class="big">${fmtNum(p.remaining / weeks)} lbs/wk needed</span>`);
+    } else if (p.remaining > 0) {
+      stats.push(`<span>${Math.abs(days)} days past target</span>`);
+    }
+  }
+  // pace so far (from first log entry to latest)
+  if (p.log.length >= 2) {
+    const first = p.log[0];
+    const wk = Math.max(0.1, daysBetween(parseISO(first.date), new Date()) / 7);
+    const paceLost = (Number(first.weight)||p.start) - p.current;
+    stats.push(`<span>${fmtNum(paceLost / wk)} lbs/wk so far</span>`);
+  }
+  // log table (newest first, with per-entry delta)
+  const asc = p.log;
+  const rows = asc.map((e, i) => {
+    const w = Number(e.weight) || 0;
+    const prev = i > 0 ? (Number(asc[i-1].weight)||0) : null;
+    let delta = '';
+    if (prev !== null) {
+      const d = w - prev;
+      const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : '';
+      delta = d === 0 ? '–' : `<span class="${cls}">${d < 0 ? '−' : '+'}${fmtNum(Math.abs(d))}</span>`;
+    }
+    return { date: e.date, html: `<tr><td>${fmtMDY(e.date)}</td><td>${fmtNum(w)} lbs</td><td>${delta}</td><td><button class="gtrack-del" onclick="deleteGoalLog('${g.id}','${e.date}')" title="Remove">×</button></td></tr>` };
+  }).reverse().map(r => r.html).join('');
+  const today = localISO(new Date());
+  const logHTML = `<div class="gtrack-log">
+      <div class="gtrack-log-add">
+        <input type="date" id="gwt-d-${g.id}" value="${today}">
+        <input type="text" inputmode="decimal" id="gwt-w-${g.id}" placeholder="Today's weight (lbs)">
+        <button class="btn" onclick="addGoalLog('${g.id}')">+ Log weight</button>
+      </div>
+      ${asc.length ? `<table class="gtrack-table"><thead><tr><th>Date</th><th>Weight</th><th>Δ</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="gtrack-empty">No entries yet — log your weight to start tracking.</div>'}
+    </div>`;
+  return progressBar(p.pct) + `<div class="gtrack-stats">${stats.join('')}</div>` + logHTML;
+}
+// Update just the dynamic part of one goal's tracker (keeps field focus).
+function refreshGoalTracker(id) {
+  const g = (S.goals || []).find(x => x.id === id); if (!g) return;
+  const card = document.querySelector(`.plan-card[data-id="${id}"]`); if (!card) return;
+  const dyn = card.querySelector('.gtrack-dyn'); if (dyn) dyn.innerHTML = goalDynHTML(g);
+  const badge = card.querySelector('.cc-pct');
+  const gp = goalProgress(g);
+  if (badge && gp) badge.textContent = gp.pct + '%';
+}
+function setGoalTrack(id, type) {
+  const g = (S.goals||[]).find(x => x.id === id); if (!g) return;
+  snapshot(); g.trackType = type; g.log = g.log || []; saveAndRender();
+}
+function updateGoalNum(id, field, v) {
+  const g = (S.goals||[]).find(x => x.id === id); if (!g) return;
+  maybeSnapshot();
+  g[field] = (v === '' || v === '-') ? '' : (parseMoney(v));
+  scheduleSave();
+  refreshGoalTracker(id);
+}
+function updateGoalStr(id, field, v) {
+  const g = (S.goals||[]).find(x => x.id === id); if (!g) return;
+  maybeSnapshot();
+  g[field] = v;
+  scheduleSave();
+  refreshGoalTracker(id);
+}
+function addGoalLog(id) {
+  const g = (S.goals||[]).find(x => x.id === id); if (!g) return;
+  const dEl = eid('gwt-d-'+id), wEl = eid('gwt-w-'+id);
+  const date = (dEl && dEl.value) || localISO(new Date());
+  const weight = parseMoney(wEl && wEl.value);
+  if (!weight) { toast('Enter a weight first.'); return; }
+  snapshot();
+  g.log = g.log || [];
+  const existing = g.log.find(e => e.date === date);
+  if (existing) existing.weight = weight; else g.log.push({ date, weight });
+  // If no start weight set yet, seed it from the first log entry.
+  if (g.startValue === '' || g.startValue === undefined || g.startValue === null) {
+    if (g.log.length === 1) { g.startValue = weight; }
+  }
+  scheduleSave();
+  if (wEl) wEl.value = '';
+  refreshGoalTracker(id);
+}
+function deleteGoalLog(id, date) {
+  const g = (S.goals||[]).find(x => x.id === id); if (!g) return;
+  snapshot();
+  g.log = (g.log || []).filter(e => e.date !== date);
+  scheduleSave();
+  refreshGoalTracker(id);
+}
 function updateGoal(id, f, v) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; maybeSnapshot(); g[f]=v; scheduleSave(); }
 function setGoalKind(id, k) { const g=(S.goals||[]).find(x=>x.id===id); if(!g)return; snapshot(); g.kind=k; saveAndRender(); }
 function deleteGoal(id) { if(!confirm('Delete this goal?'))return; snapshot(); S.goals=(S.goals||[]).filter(x=>x.id!==id); saveAndRender(); }
