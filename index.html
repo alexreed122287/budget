@@ -259,6 +259,15 @@ label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);lette
 .budget-table th.current-col .sub{color:var(--accent-dim);}
 .budget-table th.adhoc-col{color:var(--accent-dim);}
 .budget-table th.adhoc-col .sub{color:var(--accent-dim);}
+/* ── Partner Share quarterly bonus columns — stand out from regular paychecks ── */
+.budget-table thead tr.dates th.pshare-col{background:linear-gradient(180deg,#f9e9a8,#f2cf5b)!important;color:#5a4400!important;box-shadow:inset 0 0 0 2px #c99a1f;border-radius:6px 6px 0 0;}
+.budget-table thead tr.dates th.pshare-col .sub{color:#7a5d00;font-weight:800;}
+.budget-table thead tr.paycheck td.pshare-cell{background:linear-gradient(180deg,#fdf4cf,#f8e79e)!important;color:#5a4400!important;font-weight:800;box-shadow:inset 0 0 0 2px #c99a1f;}
+body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget-table thead tr.paycheck td.pshare-cell{background:linear-gradient(180deg,#fdf4cf,#f2cf5b)!important;}
+/* ── Thursday ✚ 1st-of-month combined paycheck columns ── */
+.budget-table thead tr.dates th.merge-col{background:linear-gradient(180deg,#dbeafe,#bfdbfe)!important;color:#1e3a8a!important;box-shadow:inset 0 0 0 2px #60a5fa;border-radius:6px 6px 0 0;}
+.budget-table thead tr.dates th.merge-col .sub{color:#1d4ed8;font-weight:800;}
+.budget-table thead tr.paycheck td.merge-cell{background:linear-gradient(180deg,#eff6ff,#dbeafe)!important;color:#1e3a8a!important;font-weight:800;box-shadow:inset 0 0 0 2px #60a5fa;}
 
 /* Sticky top: 2 header rows */
 .budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
@@ -1482,6 +1491,38 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
   </details>
 
   <details class="set-card">
+    <summary>Income — Partner Share (quarterly bonus)</summary>
+    <div class="set-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        Quarterly bonuses paid <b>in addition to</b> the regular Thursday paycheck. Enter the
+        amount and pick up to <b>five receipt dates</b> below. Each date gets its own
+        <span style="background:linear-gradient(180deg,#f9e9a8,#f2cf5b);color:#5a4400;padding:1px 6px;border-radius:4px;font-weight:700;">★ gold-highlighted</span>
+        column on the Budget tab. If a receipt date lands on a regular paycheck day, the two
+        amounts combine into one column. You can fine-tune any single payment by clicking its
+        cell on the Budget tab (a per-date override).
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Amount per payment</label>
+          <input id="ps-amount" type="text" inputmode="decimal" class="money" style="max-width:160px;" oninput="updatePartnerShare('amount', parseMoney(this.value))"></div>
+        <div class="field"><label>Active</label>
+          <input id="ps-active" type="checkbox" onchange="updatePartnerShare('active', this.checked)"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Receipt dates (up to 5)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="ps-date-0" type="date" onchange="updatePartnerShareDate(0, this.value)">
+          <input id="ps-date-1" type="date" onchange="updatePartnerShareDate(1, this.value)">
+          <input id="ps-date-2" type="date" onchange="updatePartnerShareDate(2, this.value)">
+          <input id="ps-date-3" type="date" onchange="updatePartnerShareDate(3, this.value)">
+          <input id="ps-date-4" type="date" onchange="updatePartnerShareDate(4, this.value)">
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);padding:8px 2px 0;line-height:1.6;">
+          Leave a slot blank if unused. Clear a date to remove that payment from the budget.
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="set-card">
     <summary>Photo Info</summary>
     <div class="set-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
@@ -1603,6 +1644,9 @@ let S = {
   savingsExtra: [],   // [{id,label,balance}] extra saved-amount rows (Crypto, etc.)
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
+  // Quarterly "Partner Share" bonus — paid in addition to the regular Thursday
+  // paycheck. Explicit receipt dates (up to 5) instead of a frequency rule.
+  partnerShare: { amount: 0, active: true, dates: ['','','','',''] },
   bills: [],
   billOverrides: {},
   billLastConfirmed: {},   // billId → ISO date a value was last typed for this bill (drives overdue reminders)
@@ -2133,10 +2177,46 @@ function generatePaychecks(weeks) {
       if (existing) {
         existing.amount += Number(p.amount) || 0;
         existing.label = (existing.label ? existing.label + ' + ' : '') + (p.label || '');
+        existing.ruleCount = (existing.ruleCount || 1) + 1;
       } else {
-        out.push({ date: iso, amount: Number(p.amount) || 0, kind: p.frequency, label: p.label || '' });
+        out.push({ date: iso, amount: Number(p.amount) || 0, kind: p.frequency, label: p.label || '', ruleCount: 1 });
       }
     });
+  });
+
+  // ── Partner Share — quarterly bonus on explicit receipt dates ──
+  // Paid in addition to the regular Thursday paycheck. If a receipt date
+  // lands on an existing paycheck column, the amounts combine into ONE
+  // column (and the column keeps the Partner Share highlight).
+  const ps = S.partnerShare || {};
+  if (ps.active !== false && (Number(ps.amount) || 0) > 0) {
+    (ps.dates || []).forEach(dstr => {
+      if (!dstr || !/^\d{4}-\d{2}-\d{2}$/.test(dstr)) return;
+      const d = parseISO(dstr);
+      if (d <= today || d > end) return;
+      const existing = out.find(o => o.date === dstr);
+      if (existing) {
+        existing.amount += Number(ps.amount) || 0;
+        existing.isPartnerShare = true;
+        existing.label = (existing.label ? existing.label + ' + ' : '') + 'Partner Share';
+        existing.ruleCount = (existing.ruleCount || 1) + 1;
+      } else {
+        out.push({ date: dstr, amount: Number(ps.amount) || 0, kind: 'partnerShare',
+                   isPartnerShare: true, label: 'Partner Share', ruleCount: 1 });
+      }
+    });
+  }
+
+  // ── Combined-income flag ──
+  // Any column whose total is MORE THAN ONE income summed together
+  // (Thursday paycheck + 1st-of-month, paycheck + Partner Share, etc.)
+  // gets flagged so the Budget tab highlights its date header + cell.
+  out.forEach(o => {
+    if ((o.ruleCount || 1) > 1) {
+      o.isCombined = true;
+      const d = parseISO(o.date);
+      if (d.getDay() === 4 && d.getDate() === 1) o.isThuFirstMerge = true;
+    }
   });
 
   // Apply per-paycheck overrides (replace the date's combined amount entirely)
@@ -2523,6 +2603,12 @@ function renderBudget() {
       const sub = (c.adhocType === 'expense' ? '−' : '+') + ' ' + (c.label || '');
       const adhocBtn = `<span class="adhoc-controls"><button onclick="editAdhocColumn('${c.adhocId}')" title="Edit">✎</button><button onclick="deleteAdhocColumn('${c.adhocId}')" title="Delete">✕</button></span>`;
       h += `<th class="adhoc-col">${lbl}<span class="sub">${escHTML(sub)}</span>${adhocBtn}</th>`;
+    } else if (c.isPartnerShare) {
+      const sub = c.isCombined ? '★ Partner Share ✚' : '★ Partner Share';
+      h += `<th class="pshare-col" title="${escHTML(c.isCombined ? 'Combined: ' + (c.label || '') : 'Partner Share quarterly bonus')}">${lbl}<span class="sub">${sub}</span></th>`;
+    } else if (c.isCombined) {
+      const sub = c.isThuFirstMerge ? 'Thu ✚ 1st' : '✚ combined';
+      h += `<th class="merge-col" title="${escHTML('Combined into one column: ' + (c.label || 'multiple incomes'))}">${lbl}<span class="sub">${sub}</span></th>`;
     } else {
       h += `<th>${lbl}</th>`;
     }
@@ -2535,7 +2621,7 @@ function renderBudget() {
     let cellType, amt, cls;
     if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; }
     else if (c.isAdhoc) { cellType = 'adhoc'; amt = c.amount * (c.adhocType === 'expense' ? -1 : 1); cls = 'editable adhoc-cell'; }
-    else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : ''); }
+    else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : '') + (c.isPartnerShare ? ' pshare-cell' : '') + (!c.isPartnerShare && c.isCombined ? ' merge-cell' : ''); }
     const dataAdhoc = c.isAdhoc ? ` data-adhoc-id="${c.adhocId}"` : '';
     const display = fmt$2(amt);
     h += `<td class="${cls}" data-cell-type="${cellType}" data-date="${c.date}" data-r="0" data-c="${ci}"${dataAdhoc} tabindex="0">${display}</td>`;
@@ -4128,6 +4214,7 @@ function renderSettings() {
   if (eid('push-vapid')) eid('push-vapid').value = S.pushConfig.vapidPublic || '';
   renderPushStatus();
   renderPaychecks();
+  renderPartnerShare();
   renderPhotoThumbs();
   updateSyncPill();
 }
@@ -4299,6 +4386,32 @@ function updatePaycheck(id, field, value) {
   if (!p) return;
   maybeSnapshot();
   p[field] = value;
+  scheduleSave();
+  if (eid('tab-budget').classList.contains('active')) renderBudget();
+}
+
+// ─── Partner Share quarterly bonus (Settings → Income) ───
+function renderPartnerShare() {
+  const ps = S.partnerShare || { amount: 0, active: true, dates: ['','','','',''] };
+  if (eid('ps-amount')) eid('ps-amount').value = fmt$2(ps.amount || 0);
+  if (eid('ps-active')) eid('ps-active').checked = ps.active !== false;
+  for (let i = 0; i < 5; i++) {
+    const el = eid('ps-date-' + i);
+    if (el) el.value = (ps.dates && ps.dates[i]) || '';
+  }
+}
+function updatePartnerShare(field, value) {
+  S.partnerShare = S.partnerShare || { amount: 0, active: true, dates: ['','','','',''] };
+  maybeSnapshot();
+  S.partnerShare[field] = value;
+  scheduleSave();
+  if (eid('tab-budget').classList.contains('active')) renderBudget();
+}
+function updatePartnerShareDate(i, value) {
+  S.partnerShare = S.partnerShare || { amount: 0, active: true, dates: ['','','','',''] };
+  S.partnerShare.dates = S.partnerShare.dates || ['','','','',''];
+  maybeSnapshot();
+  S.partnerShare.dates[i] = value || '';
   scheduleSave();
   if (eid('tab-budget').classList.contains('active')) renderBudget();
 }
@@ -4503,6 +4616,9 @@ function loadLocal() {
   S.grocery.purchases = S.grocery.purchases || [];
   S.tickerCache = S.tickerCache || { items: [], ts: null };
   S.ai = S.ai || { endpoint:'', token:'', model:'', account:'' };
+  S.partnerShare = S.partnerShare || { amount: 0, active: true, dates: ['','','','',''] };
+  S.partnerShare.dates = (S.partnerShare.dates || []).slice(0, 5);
+  while (S.partnerShare.dates.length < 5) S.partnerShare.dates.push('');
   (S.vacations || []).forEach(v => { v.links = v.links || []; });
   // Migrate legacy single-rule fields to the new paycheck list
   if (S.paychecks.length === 0 && (S.paycheckMonthly || S.paycheckWeekly)) {
