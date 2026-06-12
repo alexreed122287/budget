@@ -1836,42 +1836,6 @@ async function aiFetchOnce(messages, model, timeoutMs) {
   } finally { clearTimeout(timer); }
 }
 
-// Claude-specific API handler. Claude has a different request/response format than OpenAI-compatible endpoints.
-async function claudeFetchOnce(messages, model, timeoutMs) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': (S.ai.token || '').trim(),
-      'anthropic-version': '2023-06-01',
-    };
-    // Convert OpenAI message format to Claude format if needed
-    const body = JSON.stringify({
-      model: model || 'claude-opus-4-8',
-      max_tokens: 2000,
-      messages: messages,
-    });
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers, body, signal: ctrl.signal
-    });
-    if (r.status === 429) throw new Error('AI_RATELIMIT');
-    if (!r.ok) {
-      let detail = '';
-      try {
-        const errTxt = await r.text();
-        try { const j = JSON.parse(errTxt); detail = (j.error && (j.error.message || j.error)) || j.message || ''; }
-        catch { detail = errTxt.slice(0, 180); }
-      } catch {}
-      throw new Error('HTTP ' + r.status + (detail ? ' — ' + detail : ''));
-    }
-    const data = await r.json();
-    const content = data && data.content && data.content[0] && data.content[0].text;
-    if (!content) throw new Error('Empty AI response');
-    return String(content).trim();
-  } finally { clearTimeout(timer); }
-}
-
 // messages: standard OpenAI chat array. Returns assistant text or throws an
 // Error whose .message is already a clean, user-facing sentence.
 //  - With a configured key (Groq/OpenRouter/Claude/etc): one attempt, real errors.
@@ -1883,12 +1847,11 @@ async function aiChat(messages, opts = {}) {
   const timeoutMs = opts.timeoutMs || 45000;
   const model = aiModel();
   const keyed = aiHasKey();
-  const isClaudeSelected = (S.ai && S.ai.provider === 'claude') || (S.ai && S.ai.endpoint && /anthropic\.com/.test(S.ai.endpoint));
   let lastErr;
   const attempts = keyed ? 1 : 2;
   for (let i = 0; i < attempts; i++) {
     try {
-      return isClaudeSelected ? await claudeFetchOnce(messages, model, timeoutMs) : await aiFetchOnce(messages, model, timeoutMs);
+      return await aiFetchOnce(messages, model, timeoutMs);
     }
     catch (e) {
       lastErr = e;
@@ -4375,15 +4338,8 @@ function snapshotNetWorth() {
 // ═══════════════════════════════════════════════════════════════════
 // One-tap providers. Endpoints are OpenAI-compatible & browser-CORS-friendly.
 const AI_PROVIDERS = {
-  claude: {
-    name: 'Claude (Recommended for financial analysis)', endpoint: 'https://api.anthropic.com/v1/messages',
-    model: 'claude-opus-4-8', keyUrl: 'https://console.anthropic.com/account/keys',
-    steps: ['Open <a href="https://console.anthropic.com/account/keys" target="_blank" rel="noopener"><b>console.anthropic.com/account/keys</b></a> and sign in.',
-            'Click <b>Create Key</b>, copy it.',
-            'Paste it in the <b>API key</b> box below, then tap <b>Test AI</b>. (Billing is required, but starter credits usually cover usage.)'],
-  },
   groq: {
-    name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    name: 'Groq (Free — Recommended)', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     model: 'llama-3.3-70b-versatile', keyUrl: 'https://console.groq.com/keys',
     steps: ['Open <a href="https://console.groq.com/keys" target="_blank" rel="noopener"><b>console.groq.com/keys</b></a> and sign in (Google works — no credit card).',
             'Click <b>Create API Key</b>, copy it.',
