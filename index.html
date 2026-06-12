@@ -584,6 +584,19 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 }
 /* Calendar event modal */
 #cal-modal{display:none;}
+#insights-modal .im-wrap{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;}
+#insights-modal .im-card{background:var(--bg);width:100%;max-width:540px;border-radius:18px 18px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.15);max-height:85vh;overflow-y:auto;padding:0;}
+#insights-modal .im-hdr{padding:16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;}
+#insights-modal .im-hdr h3{margin:0;font-size:17px;}
+#insights-modal .im-hdr .close{font-size:24px;cursor:pointer;color:var(--text-light);}
+#insights-modal .im-body{padding:16px;}
+#insights-modal .im-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+#insights-modal .im-buttons button{flex:1;min-width:140px;font-size:12px;}
+#insights-modal #insights-modal-content{min-height:80px;}
+@media(min-width:641px){
+  #insights-modal .im-wrap{align-items:center;}
+  #insights-modal .im-card{border-radius:16px;}
+}
 #cal-modal .cm-wrap{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);
   display:flex;align-items:flex-end;justify-content:center;padding:0;}
 #cal-modal .cm-card{background:var(--bg);width:100%;max-width:480px;border-radius:18px 18px 0 0;
@@ -1823,9 +1836,45 @@ async function aiFetchOnce(messages, model, timeoutMs) {
   } finally { clearTimeout(timer); }
 }
 
+// Claude-specific API handler. Claude has a different request/response format than OpenAI-compatible endpoints.
+async function claudeFetchOnce(messages, model, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': (S.ai.token || '').trim(),
+      'anthropic-version': '2023-06-01',
+    };
+    // Convert OpenAI message format to Claude format if needed
+    const body = JSON.stringify({
+      model: model || 'claude-opus-4-8',
+      max_tokens: 2000,
+      messages: messages,
+    });
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers, body, signal: ctrl.signal
+    });
+    if (r.status === 429) throw new Error('AI_RATELIMIT');
+    if (!r.ok) {
+      let detail = '';
+      try {
+        const errTxt = await r.text();
+        try { const j = JSON.parse(errTxt); detail = (j.error && (j.error.message || j.error)) || j.message || ''; }
+        catch { detail = errTxt.slice(0, 180); }
+      } catch {}
+      throw new Error('HTTP ' + r.status + (detail ? ' — ' + detail : ''));
+    }
+    const data = await r.json();
+    const content = data && data.content && data.content[0] && data.content[0].text;
+    if (!content) throw new Error('Empty AI response');
+    return String(content).trim();
+  } finally { clearTimeout(timer); }
+}
+
 // messages: standard OpenAI chat array. Returns assistant text or throws an
 // Error whose .message is already a clean, user-facing sentence.
-//  - With a configured key (Groq/OpenRouter/etc): one attempt, real errors.
+//  - With a configured key (Groq/OpenRouter/Claude/etc): one attempt, real errors.
 //  - Free Pollinations default: one attempt; on a 429 IP-queue, ONE short
 //    backoff retry (never blast multiple models — that trips the queue);
 //    if it returns the legacy notice, surface the "needs key" guidance.
@@ -1834,10 +1883,13 @@ async function aiChat(messages, opts = {}) {
   const timeoutMs = opts.timeoutMs || 45000;
   const model = aiModel();
   const keyed = aiHasKey();
+  const isClaudeSelected = (S.ai && S.ai.provider === 'claude') || (S.ai && S.ai.endpoint && /anthropic\.com/.test(S.ai.endpoint));
   let lastErr;
   const attempts = keyed ? 1 : 2;
   for (let i = 0; i < attempts; i++) {
-    try { return await aiFetchOnce(messages, model, timeoutMs); }
+    try {
+      return isClaudeSelected ? await claudeFetchOnce(messages, model, timeoutMs) : await aiFetchOnce(messages, model, timeoutMs);
+    }
     catch (e) {
       lastErr = e;
       if (e.name === 'AbortError') { lastErr = new Error('The AI took too long to respond. Please try again.'); break; }
@@ -1901,6 +1953,126 @@ function parseAIJSON(text) {
   const m = t.match(/[[{][\s\S]*[\]}]/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
   return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FINANCIAL ANALYSIS (powered by Claude)
+// ═══════════════════════════════════════════════════════════════════
+// Compile financial snapshot for Claude analysis
+function getFinancialSnapshot() {
+  const today = currentBudgetDate();
+  const pastMonths = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(today);
+    d.setMonth(d.getMonth() - i);
+    pastMonths.push(isoDate(d));
+  }
+
+  const bills = (S.bills || []).filter(b => b.active !== false);
+  const monthlyExpenses = bills.reduce((sum, b) => sum + billPerMonth(b), 0);
+  const accounts = (S.accounts || []);
+  const netWorth = accounts.reduce((sum, a) => sum + (a.type === 'asset' ? 1 : -1) * (Number(a.balance)||0), 0);
+  const paychecks = (S.paychecks || []).filter(p => p.active !== false);
+  const monthlyIncome = paychecks.reduce((sum, p) => sum + billPerMonth({...p, frequency: p.frequency || 'weekly', amount: p.amount||0}), 0);
+
+  return {
+    currentBalance: Number(S.currentBalance) || 0,
+    savingsBalance: Number(S.savingsBalance) || 0,
+    netWorth,
+    monthlyIncome,
+    monthlyExpenses,
+    bills: bills.map(b => ({name: b.name, amount: b.amount, frequency: b.frequency})),
+    paychecks: paychecks.map(p => ({label: p.label, amount: p.amount, frequency: p.frequency})),
+  };
+}
+
+async function analyzeSpending() {
+  const box = aiBox('insights-modal-content');
+  box.loading('Analyzing your spending patterns…');
+  try {
+    const snap = getFinancialSnapshot();
+    const prompt = `Analyze this person's spending and provide specific insights:
+- Monthly expenses: $${snap.monthlyExpenses.toFixed(0)}
+- Bills: ${snap.bills.map(b => `${b.name} $${b.amount}`).join(', ')}
+
+Provide a 2-3 sentence analysis of:
+1. Where their money is going (top expense categories)
+2. Any concerning spending patterns
+3. One quick win to reduce expenses`;
+    const analysis = await aiAsk(prompt, 'You are a personal finance advisor. Be concise and actionable.');
+    box.text(analysis);
+  } catch (e) {
+    box.error(e);
+  }
+}
+
+async function analyzeRetirement() {
+  const box = aiBox('insights-modal-content');
+  box.loading('Calculating retirement timeline…');
+  try {
+    const snap = getFinancialSnapshot();
+    const savings = snap.currentBalance + snap.savingsBalance;
+    const monthlyExtra = snap.monthlyIncome - snap.monthlyExpenses;
+    const prompt = `Based on this financial situation, estimate retirement timeline:
+- Current savings: $${savings.toFixed(0)}
+- Net worth: $${snap.netWorth.toFixed(0)}
+- Monthly income: $${snap.monthlyIncome.toFixed(0)}
+- Monthly expenses: $${snap.monthlyExpenses.toFixed(0)}
+- Monthly surplus: $${monthlyExtra.toFixed(0)}
+
+Assuming 6% annual returns on investments and needing 25x annual expenses (4% withdrawal rule):
+1. How many years until retirement (assuming current savings rate)?
+2. What would accelerate this timeline?
+Give specific, actionable numbers.`;
+    const analysis = await aiAsk(prompt, 'You are a retirement planning expert. Use the 4% rule and standard assumptions.');
+    box.text(analysis);
+  } catch (e) {
+    box.error(e);
+  }
+}
+
+async function optimizeExpenses() {
+  const box = aiBox('insights-modal-content');
+  box.loading('Finding savings opportunities…');
+  try {
+    const snap = getFinancialSnapshot();
+    const prompt = `Review these recurring expenses and suggest specific cuts:
+${snap.bills.map(b => `- ${b.name}: $${b.amount}/${b.frequency}`).join('\n')}
+
+For the top 3 expenses:
+1. What's the industry average / should this cost less?
+2. What's a specific action to reduce it (e.g., "call and negotiate rate")?
+3. Realistic savings per month?`;
+    const analysis = await aiAsk(prompt, 'You are a personal finance optimization expert. Give concrete, actionable suggestions.');
+    box.text(analysis);
+  } catch (e) {
+    box.error(e);
+  }
+}
+
+async function calculatePaycheckGoal() {
+  const box = aiBox('insights-modal-content');
+  box.loading('Calculating financial independence number…');
+  try {
+    const snap = getFinancialSnapshot();
+    const thursdayPaycheck = snap.paychecks.find(p => p.label && /thursday|thursday/i.test(p.label));
+    const partnershare = snap.paychecks.find(p => p.label && /partner|share/i.test(p.label));
+    const weeklyTarget = (thursdayPaycheck?.amount || 0) + (partnershare?.amount || 0);
+    const yearlyTarget = weeklyTarget * 52;
+    const prompt = `Help calculate a financial independence goal:
+- Target to eliminate: $${weeklyTarget.toFixed(0)}/week ($${yearlyTarget.toFixed(0)}/year)
+- Current monthly surplus: $${(snap.monthlyIncome - snap.monthlyExpenses).toFixed(0)}
+- Current savings: $${(snap.currentBalance + snap.savingsBalance).toFixed(0)}
+
+Calculate:
+1. Total nest egg needed (using 4% withdrawal rule to generate $${yearlyTarget.toFixed(0)}/year)
+2. How many months to reach it at current savings rate?
+3. What would halve that timeline?`;
+    const analysis = await aiAsk(prompt, 'You are a financial independence expert. Use the 4% withdrawal rule.');
+    box.text(analysis);
+  } catch (e) {
+    box.error(e);
+  }
 }
 
 // Reusable AI-output box helper: set loading / error / html states.
@@ -2707,6 +2879,7 @@ function renderBudget() {
        `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.savingsBalance)||0)}" ` +
        `placeholder="$0.00" oninput="updateSavingsBalance(parseMoney(this.value))" ` +
        `title="Starting / current savings balance — overwrites the auto-grown value">` +
+       `<button class="btn" onclick="showInsightsModal()" style="margin-top:8px;width:100%;" title="Get Claude's financial insights">💡 Insights</button>` +
        '</span></td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
@@ -5893,6 +6066,31 @@ function calModal(html) {
   host.style.display='block';
 }
 function closeCalModal(){ const h=eid('cal-modal'); if(h){ h.style.display='none'; h.innerHTML=''; } }
+function showInsightsModal() {
+  let host = eid('insights-modal');
+  if (!host) { host = document.createElement('div'); host.id='insights-modal'; document.body.appendChild(host); }
+  host.innerHTML = `<div class="im-wrap" onclick="if(event.target===this)closeInsightsModal()">
+    <div class="im-card">
+      <div class="im-hdr">
+        <h3>Financial Insights</h3>
+        <span class="close" onclick="closeInsightsModal()">×</span>
+      </div>
+      <div class="im-body">
+        <div class="im-buttons">
+          <button class="btn primary" onclick="analyzeSpending()">💰 Spending</button>
+          <button class="btn" onclick="analyzeRetirement()">🎯 Retirement</button>
+          <button class="btn" onclick="optimizeExpenses()">✂️ Optimize</button>
+          <button class="btn" onclick="calculatePaycheckGoal()">🎉 FI Goal</button>
+        </div>
+        <div id="insights-modal-content" style="font-size:13px;line-height:1.6;color:var(--text-muted);">
+          <p>Select an analysis above to get Claude's insights on your finances.</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  host.style.display='block';
+}
+function closeInsightsModal(){ const h=eid('insights-modal'); if(h){ h.style.display='none'; h.innerHTML=''; } }
 function addCalEvent(iso) {
   const date = (typeof iso==='string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso : localISO(calCursor);
   openCalForm({ id:'', title:'', date, time:'', notes:'', recur:'none', remindMins:'' });
