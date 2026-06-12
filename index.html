@@ -4202,6 +4202,13 @@ function snapshotNetWorth() {
 // ═══════════════════════════════════════════════════════════════════
 // One-tap providers. Endpoints are OpenAI-compatible & browser-CORS-friendly.
 const AI_PROVIDERS = {
+  claude: {
+    name: 'Claude (Recommended for financial analysis)', endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-opus-4-8', keyUrl: 'https://console.anthropic.com/account/keys',
+    steps: ['Open <a href="https://console.anthropic.com/account/keys" target="_blank" rel="noopener"><b>console.anthropic.com/account/keys</b></a> and sign in.',
+            'Click <b>Create Key</b>, copy it.',
+            'Paste it in the <b>API key</b> box below, then tap <b>Test AI</b>. (Billing is required, but starter credits usually cover usage.)'],
+  },
   groq: {
     name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     model: 'llama-3.3-70b-versatile', keyUrl: 'https://console.groq.com/keys',
