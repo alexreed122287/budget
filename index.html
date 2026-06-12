@@ -660,6 +660,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .list-table tr.drag-over td{border-top:2px solid var(--accent);}
 .list-table input,.list-table select{font-size:13px;padding:6px 10px;min-height:32px;width:100%;background:var(--bg);border:1px solid transparent;}
 .list-table input:hover,.list-table select:hover,.list-table input:focus,.list-table select:focus{border-color:var(--border-strong);}
+/* Emergency fund calculator */
+#emergency-fund-section{padding:18px 16px;border-top:1px solid var(--border);background:var(--bg-soft);border-radius:0 0 14px 14px;}
+#emergency-fund-section h4{margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light);}
+.emergency-fund-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+.efund-item{padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center;}
+.efund-item .label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+.efund-item .value{font-size:17px;font-weight:700;color:var(--accent-dim);font-variant-numeric:tabular-nums;}
 .list-table .col-name{min-width:160px;}
 .list-table .col-amt{width:120px;}
 .list-table .col-freq{width:130px;}
@@ -1132,6 +1139,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <tbody id="bills-tbody"></tbody>
       </table>
     </div>
+    <div id="emergency-fund-section"></div>
   </div>
 </div>
 
@@ -3797,6 +3805,40 @@ function renderBills() {
     </tr>
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
+  renderEmergencyFund();
+}
+function renderEmergencyFund() {
+  const section = eid('emergency-fund-section');
+  if (!section) return;
+  // Calc avg monthly expense from all active bills
+  const activeBills = (S.bills || []).filter(b => b.active !== false);
+  if (!activeBills.length) { section.innerHTML = ''; return; }
+  const avgMonthly = activeBills.reduce((sum, b) => sum + billPerMonth(b), 0);
+  if (avgMonthly <= 0) { section.innerHTML = ''; return; }
+  const ef3m = avgMonthly * 3;
+  const ef6m = avgMonthly * 6;
+  const ef12m = avgMonthly * 12;
+  section.innerHTML = `
+    <h4>Emergency Fund Target</h4>
+    <div class="emergency-fund-grid">
+      <div class="efund-item">
+        <div class="label">Avg Monthly</div>
+        <div class="value">${fmt$2(avgMonthly)}</div>
+      </div>
+      <div class="efund-item">
+        <div class="label">3 Months</div>
+        <div class="value">${fmt$2(ef3m)}</div>
+      </div>
+      <div class="efund-item">
+        <div class="label">6 Months</div>
+        <div class="value">${fmt$2(ef6m)}</div>
+      </div>
+      <div class="efund-item">
+        <div class="label">12 Months</div>
+        <div class="value">${fmt$2(ef12m)}</div>
+      </div>
+    </div>
+  `;
 }
 function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, notes:'' }); saveAndRender(); }
 function deleteBill(id) { if (!confirm('Delete this bill?')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; if (S.billLastConfirmed) delete S.billLastConfirmed[id]; if (S.billSnoozed) delete S.billSnoozed[id]; saveAndRender(); }
