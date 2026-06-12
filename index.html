@@ -2851,15 +2851,36 @@ function renderBudget() {
   // across columns, rendered beneath Savings. Same hide-behind-label UX.
   (S.savingsExtra || []).forEach(row => {
     const bal = Number(row.balance) || 0;
+    const contribTotal = (row.contributions || []).reduce((sum, c) => sum + (Number(c.amount)||0), 0);
     const nm = (row.label && row.label.trim()) || 'Saved';
+    const contribLog = (row.contributions || []).slice().reverse().map((c, i) =>
+      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border-light);">
+        <span>${fmtMDY(c.date)}: ${fmt$2(c.amount)}</span>
+        <button class="xsave-del" onclick="removeContribution('${row.id}','${c.date}')" style="border:none;background:none;color:var(--text-light);cursor:pointer;padding:0;">×</button>
+      </div>`
+    ).join('');
     h += `<tr class="xsave" data-xid="${row.id}"><td class="cat sv">` +
-      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the amount">${escHTML(nm)}</button>` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or manage contributions">${escHTML(nm)}</button>` +
       `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
       `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Saved" ` +
       `oninput="updateSavingsExtra('${row.id}','label',this.value)" title="Row title">` +
       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(bal)}" placeholder="$0.00" ` +
       `oninput="updateSavingsExtra('${row.id}','balance',parseMoney(this.value))" ` +
       `title="${escHTML(nm)} balance">` +
+      `<div style="margin-top:10px;padding:8px;background:var(--bg-strong);border-radius:6px;font-size:12px;">
+        <div style="font-weight:700;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Contributions</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="date" id="contrib-date-${row.id}" value="${localISO(new Date())}" style="flex:1;min-width:0;font-size:12px;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+          <input type="text" id="contrib-amt-${row.id}" inputmode="decimal" placeholder="Amount" style="flex:1;min-width:0;font-size:12px;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+          <button class="btn" onclick="addContribution('${row.id}')" style="flex:0 0 auto;padding:4px 10px;font-size:11px;">+ Add</button>
+        </div>
+        <div style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px;background:var(--bg);">
+          ${contribLog ? contribLog : '<div style="color:var(--text-muted);font-size:11px;">No contributions logged yet</div>'}
+        </div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);">
+          Total contributions: <span style="color:var(--text);font-weight:700;">${fmt$2(contribTotal)}</span>
+        </div>
+      </div>` +
       `<button class="xsave-del" title="Remove this row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
       `</span></td>`;
     cols.forEach(() => h += `<td>${fmt$(bal)}</td>`);
@@ -3725,14 +3746,14 @@ function toggleBudgetActions() {
 function addSavingsExtra() {
   const name = (prompt('Name this saved row (e.g. Crypto, HSA, 529):', 'Crypto') || '').trim();
   if (!name) return;
-  const trackSheet = WEBHOOK_URL && confirm('Track contributions in the Sheet?\n\n(Create a row named "' + name + '" in your Sheet with weekly/monthly amounts. The app will auto-sum them here.)');
   snapshot();
   S.savingsExtra = S.savingsExtra || [];
   S.savingsExtra.push({
     id: uid(),
     label: name,
     balance: 0,
-    sheetTracking: trackSheet ? { enabled: true, rowName: name } : { enabled: false, rowName: '' }
+    contributions: [],
+    sheetTracking: { enabled: false, rowName: '' }
   });
   saveAndRender();
 }
@@ -3747,6 +3768,31 @@ function updateSavingsExtra(id, field, value) {
     const tr = wrap.querySelector(`tfoot tr.xsave[data-xid="${id}"]`);
     if (tr) tr.querySelectorAll('td:not(.cat)').forEach(td => td.textContent = fmt$(Number(value) || 0));
   }
+}
+
+function addContribution(id) {
+  const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
+  const dateEl = eid('contrib-date-' + id);
+  const amtEl = eid('contrib-amt-' + id);
+  const date = (dateEl && dateEl.value) || localISO(new Date());
+  const amount = parseMoney(amtEl && amtEl.value);
+  if (!amount || amount <= 0) { toast('Enter a positive amount'); return; }
+  snapshot();
+  r.contributions = r.contributions || [];
+  // Remove existing entry for this date, then add new one
+  r.contributions = r.contributions.filter(c => c.date !== date);
+  r.contributions.push({ date, amount });
+  if (amtEl) amtEl.value = '';
+  scheduleSave();
+  renderBudget();
+}
+
+function removeContribution(id, date) {
+  const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
+  snapshot();
+  r.contributions = (r.contributions || []).filter(c => c.date !== date);
+  scheduleSave();
+  renderBudget();
 }
 function deleteSavingsExtra(id) {
   snapshot();
