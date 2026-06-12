@@ -269,9 +269,9 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table thead tr.dates th.merge-col .sub{color:#1d4ed8;font-weight:800;}
 .budget-table thead tr.paycheck td.merge-cell{background:linear-gradient(180deg,#eff6ff,#dbeafe)!important;color:#1e3a8a!important;font-weight:800;box-shadow:inset 0 0 0 2px #60a5fa;}
 
-/* Sticky top: 2 header rows */
+/* Sticky top: 2 header rows (paycheck directly under dates, no gap) */
 .budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
-.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:38px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
+.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:42px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
 
 /* Sticky bottom footer rows. Their `bottom` offsets are assigned by
    lockBudgetFooter() from measured heights so Remainder & Difference
