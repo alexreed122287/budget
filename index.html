@@ -3049,7 +3049,11 @@ function enterCellEdit(td) {
     }
     placeholder = '0';
   } else if (type === 'current-balance') {
-    curVal = S.currentBalance || ''; placeholder = '0';
+    // Ensure currentBalance is always a number, not a formatted string.
+    // On some devices (iPad), it might be stored as "$1,000.00" instead of the raw number.
+    const rawBal = parseMoney(S.currentBalance);
+    curVal = rawBal ? String(rawBal) : '';
+    placeholder = '0';
   } else if (type === 'adhoc') {
     const a = (S.adhocColumns || []).find(x => x.id === adhocId);
     if (a) curVal = a.amount;
@@ -3262,8 +3266,11 @@ function commitCellEdit(opts = {}) {
     } else { const n = parseFloat(raw); if (!isNaN(n)) { snapshot(); S.paycheckOverrides[date] = n; } }
   } else if (type === 'current-balance') {
     snapshot();
-    const n = parseFloat(raw);
-    S.currentBalance = isNaN(n) ? 0 : n;
+    // Use parseMoney instead of parseFloat in case the raw value contains
+    // currency formatting. This prevents doubling on iPad where S.currentBalance
+    // might be stored as "$1,000.00" instead of a clean number.
+    const n = parseMoney(raw);
+    S.currentBalance = isNaN(n) || n === null ? 0 : n;
   } else if (type === 'adhoc') {
     snapshot();
     const n = parseFloat(raw);
