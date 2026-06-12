@@ -3589,9 +3589,15 @@ function toggleBudgetActions() {
 function addSavingsExtra() {
   const name = (prompt('Name this saved row (e.g. Crypto, HSA, 529):', 'Crypto') || '').trim();
   if (!name) return;
+  const trackSheet = WEBHOOK_URL && confirm('Track contributions in the Sheet?\n\n(Create a row named "' + name + '" in your Sheet with weekly/monthly amounts. The app will auto-sum them here.)');
   snapshot();
   S.savingsExtra = S.savingsExtra || [];
-  S.savingsExtra.push({ id: uid(), label: name, balance: 0 });
+  S.savingsExtra.push({
+    id: uid(),
+    label: name,
+    balance: 0,
+    sheetTracking: trackSheet ? { enabled: true, rowName: name } : { enabled: false, rowName: '' }
+  });
   saveAndRender();
 }
 function updateSavingsExtra(id, field, value) {
