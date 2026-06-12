@@ -1449,6 +1449,12 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <button class="btn danger" onclick="clearAll()">⊘ Clear local</button>
       </div>
       <div id="ss-status" style="font-size:12px;color:var(--text-muted);margin-top:10px;"></div>
+      <div id="sync-diagnostics" style="font-size:11px;color:var(--text-muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--border);line-height:1.7;">
+        <div style="margin-bottom:4px;">📊 <strong>Sync diagnostics</strong></div>
+        <div>Last pull: <span id="diag-last-pull" style="color:var(--text);">never</span></div>
+        <div>Background poll active: <span id="diag-poll" style="color:var(--text);">checking…</span></div>
+        <div>Webhook configured: <span id="diag-webhook" style="color:var(--text);">checking…</span></div>
+      </div>
     </div>
   </div>
 
@@ -4258,7 +4264,32 @@ function renderSettings() {
   renderPaychecks();
   renderPartnerShare();
   renderPhotoThumbs();
+  renderSyncDiagnostics();
   updateSyncPill();
+}
+function renderSyncDiagnostics() {
+  // Show last pull time
+  const lastPullEl = eid('diag-last-pull');
+  if (lastPullEl) {
+    if (LAST_PULL) {
+      try { lastPullEl.textContent = new Date(LAST_PULL).toLocaleString(); } catch { lastPullEl.textContent = LAST_PULL; }
+    } else {
+      lastPullEl.textContent = 'never (first sync pending)';
+    }
+  }
+  // Show webhook status
+  const whEl = eid('diag-webhook');
+  if (whEl) {
+    whEl.textContent = WEBHOOK_URL ? '✓ configured' : '✗ not set';
+    whEl.style.color = WEBHOOK_URL ? 'var(--accent-dim)' : 'var(--text-muted)';
+  }
+  // Show if background poll is expected to be running
+  const pollEl = eid('diag-poll');
+  if (pollEl) {
+    const isRunning = WEBHOOK_URL && typeof backgroundPull === 'function';
+    pollEl.textContent = isRunning ? '✓ running (every 25s)' : (WEBHOOK_URL ? 'paused (tab backgrounded)' : 'not available');
+    pollEl.style.color = isRunning ? 'var(--accent-dim)' : (WEBHOOK_URL ? 'var(--warn)' : 'var(--text-muted)');
+  }
 }
 function updatePushSetting(field, value) {
   S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
