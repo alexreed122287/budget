@@ -285,20 +285,16 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table tfoot tr.balance td{background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 .budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
-/* ── Recurring deposit input rows (body) ── */
-.budget-table tbody.deposits-body tr.deposit td{background:rgba(16,185,129,0.06);}
+/* ── Recurring deposit input rows — styled like the Saved rows ── */
+.budget-table tbody.deposits-body tr.deposit td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.has-value{color:var(--accent-dim);font-weight:600;}
-.budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);}
-.budget-table tbody.deposits-body tr.deposit td.dep-cat{font-weight:600;color:var(--accent-dim);}
-.budget-table tbody.deposits-body tr.deposit td.dep-cat .dep-name{margin-right:4px;}
-.budget-table tbody.deposits-body tr.deposit td.dep-cat button{background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0 2px;}
-.budget-table tbody.deposits-body tr.deposit td.dep-cat button:hover{color:var(--text);}
+.budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);font-weight:400;}
+.budget-table tbody.deposits-body tr.deposit td.cat.sv{z-index:5;background:var(--bg);font-size:11px;color:var(--accent-dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.override{box-shadow:inset 0 0 0 1px var(--accent-dim);}
-/* ── Running Saved total footer row — bold accent so it reads as a total ── */
-.budget-table tfoot tr.saved-run td{background:linear-gradient(180deg,#e7f9f1,#d2f3e4)!important;color:#065f46!important;font-weight:800;border-top:2px solid #10b981;font-size:14px;}
-.budget-table tfoot tr.saved-run td.cat{z-index:5;}
-.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:#065f46;text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:700;}
-body.bg-active .budget-table tfoot tr.saved-run td{background:linear-gradient(180deg,#e7f9f1,#d2f3e4)!important;}
+/* ── Running Saved total — same Saved-row palette, a touch heavier ── */
+.budget-table tfoot tr.saved-run td{background:var(--bg);color:var(--accent-dim);font-weight:700;border-top:2px solid var(--border-strong);}
+.budget-table tfoot tr.saved-run td.cat{z-index:5;background:var(--bg);}
+.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:var(--accent-dim);text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:700;}
 .budget-table tfoot tr.xsave td.cat{z-index:5;background:var(--bg);}
 
 /* Hide-behind-the-label editor for Savings + custom saved rows.
@@ -2712,10 +2708,15 @@ function renderBudget() {
       const nm = (row.label && row.label.trim()) || 'Deposit';
       const recur = Number(row.amount) || 0;
       h += `<tr class="deposit" data-dep-id="${row.id}">`;
-      h += `<td class="cat dep-cat" title="Recurring ${escHTML(fmt$2(recur))} each period — tap ✎ to change">` +
-           `<span class="cat-inner"><span class="dep-name">${escHTML(nm)}</span>` +
-           `<button class="dep-edit" title="Rename / set recurring amount" onclick="editDepositRow('${row.id}')">✎</button>` +
-           `<button class="dep-del" title="Delete this deposit row" onclick="deleteDepositRow('${row.id}')">×</button></span></td>`;
+      h += `<td class="cat sv dep-cat">` +
+           `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the recurring amount">${escHTML(nm)}</button>` +
+           `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
+           `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Deposit" ` +
+           `oninput="updateDepositRow('${row.id}','label',this.value)" title="Row title">` +
+           `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(recur)}" placeholder="$0.00" ` +
+           `oninput="updateDepositRow('${row.id}','amount',parseMoney(this.value))" title="Recurring deposit each period">` +
+           `<button class="xsave-del" title="Remove this deposit row" onclick="deleteDepositRow('${row.id}')">×</button>` +
+           `</span></td>`;
       cols.forEach((c, ci) => {
         const amt = (matrixDep[c.date] && matrixDep[c.date][row.id]) || 0;
         const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
@@ -2793,11 +2794,11 @@ function renderBudget() {
 
   // ── Running Saved total — cumulative deposits across columns ──
   if ((S.depositRows || []).length || (Number(S.depositStart) || 0)) {
-    const rLabel = rowTitle('savedrunning', 'Running Saved');
+    const rLabel = rowTitle('savedrunning', savedRunDefaultTitle());
     h += '<tr class="saved-run"><td class="cat sv">' +
       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the starting balance">${escHTML(rLabel)}</button>` +
       '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
-      `<input type="text" class="xsave-name" value="${escHTML(rLabel)}" placeholder="Running Saved" ` +
+      `<input type="text" class="xsave-name" value="${escHTML(rLabel)}" placeholder="${escHTML(savedRunDefaultTitle())}" ` +
       `oninput="updateRowLabel('savedrunning',this.value)" title="Row title">` +
       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.depositStart)||0)}" ` +
       `placeholder="$0.00" oninput="updateDepositStart(parseMoney(this.value))" ` +
@@ -3719,25 +3720,59 @@ function deleteSavingsExtra(id) {
 function addDepositRow() {
   const name = (prompt('Name this deposit row (e.g. Savings, Emergency Fund, Vacation):', 'Savings') || '').trim();
   if (!name) return;
-  const amtStr = prompt('Recurring deposit each pay period (you can edit any single cell later):', '0') || '0';
-  const amount = Math.abs(parseMoney(amtStr)) || 0;
   snapshot();
   S.depositRows = S.depositRows || [];
-  S.depositRows.push({ id: uid(), label: name, amount });
+  S.depositRows.push({ id: uid(), label: name, amount: 0 });
   saveAndRender();
+}
+// The Running Saved row's title mirrors the contribution row's name when
+// there's a single deposit row and the user hasn't set a custom title.
+function savedRunDefaultTitle() {
+  const named = (S.depositRows || []).map(r => (r.label || '').trim()).filter(Boolean);
+  if (named.length === 1) return named[0];
+  return 'Running Saved';
+}
+// Recompute the deposit cells + the running-saved totals IN PLACE, without
+// rebuilding the table (which would destroy the input being typed in).
+function patchDepositsLive() {
+  const wrap = eid('budget-scroll');
+  if (!wrap || !eid('tab-budget').classList.contains('active')) return;
+  const { cols, matrixDep } = buildBudget(BUDGET_WEEKS);
+  (S.depositRows || []).forEach(row => {
+    const tr = wrap.querySelector(`tbody.deposits-body tr.deposit[data-dep-id="${row.id}"]`);
+    if (!tr) return;
+    const tds = tr.querySelectorAll('td.dep-cell');
+    cols.forEach((c, i) => {
+      const td = tds[i]; if (!td) return;
+      const amt = (matrixDep[c.date] && matrixDep[c.date][row.id]) || 0;
+      td.textContent = amt !== 0 ? fmt$2(amt) : '·';
+      td.classList.toggle('zero', amt === 0);
+      td.classList.toggle('has-value', amt !== 0);
+    });
+  });
+  const trTot = wrap.querySelector('tfoot tr.saved-run');
+  if (trTot) { const tds = trTot.querySelectorAll('td:not(.cat)'); cols.forEach((c, i) => { if (tds[i]) tds[i].textContent = fmt$(c.savedRunning); }); }
+}
+function updateDepositRow(id, field, value) {
+  const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
+  maybeSnapshot();
+  row[field] = (field === 'amount') ? (Math.abs(Number(value)) || 0) : value;
+  scheduleSave();
+  if (field === 'label') {
+    // Live-mirror the name into the Running Saved title (unless custom-named).
+    const wrap = eid('budget-scroll');
+    const lbl = wrap && wrap.querySelector('tfoot tr.saved-run td.cat .sv-label');
+    const custom = S.rowLabels && S.rowLabels.savedrunning && S.rowLabels.savedrunning.trim();
+    if (lbl && !custom) lbl.textContent = savedRunDefaultTitle();
+  } else if (field === 'amount') {
+    patchDepositsLive();   // recompute cells + total without a full re-render
+  }
 }
 function editDepositRow(id) {
   const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
   const name = (prompt('Row name:', row.label || 'Deposit') || '').trim();
   if (name === '') return;
-  const amtStr = prompt('Recurring deposit each pay period (blank cells use this; edited cells keep their own value):', String(Number(row.amount) || 0));
-  if (amtStr === null) { // name-only change
-    snapshot(); row.label = name; saveAndRender(); return;
-  }
-  snapshot();
-  row.label = name;
-  row.amount = Math.abs(parseMoney(amtStr)) || 0;
-  saveAndRender();
+  snapshot(); row.label = name; saveAndRender();
 }
 function deleteDepositRow(id) {
   if (!confirm('Delete this deposit row? Its per-cell edits are removed too.')) return;
@@ -3750,7 +3785,7 @@ function updateDepositStart(value) {
   maybeSnapshot();
   S.depositStart = Number(value) || 0;
   scheduleSave();
-  if (eid('tab-budget').classList.contains('active')) renderBudget();
+  patchDepositsLive();   // live-update the running total without destroying the input
 }
 // Savings / custom-row label is shown by default; tapping it reveals the
 // hidden input(s) so you can set a fixed start value or overwrite the
