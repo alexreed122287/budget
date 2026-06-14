@@ -285,17 +285,21 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table tfoot tr.balance td{background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 .budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
-/* ── Recurring deposit input rows — styled like the Saved rows ── */
+/* ── Recurring deposit input rows — white font like the rest of the sheet ── */
 .budget-table tbody.deposits-body tr.deposit td{background:var(--bg);color:var(--text);font-weight:400;border-top:1px solid var(--border);}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.has-value{color:var(--text);font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.cat.sv{z-index:5;background:var(--bg);}
 .budget-table tbody.deposits-body tr.deposit td.cat.sv .sv-label{color:var(--text);text-transform:none;letter-spacing:normal;font-size:inherit;font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.override{box-shadow:inset 0 0 0 1px var(--accent-dim);}
-/* ── Running Saved total — same total convention as Savings/Balance rows ── */
-.budget-table tfoot tr.saved-run td{background:var(--bg);color:var(--text);font-weight:700;border-top:2px solid var(--border-strong);}
+/* ── Running Saved total — same green Saved-row look (Savings / custom saved rows) ── */
+.budget-table tfoot tr.saved-run td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 .budget-table tfoot tr.saved-run td.cat{z-index:5;background:var(--bg);}
-.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:var(--text);text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:700;}
+.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:var(--accent-dim);text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:600;}
+/* Drag handle on deposit rows (reorder, desktop + touch) */
+.budget-table tbody.deposits-body tr.deposit td.cat .drag-handle{touch-action:none;cursor:grab;padding:6px 4px;margin:-6px 4px -6px -2px;}
+.budget-table tr.deposit.row-dragging{opacity:.92;}
+.budget-table tr.deposit.row-dragging td{background:var(--accent-soft,rgba(59,130,246,0.12))!important;box-shadow:inset 0 0 0 1px var(--accent-dim);}
 /* ── Delete-expense button on budget-tab bill rows ── */
 .budget-table tr.bill td.cat .bill-del{flex:0 0 auto;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:15px;line-height:1;padding:0 2px;opacity:.55;}
 .budget-table tr.bill td.cat .bill-del:hover{color:var(--negative);opacity:1;}
@@ -2722,8 +2726,9 @@ function renderBudget() {
     depRows.forEach((row, di) => {
       const nm = (row.label && row.label.trim()) || 'Deposit';
       const recur = Number(row.amount) || 0;
-      h += `<tr class="deposit" data-dep-id="${row.id}">`;
+      h += `<tr class="deposit" draggable="true" data-dep-id="${row.id}">`;
       h += `<td class="cat sv dep-cat">` +
+           `<span class="drag-handle" title="Drag to reorder">⋮⋮</span>` +
            `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the recurring amount">${escHTML(nm)}</button>` +
            `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
            `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Deposit" ` +
@@ -2868,6 +2873,17 @@ function wireBudgetInteractions() {
   // Touch reorder (mobile): grab the ⋮⋮ handle and drag the row up/down.
   // Non-passive so the drag can preventDefault and stop the page scrolling.
   wrap.querySelectorAll('tr.bill td.cat .drag-handle').forEach(h => {
+    h.addEventListener('touchstart', billTouchReorderStart, { passive: false });
+  });
+  // Deposit rows: same reorder affordance (desktop drag + touch).
+  wrap.querySelectorAll('tr.deposit').forEach(tr => {
+    tr.addEventListener('dragstart', onDepRowDragStart);
+    tr.addEventListener('dragover', onDepRowDragOver);
+    tr.addEventListener('dragleave', onDepRowDragLeave);
+    tr.addEventListener('drop', onDepRowDrop);
+    tr.addEventListener('dragend', onDepRowDragEnd);
+  });
+  wrap.querySelectorAll('tr.deposit td.cat .drag-handle').forEach(h => {
     h.addEventListener('touchstart', billTouchReorderStart, { passive: false });
   });
   // Cell drag (shift cadence) — only on cells with values
@@ -3483,6 +3499,41 @@ function onBillRowDragEnd(ev) {
   dragSrcId = null; dragMode = null;
 }
 
+// ── Deposit row reorder (desktop HTML5 drag) ──
+function onDepRowDragStart(ev) {
+  const startTd = ev.target.closest('td');
+  if (!startTd || !startTd.classList.contains('cat')) { ev.preventDefault(); return; }
+  dragSrcId = ev.currentTarget.dataset.depId; dragMode = 'budget-dep';
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', dragSrcId);
+  ev.currentTarget.classList.add('dragging');
+}
+function onDepRowDragOver(ev) {
+  if (dragMode !== 'budget-dep') return;
+  ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+  ev.currentTarget.classList.add('drag-over');
+}
+function onDepRowDragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
+function onDepRowDrop(ev) {
+  if (dragMode !== 'budget-dep') return;
+  ev.preventDefault();
+  ev.currentTarget.classList.remove('drag-over');
+  const tgtId = ev.currentTarget.dataset.depId;
+  if (!dragSrcId || dragSrcId === tgtId) return;
+  snapshot();
+  const src = S.depositRows.findIndex(d => d.id === dragSrcId);
+  if (src < 0) return;
+  const [moved] = S.depositRows.splice(src, 1);
+  const tgt = S.depositRows.findIndex(d => d.id === tgtId);
+  S.depositRows.splice(tgt, 0, moved);
+  saveAndRender();
+}
+function onDepRowDragEnd(ev) {
+  ev.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragSrcId = null; dragMode = null;
+}
+
 // ── Touch drag-to-reorder for budget bill rows (mobile) ──
 // HTML5 drag events don't fire on touch, so we implement our own: press the
 // ⋮⋮ handle and drag the row up/down. We reorder the live DOM as the finger
@@ -3490,12 +3541,13 @@ function onBillRowDragEnd(ev) {
 let __touchReorder = null;
 function billTouchReorderStart(ev) {
   if (selMode) return;                         // don't fight cell-selection mode
-  const tr = ev.target.closest('tr.bill');
+  const tr = ev.target.closest('tr.bill, tr.deposit');
   if (!tr || !ev.touches || ev.touches.length !== 1) return;
   ev.preventDefault();                          // stop scroll + the synthetic click
   ev.stopPropagation();
   const wrap = eid('budget-scroll');
-  __touchReorder = { tr, wrap, lastY: ev.touches[0].clientY, autoTimer: null };
+  const rowType = tr.classList.contains('deposit') ? 'deposit' : 'bill';
+  __touchReorder = { tr, wrap, rowType, lastY: ev.touches[0].clientY };
   tr.classList.add('row-dragging');
   if (navigator.vibrate) { try { navigator.vibrate(10); } catch {} }
   document.addEventListener('touchmove', billTouchReorderMove, { passive: false });
@@ -3507,11 +3559,11 @@ function billTouchReorderMove(ev) {
   ev.preventDefault();
   const y = ev.touches[0].clientY;
   __touchReorder.lastY = y;
-  const { tr } = __touchReorder;
+  const { tr, rowType } = __touchReorder;
   const tbody = tr.parentNode;
   if (!tbody) return;
-  // Reposition the dragged row among its siblings based on finger Y.
-  const siblings = Array.from(tbody.querySelectorAll('tr.bill')).filter(r => r !== tr);
+  const sel = rowType === 'deposit' ? 'tr.deposit' : 'tr.bill';
+  const siblings = Array.from(tbody.querySelectorAll(sel)).filter(r => r !== tr);
   let placedBefore = null;
   for (const r of siblings) {
     const rect = r.getBoundingClientRect();
@@ -3519,7 +3571,6 @@ function billTouchReorderMove(ev) {
   }
   if (placedBefore) tbody.insertBefore(tr, placedBefore);
   else tbody.appendChild(tr);
-  // Auto-scroll the pane when near the top/bottom edge.
   const wrap = __touchReorder.wrap;
   if (wrap) {
     const wr = wrap.getBoundingClientRect();
@@ -3533,16 +3584,21 @@ function billTouchReorderEnd() {
   document.removeEventListener('touchmove', billTouchReorderMove, { passive: false });
   document.removeEventListener('touchend', billTouchReorderEnd);
   document.removeEventListener('touchcancel', billTouchReorderEnd);
-  const { tr } = __touchReorder;
+  const { tr, rowType } = __touchReorder;
   const tbody = tr.parentNode;
   tr.classList.remove('row-dragging');
   __touchReorder = null;
   if (!tbody) return;
-  // New visible order from the DOM → apply to S.bills, preserving the
-  // positions of any inactive (hidden) bills.
-  const newVisibleIds = Array.from(tbody.querySelectorAll('tr.bill')).map(r => r.dataset.billId);
-  applyVisibleBillOrder(newVisibleIds);
-  saveAndRender();
+  if (rowType === 'deposit') {
+    const ids = Array.from(tbody.querySelectorAll('tr.deposit')).map(r => r.dataset.depId);
+    const byId = {}; (S.depositRows || []).forEach(d => byId[d.id] = d);
+    S.depositRows = ids.map(id => byId[id]).filter(Boolean);
+    saveAndRender();
+  } else {
+    const newVisibleIds = Array.from(tbody.querySelectorAll('tr.bill')).map(r => r.dataset.billId);
+    applyVisibleBillOrder(newVisibleIds);
+    saveAndRender();
+  }
 }
 // Rebuild S.bills so the active (visible) bills follow newVisibleIds, while
 // inactive bills keep their existing slots.
