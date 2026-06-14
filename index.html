@@ -291,7 +291,7 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.cat.sv{z-index:5;background:var(--bg);}
 .budget-table tbody.deposits-body tr.deposit td.cat.sv .sv-label{color:var(--text);text-transform:none;letter-spacing:normal;font-size:inherit;font-weight:400;}
-.budget-table tbody.deposits-body tr.deposit td.dep-cell.override{box-shadow:inset 0 0 0 1px var(--accent-dim);}
+/* Edited deposit cells look identical to non-edited ones — no lingering border. */
 /* ── Running Saved total — same green Saved-row look (Savings / custom saved rows) ── */
 .budget-table tfoot tr.saved-run td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 .budget-table tfoot tr.saved-run td.cat{z-index:5;background:var(--bg);}
@@ -1149,6 +1149,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
           <th class="col-freq">Frequency</th>
           <th class="col-day">Due day</th>
           <th class="col-cat">Category</th>
+          <th title="Counts toward the emergency-fund cost-of-living total. Uncheck discretionary items (day care, IRA, etc.).">Essential</th>
           <th>Active</th>
           <th class="col-actions"></th>
         </tr></thead>
@@ -1168,6 +1169,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
     </div>
     <div class="card-body">
       <div class="exp-stats" id="exp-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px;"></div>
+      <div id="emergency-fund" style="margin-bottom:18px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
         <div class="chart-wrap"><div id="exp-cat-chart" style="height:340px;"></div></div>
         <div class="chart-wrap"><div id="exp-trend-chart" style="height:340px;"></div></div>
@@ -1672,6 +1674,9 @@ let S = {
   depositRows: [],
   depositOverrides: {},
   depositStart: 0,
+  // Emergency fund: monthly miscellaneous baseline + months of cushion.
+  emergencyMisc: 800,
+  emergencyMonths: 3,
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
   // Quarterly "Partner Share" bonus — paid in addition to the regular Thursday
@@ -4120,7 +4125,7 @@ function attachListDrag(tbody, arrayName, onComplete) {
 // ═══════════════════════════════════════════════════════════════════
 function renderBills() {
   const tbody = eid('bills-tbody');
-  if (!S.bills.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No bills yet.</td></tr>'; return; }
+  if (!S.bills.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">No bills yet.</td></tr>'; return; }
   tbody.innerHTML = S.bills.map((b, i) => `
     <tr class="${b.active === false ? 'inactive' : ''}" data-id="${b.id}" draggable="true">
       <td class="drag-cell">⋮⋮</td>
@@ -4131,6 +4136,7 @@ function renderBills() {
       </select></td>
       <td class="col-day" data-label="Due day"><input type="number" min="0" max="31" value="${b.dueDay||1}" oninput="updateBill('${b.id}','dueDay',parseInt(this.value)||1)"></td>
       <td class="col-cat" data-label="Category"><input type="text" value="${escHTML(b.category||'')}" placeholder="(optional)" oninput="updateBill('${b.id}','category',this.value)"></td>
+      <td data-label="Essential"><input type="checkbox" ${b.essential!==false?'checked':''} title="Counts toward the emergency fund" onchange="updateBill('${b.id}','essential',this.checked)"></td>
       <td data-label="Active"><input type="checkbox" ${b.active!==false?'checked':''} onchange="updateBill('${b.id}','active',this.checked)"></td>
       <td class="col-actions">
         <span class="row-move">
@@ -4143,7 +4149,7 @@ function renderBills() {
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
 }
-function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, notes:'' }); saveAndRender(); }
+function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, essential:true, notes:'' }); saveAndRender(); }
 function deleteBill(id) { const b = (S.bills||[]).find(x=>x.id===id); const nm = b ? (b.name||'this expense') : 'this expense'; if (!confirm('Delete "' + nm + '"?\n\nThis removes it from the budget and the Bills page.')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; if (S.billLastConfirmed) delete S.billLastConfirmed[id]; if (S.billSnoozed) delete S.billSnoozed[id]; saveAndRender(); }
 function updateBill(id, field, value) {
   const b = S.bills.find(x => x.id === id); if (!b) return;
@@ -4201,6 +4207,7 @@ function renderExpenses() {
   const stats = eid('exp-stats');
   const tbody = eid('exp-tbody');
   if (!stats || !tbody) return;
+  renderEmergencyFund();
   const active = (S.bills || []).filter(b => b.active !== false);
   if (!active.length) {
     stats.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);text-align:center;padding:24px;">No active bills yet — add some on the Bills tab.</div>';
@@ -4281,6 +4288,90 @@ function statCard(label, value, sub) {
     <div style="font-size:22px;font-weight:700;margin-top:4px;">${escHTML(value)}</div>
     ${sub ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHTML(sub)}</div>` : ''}
   </div>`;
+}
+
+// ── Emergency fund: mandatory cost-of-living only ──
+// Sums the monthly equivalent of ESSENTIAL recurring bills (excludes any
+// bill unchecked as "Essential" and excludes one-time bills), adds a
+// configurable miscellaneous baseline, and targets N months of cushion.
+function emergencyFigures() {
+  const active = (S.bills || []).filter(b => b.active !== false);
+  const essential = active.filter(b => b.essential !== false && b.frequency !== 'once');
+  const excluded  = active.filter(b => b.essential === false && b.frequency !== 'once');
+  const essentialMonthly = essential.reduce((a, b) => a + billPerMonth(b), 0);
+  const misc = Number(S.emergencyMisc) || 0;
+  return { essential, excluded, essentialMonthly, misc, monthly: essentialMonthly + misc };
+}
+function renderEmergencyFund() {
+  const host = eid('emergency-fund'); if (!host) return;
+  const f = emergencyFigures();
+  const months = (S.emergencyMonths === 6) ? 6 : 3;
+  const target = f.monthly * months;
+  const saved = Number(S.savingsBalance) || 0;
+  const pct = target > 0 ? Math.min(100, saved / target * 100) : 0;
+  const exNames = f.excluded.map(b => b.name).filter(Boolean);
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-hdr"><span>Emergency fund</span>
+        <span style="font-size:12px;color:var(--text-muted);">Mandatory cost-of-living only — discretionary bills excluded</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;">
+          ${statCard('Essential bills', fmt$(f.essentialMonthly), f.essential.length + ' bills / month')}
+          <div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);">Miscellaneous /mo</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;display:flex;align-items:baseline;gap:2px;">$<input id="ef-misc" type="text" inputmode="decimal" value="${(Number(S.emergencyMisc)||0).toLocaleString('en-US')}" oninput="updateEmergencyMisc(parseMoney(this.value))" style="width:90px;border:none;border-bottom:1px solid var(--border);background:transparent;font:inherit;font-weight:700;color:var(--text);"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">household, pet, car upkeep, etc.</div>
+          </div>
+          <div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);">Monthly need</div>
+            <div id="ef-monthly" style="font-size:22px;font-weight:700;margin-top:4px;">${fmt$(f.monthly)}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">essential + misc</div>
+          </div>
+          <div style="background:var(--bg-soft);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);">Target cushion</div>
+            <div id="ef-target" style="font-size:22px;font-weight:700;margin-top:4px;color:var(--accent-dim);">${fmt$(target)}</div>
+            <div style="margin-top:6px;display:flex;gap:6px;">
+              <button class="btn ${months===3?'primary':''}" style="padding:2px 10px;font-size:12px;" onclick="setEmergencyMonths(3)">3 mo</button>
+              <button class="btn ${months===6?'primary':''}" style="padding:2px 10px;font-size:12px;" onclick="setEmergencyMonths(6)">6 mo</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+            <span>Saved: <b style="color:var(--text);">${fmt$(saved)}</b></span>
+            <span id="ef-gap">${saved>=target?'Fully funded ✓':fmt$(target-saved)+' to go'}</span>
+          </div>
+          <div style="height:8px;background:var(--bg-strong,rgba(0,0,0,.08));border-radius:5px;overflow:hidden;">
+            <div id="ef-bar" style="height:100%;width:${pct}%;background:var(--accent-dim);border-radius:5px;transition:width .3s;"></div>
+          </div>
+        </div>
+        ${exNames.length ? `<div style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.5;">Excluded as discretionary: ${exNames.map(escHTML).join(', ')}. <span style="opacity:.8;">Toggle “Essential” on the Bills tab to change.</span></div>`
+                         : `<div style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.5;">All recurring bills count as essential. Uncheck “Essential” on the Bills tab for anything discretionary (day care, IRA, etc.) so it’s left out here.</div>`}
+      </div>
+    </div>`;
+}
+function updateEmergencyMisc(v) {
+  maybeSnapshot();
+  S.emergencyMisc = Number(v) || 0;
+  scheduleSave();
+  patchEmergencyFund();         // update numbers in place — don't rebuild (keeps the input focused)
+}
+function setEmergencyMonths(m) {
+  maybeSnapshot();
+  S.emergencyMonths = m;
+  scheduleSave();
+  renderEmergencyFund();        // toggle isn't an input, so a rebuild is fine here
+}
+function patchEmergencyFund() {
+  const f = emergencyFigures();
+  const months = (S.emergencyMonths === 6) ? 6 : 3;
+  const target = f.monthly * months;
+  const saved = Number(S.savingsBalance) || 0;
+  const set = (id, txt) => { const el = eid(id); if (el) el.textContent = txt; };
+  set('ef-monthly', fmt$(f.monthly));
+  set('ef-target', fmt$(target));
+  set('ef-gap', saved >= target ? 'Fully funded ✓' : fmt$(target - saved) + ' to go');
+  const bar = eid('ef-bar'); if (bar) bar.style.width = (target > 0 ? Math.min(100, saved / target * 100) : 0) + '%';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5085,6 +5176,8 @@ function loadLocal() {
   S.depositRows = S.depositRows || [];
   S.depositOverrides = S.depositOverrides || {};
   if (S.depositStart === undefined) S.depositStart = 0;
+  if (S.emergencyMisc === undefined) S.emergencyMisc = 800;
+  if (S.emergencyMonths === undefined) S.emergencyMonths = 3;
   (S.vacations || []).forEach(v => { v.links = v.links || []; });
   // Migrate legacy single-rule fields to the new paycheck list
   if (S.paychecks.length === 0 && (S.paycheckMonthly || S.paycheckWeekly)) {
