@@ -269,9 +269,9 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table thead tr.dates th.merge-col .sub{color:#1d4ed8;font-weight:800;}
 .budget-table thead tr.paycheck td.merge-cell{background:linear-gradient(180deg,#eff6ff,#dbeafe)!important;color:#1e3a8a!important;font-weight:800;box-shadow:inset 0 0 0 2px #60a5fa;}
 
-/* Sticky top: 2 header rows (paycheck directly under dates, no gap) */
+/* Sticky top: 2 header rows */
 .budget-table thead tr.dates th{position:sticky;top:0;z-index:3;background:var(--bg);}
-.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:42px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
+.budget-table thead tr.paycheck th, .budget-table thead tr.paycheck td{position:sticky;top:38px;z-index:3;background:var(--bg-strong);font-weight:600;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums;}
 
 /* Sticky bottom footer rows. Their `bottom` offsets are assigned by
    lockBudgetFooter() from measured heights so Remainder & Difference
@@ -285,6 +285,20 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table tfoot tr.balance td{background:var(--bg-strong);font-weight:700;color:var(--text);font-size:14px;border-top:1px solid var(--border-strong);}
 .budget-table tfoot tr.balance td.neg{color:var(--negative);}
 .budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
+/* ── Recurring deposit input rows (body) ── */
+.budget-table tbody.deposits-body tr.deposit td{background:rgba(16,185,129,0.06);}
+.budget-table tbody.deposits-body tr.deposit td.dep-cell.has-value{color:var(--accent-dim);font-weight:600;}
+.budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);}
+.budget-table tbody.deposits-body tr.deposit td.dep-cat{font-weight:600;color:var(--accent-dim);}
+.budget-table tbody.deposits-body tr.deposit td.dep-cat .dep-name{margin-right:4px;}
+.budget-table tbody.deposits-body tr.deposit td.dep-cat button{background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0 2px;}
+.budget-table tbody.deposits-body tr.deposit td.dep-cat button:hover{color:var(--text);}
+.budget-table tbody.deposits-body tr.deposit td.dep-cell.override{box-shadow:inset 0 0 0 1px var(--accent-dim);}
+/* ── Running Saved total footer row — bold accent so it reads as a total ── */
+.budget-table tfoot tr.saved-run td{background:linear-gradient(180deg,#e7f9f1,#d2f3e4)!important;color:#065f46!important;font-weight:800;border-top:2px solid #10b981;font-size:14px;}
+.budget-table tfoot tr.saved-run td.cat{z-index:5;}
+.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:#065f46;text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:700;}
+body.bg-active .budget-table tfoot tr.saved-run td{background:linear-gradient(180deg,#e7f9f1,#d2f3e4)!important;}
 .budget-table tfoot tr.xsave td.cat{z-index:5;background:var(--bg);}
 
 /* Hide-behind-the-label editor for Savings + custom saved rows.
@@ -584,19 +598,6 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 }
 /* Calendar event modal */
 #cal-modal{display:none;}
-#insights-modal .im-wrap{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;}
-#insights-modal .im-card{background:var(--bg);width:100%;max-width:540px;border-radius:18px 18px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.15);max-height:85vh;overflow-y:auto;padding:0;}
-#insights-modal .im-hdr{padding:16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;}
-#insights-modal .im-hdr h3{margin:0;font-size:17px;}
-#insights-modal .im-hdr .close{font-size:24px;cursor:pointer;color:var(--text-light);}
-#insights-modal .im-body{padding:16px;}
-#insights-modal .im-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
-#insights-modal .im-buttons button{flex:1;min-width:140px;font-size:12px;}
-#insights-modal #insights-modal-content{min-height:80px;}
-@media(min-width:641px){
-  #insights-modal .im-wrap{align-items:center;}
-  #insights-modal .im-card{border-radius:16px;}
-}
 #cal-modal .cm-wrap{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.45);
   display:flex;align-items:flex-end;justify-content:center;padding:0;}
 #cal-modal .cm-card{background:var(--bg);width:100%;max-width:480px;border-radius:18px 18px 0 0;
@@ -673,13 +674,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .list-table tr.drag-over td{border-top:2px solid var(--accent);}
 .list-table input,.list-table select{font-size:13px;padding:6px 10px;min-height:32px;width:100%;background:var(--bg);border:1px solid transparent;}
 .list-table input:hover,.list-table select:hover,.list-table input:focus,.list-table select:focus{border-color:var(--border-strong);}
-/* Emergency fund calculator */
-#emergency-fund-section{padding:18px 16px;border-top:1px solid var(--border);background:var(--bg-soft);border-radius:0 0 14px 14px;}
-#emergency-fund-section h4{margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light);}
-.emergency-fund-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
-.efund-item{padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center;}
-.efund-item .label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
-.efund-item .value{font-size:17px;font-weight:700;color:var(--accent-dim);font-variant-numeric:tabular-nums;}
 .list-table .col-name{min-width:160px;}
 .list-table .col-amt{width:120px;}
 .list-table .col-freq{width:130px;}
@@ -1119,6 +1113,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
           <option value="expense">Expense (row)</option>
         </select>
         <button class="btn" onclick="addSavingsExtra()" title="Add a saved-amount row (Crypto, etc.) below Savings">+ Saved row</button>
+        <button class="btn" onclick="addDepositRow()" title="Add a recurring deposit row that feeds a running saved total at the bottom">+ Deposit row</button>
         <button class="btn green" onclick="advanceToNextPaycheck()" title="Promote the next upcoming paycheck column into Current">→ Advance</button>
       </div>
       <div class="ctrl-group">
@@ -1152,7 +1147,6 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <tbody id="bills-tbody"></tbody>
       </table>
     </div>
-    <div id="emergency-fund-section"></div>
   </div>
 </div>
 
@@ -1462,12 +1456,6 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <button class="btn danger" onclick="clearAll()">⊘ Clear local</button>
       </div>
       <div id="ss-status" style="font-size:12px;color:var(--text-muted);margin-top:10px;"></div>
-      <div id="sync-diagnostics" style="font-size:11px;color:var(--text-muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--border);line-height:1.7;">
-        <div style="margin-bottom:4px;">📊 <strong>Sync diagnostics</strong></div>
-        <div>Last pull: <span id="diag-last-pull" style="color:var(--text);">never</span></div>
-        <div>Background poll active: <span id="diag-poll" style="color:var(--text);">checking…</span></div>
-        <div>Webhook configured: <span id="diag-webhook" style="color:var(--text);">checking…</span></div>
-      </div>
     </div>
   </div>
 
@@ -1669,6 +1657,13 @@ let S = {
   currentDate: null,    // ISO date — when set, the Budget's CURRENT column anchors here instead of today (advanced forward via the Advance button)
   savingsBalance: 0,
   savingsExtra: [],   // [{id,label,balance}] extra saved-amount rows (Crypto, etc.)
+  // Recurring deposit rows + a cumulative "running saved" footer total.
+  // depositRows: [{id,label,amount}] — amount recurs on every future column.
+  // depositOverrides: { rowId: { date: value } } — per-cell edits.
+  // depositStart: starting balance the running total builds on.
+  depositRows: [],
+  depositOverrides: {},
+  depositStart: 0,
   savingsLastApplied: null,   // ISO date — last time auto-advance touched savingsBalance
   paycheckOverrides: {},
   // Quarterly "Partner Share" bonus — paid in addition to the regular Thursday
@@ -1702,6 +1697,12 @@ const PHOTO_ROTATE_MS = 4500;
 let WEBHOOK_URL = '';
 let SYNC_STATE = 'local';
 let LAST_PULL = null;
+let SYNC_ERR = null;          // last failure reason code (network|auth|badjson|server)
+let LAST_PULL_MS = 0;         // local clock ms of last successful sync (for "N min ago")
+let SYNCED_BASE = null;       // common ancestor for 3-way merge (last state both sides agreed on)
+let __syncBusy = false;       // single mutex: only one read-merge-write critical section at a time
+let __pushQueued = false;     // a save landed mid-sync → coalesce into one follow-up push
+const LS_BASE = 'roth_budget_base_v1';
 
 // ═══════════════════════════════════════════════════════════════════
 //  UTIL
@@ -1838,7 +1839,7 @@ async function aiFetchOnce(messages, model, timeoutMs) {
 
 // messages: standard OpenAI chat array. Returns assistant text or throws an
 // Error whose .message is already a clean, user-facing sentence.
-//  - With a configured key (Groq/OpenRouter/Claude/etc): one attempt, real errors.
+//  - With a configured key (Groq/OpenRouter/etc): one attempt, real errors.
 //  - Free Pollinations default: one attempt; on a 429 IP-queue, ONE short
 //    backoff retry (never blast multiple models — that trips the queue);
 //    if it returns the legacy notice, surface the "needs key" guidance.
@@ -1850,9 +1851,7 @@ async function aiChat(messages, opts = {}) {
   let lastErr;
   const attempts = keyed ? 1 : 2;
   for (let i = 0; i < attempts; i++) {
-    try {
-      return await aiFetchOnce(messages, model, timeoutMs);
-    }
+    try { return await aiFetchOnce(messages, model, timeoutMs); }
     catch (e) {
       lastErr = e;
       if (e.name === 'AbortError') { lastErr = new Error('The AI took too long to respond. Please try again.'); break; }
@@ -1916,126 +1915,6 @@ function parseAIJSON(text) {
   const m = t.match(/[[{][\s\S]*[\]}]/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
   return null;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  FINANCIAL ANALYSIS (powered by Claude)
-// ═══════════════════════════════════════════════════════════════════
-// Compile financial snapshot for Claude analysis
-function getFinancialSnapshot() {
-  const today = currentBudgetDate();
-  const pastMonths = [];
-  for (let i = 0; i < 3; i++) {
-    const d = new Date(today);
-    d.setMonth(d.getMonth() - i);
-    pastMonths.push(isoDate(d));
-  }
-
-  const bills = (S.bills || []).filter(b => b.active !== false);
-  const monthlyExpenses = bills.reduce((sum, b) => sum + billPerMonth(b), 0);
-  const accounts = (S.accounts || []);
-  const netWorth = accounts.reduce((sum, a) => sum + (a.type === 'asset' ? 1 : -1) * (Number(a.balance)||0), 0);
-  const paychecks = (S.paychecks || []).filter(p => p.active !== false);
-  const monthlyIncome = paychecks.reduce((sum, p) => sum + billPerMonth({...p, frequency: p.frequency || 'weekly', amount: p.amount||0}), 0);
-
-  return {
-    currentBalance: Number(S.currentBalance) || 0,
-    savingsBalance: Number(S.savingsBalance) || 0,
-    netWorth,
-    monthlyIncome,
-    monthlyExpenses,
-    bills: bills.map(b => ({name: b.name, amount: b.amount, frequency: b.frequency})),
-    paychecks: paychecks.map(p => ({label: p.label, amount: p.amount, frequency: p.frequency})),
-  };
-}
-
-async function analyzeSpending() {
-  const box = aiBox('insights-modal-content');
-  box.loading('Analyzing your spending patterns…');
-  try {
-    const snap = getFinancialSnapshot();
-    const prompt = `Analyze this person's spending and provide specific insights:
-- Monthly expenses: $${snap.monthlyExpenses.toFixed(0)}
-- Bills: ${snap.bills.map(b => `${b.name} $${b.amount}`).join(', ')}
-
-Provide a 2-3 sentence analysis of:
-1. Where their money is going (top expense categories)
-2. Any concerning spending patterns
-3. One quick win to reduce expenses`;
-    const analysis = await aiAsk(prompt, 'You are a personal finance advisor. Be concise and actionable.');
-    box.text(analysis);
-  } catch (e) {
-    box.error(e);
-  }
-}
-
-async function analyzeRetirement() {
-  const box = aiBox('insights-modal-content');
-  box.loading('Calculating retirement timeline…');
-  try {
-    const snap = getFinancialSnapshot();
-    const savings = snap.currentBalance + snap.savingsBalance;
-    const monthlyExtra = snap.monthlyIncome - snap.monthlyExpenses;
-    const prompt = `Based on this financial situation, estimate retirement timeline:
-- Current savings: $${savings.toFixed(0)}
-- Net worth: $${snap.netWorth.toFixed(0)}
-- Monthly income: $${snap.monthlyIncome.toFixed(0)}
-- Monthly expenses: $${snap.monthlyExpenses.toFixed(0)}
-- Monthly surplus: $${monthlyExtra.toFixed(0)}
-
-Assuming 6% annual returns on investments and needing 25x annual expenses (4% withdrawal rule):
-1. How many years until retirement (assuming current savings rate)?
-2. What would accelerate this timeline?
-Give specific, actionable numbers.`;
-    const analysis = await aiAsk(prompt, 'You are a retirement planning expert. Use the 4% rule and standard assumptions.');
-    box.text(analysis);
-  } catch (e) {
-    box.error(e);
-  }
-}
-
-async function optimizeExpenses() {
-  const box = aiBox('insights-modal-content');
-  box.loading('Finding savings opportunities…');
-  try {
-    const snap = getFinancialSnapshot();
-    const prompt = `Review these recurring expenses and suggest specific cuts:
-${snap.bills.map(b => `- ${b.name}: $${b.amount}/${b.frequency}`).join('\n')}
-
-For the top 3 expenses:
-1. What's the industry average / should this cost less?
-2. What's a specific action to reduce it (e.g., "call and negotiate rate")?
-3. Realistic savings per month?`;
-    const analysis = await aiAsk(prompt, 'You are a personal finance optimization expert. Give concrete, actionable suggestions.');
-    box.text(analysis);
-  } catch (e) {
-    box.error(e);
-  }
-}
-
-async function calculatePaycheckGoal() {
-  const box = aiBox('insights-modal-content');
-  box.loading('Calculating financial independence number…');
-  try {
-    const snap = getFinancialSnapshot();
-    const thursdayPaycheck = snap.paychecks.find(p => p.label && /thursday|thursday/i.test(p.label));
-    const partnershare = snap.paychecks.find(p => p.label && /partner|share/i.test(p.label));
-    const weeklyTarget = (thursdayPaycheck?.amount || 0) + (partnershare?.amount || 0);
-    const yearlyTarget = weeklyTarget * 52;
-    const prompt = `Help calculate a financial independence goal:
-- Target to eliminate: $${weeklyTarget.toFixed(0)}/week ($${yearlyTarget.toFixed(0)}/year)
-- Current monthly surplus: $${(snap.monthlyIncome - snap.monthlyExpenses).toFixed(0)}
-- Current savings: $${(snap.currentBalance + snap.savingsBalance).toFixed(0)}
-
-Calculate:
-1. Total nest egg needed (using 4% withdrawal rule to generate $${yearlyTarget.toFixed(0)}/year)
-2. How many months to reach it at current savings rate?
-3. What would halve that timeline?`;
-    const analysis = await aiAsk(prompt, 'You are a financial independence expert. Use the 4% withdrawal rule.');
-    box.text(analysis);
-  } catch (e) {
-    box.error(e);
-  }
 }
 
 // Reusable AI-output box helper: set loading / error / html states.
@@ -2717,7 +2596,29 @@ function buildBudget(weeks) {
     prevBal = bal;
   });
 
-  return { cols, matrix };
+  // ── Recurring deposit rows → cumulative "running saved" total ──
+  // Each deposit row's default amount applies to every future (non-Current)
+  // column; per-cell overrides win. The running total starts at depositStart
+  // and accumulates every row's deposit left-to-right across the columns.
+  const depRows = S.depositRows || [];
+  const matrixDep = {};
+  cols.forEach(c => matrixDep[c.date] = {});
+  let savedRun = Number(S.depositStart) || 0;
+  cols.forEach(c => {
+    let colDeposits = 0;
+    depRows.forEach(row => {
+      const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
+      let v;
+      if (ov[c.date] !== undefined) v = Number(ov[c.date]) || 0;
+      else v = c.isCurrent ? 0 : (Number(row.amount) || 0);
+      matrixDep[c.date][row.id] = v;
+      colDeposits += v;
+    });
+    savedRun += colDeposits;
+    c.savedRunning = savedRun;
+  });
+
+  return { cols, matrix, matrixDep };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2730,7 +2631,7 @@ function renderBudget() {
   // become detached DOM nodes. Drop the selection so the sum bar reflects the
   // visible state and we don't hold onto garbage references.
   if (selSet && selSet.size) clearCellSelection();
-  const { cols, matrix } = buildBudget(BUDGET_WEEKS);
+  const { cols, matrix, matrixDep } = buildBudget(BUDGET_WEEKS);
   if (!cols.length) { wrap.innerHTML = '<div style="padding:30px;color:var(--text-muted);text-align:center;">No data</div>'; return; }
 
   const visibleBills = S.bills.filter(b => b.active !== false);
@@ -2802,7 +2703,32 @@ function renderBudget() {
   });
   h += '</tbody>';
 
-  // Footer rows: balance, diff, savings (sticky bottom in this stacking order)
+  // ── Recurring deposit input rows (feed the Running Saved total) ──
+  const depRows = S.depositRows || [];
+  if (depRows.length) {
+    const depBaseR = visibleBills.length + 1;
+    h += '<tbody class="deposits-body" id="budget-deposits">';
+    depRows.forEach((row, di) => {
+      const nm = (row.label && row.label.trim()) || 'Deposit';
+      const recur = Number(row.amount) || 0;
+      h += `<tr class="deposit" data-dep-id="${row.id}">`;
+      h += `<td class="cat dep-cat" title="Recurring ${escHTML(fmt$2(recur))} each period — tap ✎ to change">` +
+           `<span class="cat-inner"><span class="dep-name">${escHTML(nm)}</span>` +
+           `<button class="dep-edit" title="Rename / set recurring amount" onclick="editDepositRow('${row.id}')">✎</button>` +
+           `<button class="dep-del" title="Delete this deposit row" onclick="deleteDepositRow('${row.id}')">×</button></span></td>`;
+      cols.forEach((c, ci) => {
+        const amt = (matrixDep[c.date] && matrixDep[c.date][row.id]) || 0;
+        const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
+        const isOverride = ov[c.date] !== undefined;
+        const hasValue = amt !== 0;
+        const cls = 'dep-cell ' + (hasValue ? 'has-value ' : 'zero ') + 'editable' + (isOverride ? ' override' : '');
+        const display = hasValue ? fmt$2(amt) : '·';
+        h += `<td class="${cls}" data-cell-type="deposit" data-dep-id="${row.id}" data-date="${c.date}" data-r="${depBaseR + di}" data-c="${ci}" tabindex="0">${display}</td>`;
+      });
+      h += '</tr>';
+    });
+    h += '</tbody>';
+  }
   // Row titles are now tap-to-rename. Stored as overrides in S.rowLabels.
   h += '<tfoot>';
   S.rowLabels = S.rowLabels || { remainder:'', difference:'', savings:'' };
@@ -2842,7 +2768,6 @@ function renderBudget() {
        `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.savingsBalance)||0)}" ` +
        `placeholder="$0.00" oninput="updateSavingsBalance(parseMoney(this.value))" ` +
        `title="Starting / current savings balance — overwrites the auto-grown value">` +
-       `<button class="btn" onclick="showInsightsModal()" style="margin-top:8px;width:100%;" title="Get Claude's financial insights">💡 Insights</button>` +
        '</span></td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
@@ -2851,41 +2776,36 @@ function renderBudget() {
   // across columns, rendered beneath Savings. Same hide-behind-label UX.
   (S.savingsExtra || []).forEach(row => {
     const bal = Number(row.balance) || 0;
-    const contribTotal = (row.contributions || []).reduce((sum, c) => sum + (Number(c.amount)||0), 0);
     const nm = (row.label && row.label.trim()) || 'Saved';
-    const contribLog = (row.contributions || []).slice().reverse().map((c, i) =>
-      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border-light);">
-        <span>${fmtMDY(c.date)}: ${fmt$2(c.amount)}</span>
-        <button class="xsave-del" onclick="removeContribution('${row.id}','${c.date}')" style="border:none;background:none;color:var(--text-light);cursor:pointer;padding:0;">×</button>
-      </div>`
-    ).join('');
     h += `<tr class="xsave" data-xid="${row.id}"><td class="cat sv">` +
-      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or manage contributions">${escHTML(nm)}</button>` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the amount">${escHTML(nm)}</button>` +
       `<span class="sv-edit" onfocusout="svMaybeClose(event,this)">` +
       `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Saved" ` +
       `oninput="updateSavingsExtra('${row.id}','label',this.value)" title="Row title">` +
       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(bal)}" placeholder="$0.00" ` +
       `oninput="updateSavingsExtra('${row.id}','balance',parseMoney(this.value))" ` +
       `title="${escHTML(nm)} balance">` +
-      `<div style="margin-top:10px;padding:8px;background:var(--bg-strong);border-radius:6px;font-size:12px;">
-        <div style="font-weight:700;margin-bottom:6px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Contributions</div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <input type="date" id="contrib-date-${row.id}" value="${localISO(new Date())}" style="flex:1;min-width:0;font-size:12px;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-          <input type="text" id="contrib-amt-${row.id}" inputmode="decimal" placeholder="Amount" style="flex:1;min-width:0;font-size:12px;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-          <button class="btn" onclick="addContribution('${row.id}')" style="flex:0 0 auto;padding:4px 10px;font-size:11px;">+ Add</button>
-        </div>
-        <div style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px;background:var(--bg);">
-          ${contribLog ? contribLog : '<div style="color:var(--text-muted);font-size:11px;">No contributions logged yet</div>'}
-        </div>
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);">
-          Total contributions: <span style="color:var(--text);font-weight:700;">${fmt$2(contribTotal)}</span>
-        </div>
-      </div>` +
       `<button class="xsave-del" title="Remove this row" onclick="deleteSavingsExtra('${row.id}')">×</button>` +
       `</span></td>`;
     cols.forEach(() => h += `<td>${fmt$(bal)}</td>`);
     h += '</tr>';
   });
+
+  // ── Running Saved total — cumulative deposits across columns ──
+  if ((S.depositRows || []).length || (Number(S.depositStart) || 0)) {
+    const rLabel = rowTitle('savedrunning', 'Running Saved');
+    h += '<tr class="saved-run"><td class="cat sv">' +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the starting balance">${escHTML(rLabel)}</button>` +
+      '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
+      `<input type="text" class="xsave-name" value="${escHTML(rLabel)}" placeholder="Running Saved" ` +
+      `oninput="updateRowLabel('savedrunning',this.value)" title="Row title">` +
+      `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.depositStart)||0)}" ` +
+      `placeholder="$0.00" oninput="updateDepositStart(parseMoney(this.value))" ` +
+      `title="Starting balance the running total builds on">` +
+      '</span></td>';
+    cols.forEach(c => h += `<td>${fmt$(c.savedRunning)}</td>`);
+    h += '</tr>';
+  }
   h += '</tfoot></table>';
 
   wrap.innerHTML = h;
@@ -3206,14 +3126,20 @@ function enterCellEdit(td) {
     }
     placeholder = '0';
   } else if (type === 'current-balance') {
-    // Ensure currentBalance is always a number, not a formatted string.
-    // On some devices (iPad), it might be stored as "$1,000.00" instead of the raw number.
-    const rawBal = parseMoney(S.currentBalance);
-    curVal = rawBal ? String(rawBal) : '';
-    placeholder = '0';
+    curVal = S.currentBalance || ''; placeholder = '0';
   } else if (type === 'adhoc') {
     const a = (S.adhocColumns || []).find(x => x.id === adhocId);
     if (a) curVal = a.amount;
+  } else if (type === 'deposit') {
+    const depId = td.dataset.depId;
+    const overrides = (S.depositOverrides && S.depositOverrides[depId]) || {};
+    if (overrides[date] !== undefined) {
+      curVal = overrides[date];
+    } else {
+      const shown = parseFloat(String(td.textContent).replace(/[^0-9.\-]/g, ''));
+      curVal = isNaN(shown) ? '' : shown;
+    }
+    placeholder = '0';
   }
 
   // Overlay the input absolutely on top of the cell — original text stays in
@@ -3243,7 +3169,7 @@ function enterCellEdit(td) {
   // just enough that the entire value fits the cell's current width.
   inp.addEventListener('input', () => fitInputText(inp));
   requestAnimationFrame(() => fitInputText(inp));
-  activeCell = { td, type, billId, adhocId, date, r, c, inp, originalValue: curVal };
+  activeCell = { td, type, billId, adhocId, depId: td.dataset.depId, date, r, c, inp, originalValue: curVal };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3375,7 +3301,7 @@ document.addEventListener('focusout', (ev) => {
 
 function commitCellEdit(opts = {}) {
   if (!activeCell) return;
-  const { td, type, billId, adhocId, date, inp, originalValue } = activeCell;
+  const { td, type, billId, adhocId, depId, date, inp, originalValue } = activeCell;
   const raw = inp.value.trim();
 
   if (type === 'bill') {
@@ -3423,16 +3349,36 @@ function commitCellEdit(opts = {}) {
     } else { const n = parseFloat(raw); if (!isNaN(n)) { snapshot(); S.paycheckOverrides[date] = n; } }
   } else if (type === 'current-balance') {
     snapshot();
-    // Use parseMoney instead of parseFloat in case the raw value contains
-    // currency formatting. This prevents doubling on iPad where S.currentBalance
-    // might be stored as "$1,000.00" instead of a clean number.
-    const n = parseMoney(raw);
-    S.currentBalance = isNaN(n) || n === null ? 0 : n;
+    const n = parseFloat(raw);
+    S.currentBalance = isNaN(n) ? 0 : n;
   } else if (type === 'adhoc') {
     snapshot();
     const n = parseFloat(raw);
     const a = (S.adhocColumns || []).find(x => x.id === adhocId);
     if (a && !isNaN(n)) a.amount = Math.abs(n);
+  } else if (type === 'deposit') {
+    const row = (S.depositRows || []).find(x => x.id === depId);
+    if (!row) { activeCell = null; return; }
+    S.depositOverrides = S.depositOverrides || {};
+    const recur = Number(row.amount) || 0;
+    const hadValue = originalValue !== '' && originalValue !== null && originalValue !== undefined && !isNaN(Number(originalValue));
+    if (raw === '') {
+      // Emptied a shown deposit → zero it for this period (override 0).
+      if (hadValue && Number(originalValue) !== 0) {
+        snapshot();
+        S.depositOverrides[depId] = S.depositOverrides[depId] || {};
+        S.depositOverrides[depId][date] = 0;
+      }
+    } else {
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n !== Number(originalValue)) {
+        snapshot();
+        S.depositOverrides[depId] = S.depositOverrides[depId] || {};
+        // Matches the recurring default → clear the override; else store it.
+        if (n === recur) delete S.depositOverrides[depId][date];
+        else S.depositOverrides[depId][date] = n;
+      }
+    }
   }
 
   // Clear activeCell BEFORE removing the input — `inp.remove()` synchronously
@@ -3748,13 +3694,7 @@ function addSavingsExtra() {
   if (!name) return;
   snapshot();
   S.savingsExtra = S.savingsExtra || [];
-  S.savingsExtra.push({
-    id: uid(),
-    label: name,
-    balance: 0,
-    contributions: [],
-    sheetTracking: { enabled: false, rowName: '' }
-  });
+  S.savingsExtra.push({ id: uid(), label: name, balance: 0 });
   saveAndRender();
 }
 function updateSavingsExtra(id, field, value) {
@@ -3769,35 +3709,48 @@ function updateSavingsExtra(id, field, value) {
     if (tr) tr.querySelectorAll('td:not(.cat)').forEach(td => td.textContent = fmt$(Number(value) || 0));
   }
 }
-
-function addContribution(id) {
-  const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
-  const dateEl = eid('contrib-date-' + id);
-  const amtEl = eid('contrib-amt-' + id);
-  const date = (dateEl && dateEl.value) || localISO(new Date());
-  const amount = parseMoney(amtEl && amtEl.value);
-  if (!amount || amount <= 0) { toast('Enter a positive amount'); return; }
-  snapshot();
-  r.contributions = r.contributions || [];
-  // Remove existing entry for this date, then add new one
-  r.contributions = r.contributions.filter(c => c.date !== date);
-  r.contributions.push({ date, amount });
-  if (amtEl) amtEl.value = '';
-  scheduleSave();
-  renderBudget();
-}
-
-function removeContribution(id, date) {
-  const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
-  snapshot();
-  r.contributions = (r.contributions || []).filter(c => c.date !== date);
-  scheduleSave();
-  renderBudget();
-}
 function deleteSavingsExtra(id) {
   snapshot();
   S.savingsExtra = (S.savingsExtra || []).filter(x => x.id !== id);
   saveAndRender();
+}
+
+// ── Recurring deposit rows (running saved total) ──
+function addDepositRow() {
+  const name = (prompt('Name this deposit row (e.g. Savings, Emergency Fund, Vacation):', 'Savings') || '').trim();
+  if (!name) return;
+  const amtStr = prompt('Recurring deposit each pay period (you can edit any single cell later):', '0') || '0';
+  const amount = Math.abs(parseMoney(amtStr)) || 0;
+  snapshot();
+  S.depositRows = S.depositRows || [];
+  S.depositRows.push({ id: uid(), label: name, amount });
+  saveAndRender();
+}
+function editDepositRow(id) {
+  const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
+  const name = (prompt('Row name:', row.label || 'Deposit') || '').trim();
+  if (name === '') return;
+  const amtStr = prompt('Recurring deposit each pay period (blank cells use this; edited cells keep their own value):', String(Number(row.amount) || 0));
+  if (amtStr === null) { // name-only change
+    snapshot(); row.label = name; saveAndRender(); return;
+  }
+  snapshot();
+  row.label = name;
+  row.amount = Math.abs(parseMoney(amtStr)) || 0;
+  saveAndRender();
+}
+function deleteDepositRow(id) {
+  if (!confirm('Delete this deposit row? Its per-cell edits are removed too.')) return;
+  snapshot();
+  S.depositRows = (S.depositRows || []).filter(x => x.id !== id);
+  if (S.depositOverrides) delete S.depositOverrides[id];
+  saveAndRender();
+}
+function updateDepositStart(value) {
+  maybeSnapshot();
+  S.depositStart = Number(value) || 0;
+  scheduleSave();
+  if (eid('tab-budget').classList.contains('active')) renderBudget();
 }
 // Savings / custom-row label is shown by default; tapping it reveals the
 // hidden input(s) so you can set a fixed start value or overwrite the
@@ -4006,40 +3959,6 @@ function renderBills() {
     </tr>
   `).join('');
   attachListDrag(tbody, 'bills', () => saveAndRender());
-  renderEmergencyFund();
-}
-function renderEmergencyFund() {
-  const section = eid('emergency-fund-section');
-  if (!section) return;
-  // Calc avg monthly expense from all active bills
-  const activeBills = (S.bills || []).filter(b => b.active !== false);
-  if (!activeBills.length) { section.innerHTML = ''; return; }
-  const avgMonthly = activeBills.reduce((sum, b) => sum + billPerMonth(b), 0);
-  if (avgMonthly <= 0) { section.innerHTML = ''; return; }
-  const ef3m = avgMonthly * 3;
-  const ef6m = avgMonthly * 6;
-  const ef12m = avgMonthly * 12;
-  section.innerHTML = `
-    <h4>Emergency Fund Target</h4>
-    <div class="emergency-fund-grid">
-      <div class="efund-item">
-        <div class="label">Avg Monthly</div>
-        <div class="value">${fmt$2(avgMonthly)}</div>
-      </div>
-      <div class="efund-item">
-        <div class="label">3 Months</div>
-        <div class="value">${fmt$2(ef3m)}</div>
-      </div>
-      <div class="efund-item">
-        <div class="label">6 Months</div>
-        <div class="value">${fmt$2(ef6m)}</div>
-      </div>
-      <div class="efund-item">
-        <div class="label">12 Months</div>
-        <div class="value">${fmt$2(ef12m)}</div>
-      </div>
-    </div>
-  `;
 }
 function addBill() { snapshot(); S.bills.push({ id: uid(), name:'New bill', amount:0, frequency:'monthly', dueDay:1, category:'', active:true, notes:'' }); saveAndRender(); }
 function deleteBill(id) { if (!confirm('Delete this bill?')) return; snapshot(); S.bills = S.bills.filter(b => b.id !== id); delete S.billOverrides[id]; if (S.billLastConfirmed) delete S.billLastConfirmed[id]; if (S.billSnoozed) delete S.billSnoozed[id]; saveAndRender(); }
@@ -4385,7 +4304,7 @@ function snapshotNetWorth() {
 // One-tap providers. Endpoints are OpenAI-compatible & browser-CORS-friendly.
 const AI_PROVIDERS = {
   groq: {
-    name: 'Groq (Free — Recommended)', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     model: 'llama-3.3-70b-versatile', keyUrl: 'https://console.groq.com/keys',
     steps: ['Open <a href="https://console.groq.com/keys" target="_blank" rel="noopener"><b>console.groq.com/keys</b></a> and sign in (Google works — no credit card).',
             'Click <b>Create API Key</b>, copy it.',
@@ -4459,32 +4378,7 @@ function renderSettings() {
   renderPaychecks();
   renderPartnerShare();
   renderPhotoThumbs();
-  renderSyncDiagnostics();
   updateSyncPill();
-}
-function renderSyncDiagnostics() {
-  // Show last pull time
-  const lastPullEl = eid('diag-last-pull');
-  if (lastPullEl) {
-    if (LAST_PULL) {
-      try { lastPullEl.textContent = new Date(LAST_PULL).toLocaleString(); } catch { lastPullEl.textContent = LAST_PULL; }
-    } else {
-      lastPullEl.textContent = 'never (first sync pending)';
-    }
-  }
-  // Show webhook status
-  const whEl = eid('diag-webhook');
-  if (whEl) {
-    whEl.textContent = WEBHOOK_URL ? '✓ configured' : '✗ not set';
-    whEl.style.color = WEBHOOK_URL ? 'var(--accent-dim)' : 'var(--text-muted)';
-  }
-  // Show if background poll is expected to be running
-  const pollEl = eid('diag-poll');
-  if (pollEl) {
-    const isRunning = WEBHOOK_URL && typeof backgroundPull === 'function';
-    pollEl.textContent = isRunning ? '✓ running (every 25s)' : (WEBHOOK_URL ? 'paused (tab backgrounded)' : 'not available');
-    pollEl.style.color = isRunning ? 'var(--accent-dim)' : (WEBHOOK_URL ? 'var(--warn)' : 'var(--text-muted)');
-  }
 }
 function updatePushSetting(field, value) {
   S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
@@ -4699,90 +4593,235 @@ async function testSync() {
     else setStatus('Server returned: ' + JSON.stringify(j), 'red');
   } catch (e) { setStatus('✗ Failed: ' + e.message, 'red'); }
 }
+// ═══════════════════════════════════════════════════════════════════
+//  CROSS-DEVICE SYNC  —  3-way merge (no blind overwrites)
+//
+//  The sheet holds one JSON blob. With two devices editing, a blind
+//  "write my whole state" loses whoever saved second. Instead every
+//  write is READ → MERGE → WRITE: we merge the remote copy and our
+//  local copy against a common ancestor (SYNCED_BASE, the last state
+//  both sides agreed on). Different fields edited on each device all
+//  survive; only a true same-field conflict falls back to newest-wins.
+// ═══════════════════════════════════════════════════════════════════
+const __clone = x => JSON.parse(JSON.stringify(x));
+function __stable(x) {
+  if (x === null || typeof x !== 'object') return JSON.stringify(x);
+  if (Array.isArray(x)) return '[' + x.map(__stable).join(',') + ']';
+  return '{' + Object.keys(x).sort().map(k => JSON.stringify(k) + ':' + __stable(x[k])).join(',') + '}';
+}
+const __eq = (a, b) => __stable(a) === __stable(b);
+const __isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+
+function merge3(base, local, remote, localNewer, key) {
+  if (__eq(local, remote)) return local;
+  if (base !== undefined) {
+    if (__eq(local, base))  return remote;
+    if (__eq(remote, base)) return local;
+  }
+  if (Array.isArray(local) && Array.isArray(remote)) {
+    const sample = local.find(__isObj) || remote.find(__isObj);
+    let idField = null;
+    if (sample) { if (sample.id !== undefined) idField = 'id'; else if (sample.date !== undefined) idField = 'date'; }
+    if (idField) return mergeArrayById(Array.isArray(base) ? base : [], local, remote, localNewer, key, idField);
+    return localNewer ? local : remote;
+  }
+  if (__isObj(local) && __isObj(remote)) {
+    const out = {};
+    const keys = new Set([...Object.keys(base || {}), ...Object.keys(local), ...Object.keys(remote)]);
+    for (const k of keys) {
+      const b = base ? base[k] : undefined;
+      const l = local[k], r = remote[k];
+      if (l === undefined && r === undefined) continue;
+      if (l === undefined) { if (b !== undefined && __eq(b, r)) continue; out[k] = r; continue; }
+      if (r === undefined) { if (b !== undefined && __eq(b, l)) continue; out[k] = l; continue; }
+      out[k] = merge3(b, l, r, localNewer, k);
+    }
+    return out;
+  }
+  return localNewer ? local : remote;
+}
+
+function mergeArrayById(base, local, remote, localNewer, key, idField) {
+  const idx = arr => { const m = {}; (arr || []).forEach(x => { if (__isObj(x) && x[idField] !== undefined) m[x[idField]] = x; }); return m; };
+  const bById = idx(base), lById = idx(local), rById = idx(remote);
+  const order = []; const seen = new Set();
+  (local || []).forEach(x => { const id = __isObj(x) ? x[idField] : undefined; if (id !== undefined && !seen.has(id)) { seen.add(id); order.push(id); } });
+  (remote || []).forEach(x => { const id = __isObj(x) ? x[idField] : undefined; if (id !== undefined && !seen.has(id)) { seen.add(id); order.push(id); } });
+  const out = [];
+  for (const id of order) {
+    const b = bById[id], l = lById[id], r = rById[id];
+    if (l && r)      out.push(merge3(b, l, r, localNewer, key + '[]'));
+    else if (l && !r) { if (!(b && __eq(b, l))) out.push(l); }
+    else if (!l && r) { if (!(b && __eq(b, r))) out.push(r); }
+  }
+  return out;
+}
+
+function applyMerge(remoteData) {
+  if (!remoteData) return { changed: false };
+  const localMod  = (S.meta && S.meta.modified) || '';
+  const remoteMod = (remoteData.meta && remoteData.meta.modified) || '';
+  const localNewer = !remoteMod || (!!localMod && localMod >= remoteMod);
+  const before = __stable(S);
+  const merged = merge3(SYNCED_BASE === null ? undefined : SYNCED_BASE, S, remoteData, localNewer, '');
+  merged.meta = { version: 1, modified: (localMod > remoteMod ? localMod : remoteMod) || new Date().toISOString() };
+  const changed = __stable(merged) !== before;
+  S = merged;
+  SYNCED_BASE = __clone(merged);
+  try { localStorage.setItem(LS_BASE, JSON.stringify(SYNCED_BASE)); } catch (e) {}
+  return { changed };
+}
+
+async function syncRequest(payload) {
+  let r;
+  try {
+    r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+  } catch (e) { return { ok:false, reason:'network', msg:String(e && e.message || e) }; }
+  let text = '';
+  try { text = await r.text(); } catch (e) { return { ok:false, status:r.status, reason:'network' }; }
+  const head = text.slice(0, 300).toLowerCase();
+  if (head.includes('<!doctype') || head.includes('<html') || head.includes('accounts.google.com') || head.includes('sign in to continue')) {
+    return { ok:false, status:r.status, reason:'auth' };
+  }
+  let j;
+  try { j = JSON.parse(text); } catch (e) { return { ok:false, status:r.status, reason:'badjson' }; }
+  if (j && j.error) return { ok:false, status:r.status, reason:'server', msg:j.error };
+  return { ok:true, status:r.status, data:j.data, updated:j.updated, raw:j };
+}
+function syncReasonMsg(reason) {
+  return ({
+    network: 'No connection to the sheet — check your internet.',
+    auth:    'Sheet access is blocked. In Apps Script \u2192 Manage deployments, set \u201CWho has access\u201D to Anyone, or update this device to the current /exec URL.',
+    badjson: 'The sheet returned an unexpected response (not JSON).',
+    server:  'The sheet script reported an error.',
+  })[reason] || 'Sync error.';
+}
+
+async function syncPull() {
+  const res = await syncRequest({ action:'read' });
+  if (!res.ok) { SYNC_STATE = 'err'; SYNC_ERR = res.reason; updateSyncPill(); return res; }
+  const wasEditing = (typeof activeCell !== 'undefined' && activeCell);
+  const { changed } = applyMerge(res.data);
+  LAST_PULL = res.updated || new Date().toISOString();
+  LAST_PULL_MS = Date.now();
+  SYNC_STATE = 'ok'; SYNC_ERR = null;
+  if (changed && !wasEditing) { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} renderAll(); }
+  updateSyncPill();
+  return { ok:true, changed };
+}
+
+async function syncPush() {
+  if (!WEBHOOK_URL) return { ok:false };
+  if (__syncBusy) { __pushQueued = true; return { ok:false, queued:true }; }
+  __syncBusy = true; SYNC_STATE = 'syncing'; updateSyncPill();
+  try {
+    const rd = await syncRequest({ action:'read' });
+    if (rd.ok) { applyMerge(rd.data); }
+    else if (rd.reason !== 'badjson') { SYNC_STATE = 'err'; SYNC_ERR = rd.reason; updateSyncPill(); return rd; }
+    S.meta = { version:1, modified: new Date().toISOString() };
+    SYNCED_BASE = __clone(S);
+    try { localStorage.setItem(LS_BASE, JSON.stringify(SYNCED_BASE)); localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+    const w = await syncRequest({ action:'write', data: S });
+    if (w.ok) { SYNC_STATE = 'ok'; SYNC_ERR = null; LAST_PULL = w.updated || LAST_PULL; LAST_PULL_MS = Date.now(); }
+    else { SYNC_STATE = 'err'; SYNC_ERR = w.reason; }
+    updateSyncPill();
+    return w;
+  } catch (e) {
+    SYNC_STATE = 'err'; SYNC_ERR = 'network'; updateSyncPill();
+    return { ok:false, reason:'network' };
+  } finally {
+    __syncBusy = false;
+    if (__pushQueued) { __pushQueued = false; setTimeout(syncPush, 350); }
+  }
+}
+const backgroundPush = syncPush;
+
 async function forcePull() {
   if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
-  setStatus('Pulling…', 'gry');
+  if (__syncBusy) { setStatus('Sync in progress\u2026', 'gry'); return; }
+  setStatus('Pulling\u2026', 'gry');
+  __syncBusy = true;
   try {
-    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'read' }) });
-    const j = await r.json();
-    if (j.error) { setStatus('Server error: ' + j.error, 'red'); return; }
-    if (j.data) {
-      S = Object.assign({}, S, j.data);
-      S.adhocColumns = S.adhocColumns || [];
-      LAST_PULL = j.updated; saveLocal(); renderAll();
-      setStatus('✓ Pulled. Last write: ' + (j.updated || 'never'), 'grn');
-    } else { setStatus('Sheet empty. Pushing local…', 'gry'); await forcePush(); }
-  } catch (e) { setStatus('✗ Pull failed: ' + e.message, 'red'); }
+    const res = await syncRequest({ action:'read' });
+    if (!res.ok) { SYNC_STATE='err'; SYNC_ERR=res.reason; updateSyncPill(); setStatus('\u2717 ' + syncReasonMsg(res.reason), 'red'); return; }
+    if (!res.data) { setStatus('Sheet empty \u2014 pushing this device up\u2026', 'gry'); __syncBusy = false; await forcePush(); return; }
+    const { changed } = applyMerge(res.data);
+    LAST_PULL = res.updated || new Date().toISOString(); LAST_PULL_MS = Date.now();
+    SYNC_STATE='ok'; SYNC_ERR=null;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+    renderAll(); updateSyncPill();
+    setStatus(changed ? '\u2713 Pulled & merged the latest.' : '\u2713 Already up to date.', 'grn');
+  } catch (e) { SYNC_STATE='err'; SYNC_ERR='network'; updateSyncPill(); setStatus('\u2717 Pull failed: ' + e.message, 'red'); }
+  finally { __syncBusy = false; }
 }
-// Manual "check my other devices" pull, triggered by the header icon.
-// Honors the same merge rule as the background poller (only adopt the
-// remote copy when it's newer), but runs on demand and shows feedback.
+
 let __manualRefreshing = false;
 async function manualRefresh() {
   if (__manualRefreshing) return;
   const btn = eid('btn-refresh');
-  if (!WEBHOOK_URL) {
-    toast('Cross-device sync isn\'t set up — add a Sheet URL in Settings.');
-    return;
-  }
-  // Don't yank state out from under an open cell editor.
-  if (typeof activeCell !== 'undefined' && activeCell) { try { commitCellEdit({ silent:false }); } catch {} }
-  __manualRefreshing = true;
+  if (!WEBHOOK_URL) { toast('Cross-device sync isn\u2019t set up \u2014 add a Sheet URL in Settings.'); return; }
+  if (typeof activeCell !== 'undefined' && activeCell) { try { commitCellEdit({ silent:false }); } catch (e) {} }
+  if (__syncBusy) { toast('Syncing\u2026'); return; }
+  __manualRefreshing = true; __syncBusy = true;
   if (btn) btn.classList.add('spinning');
   const started = Date.now();
   try {
-    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'read' }) });
-    const j = await r.json();
-    if (!j || !j.data) { toast('Couldn\'t reach the sheet — try again.'); SYNC_STATE='err'; updateSyncPill(); return; }
-    const remoteMod = (j.data.meta && j.data.meta.modified) || '';
-    const localMod  = (S.meta && S.meta.modified) || '';
-    if (remoteMod && localMod && remoteMod <= localMod) {
-      LAST_PULL = j.updated; SYNC_STATE='ok'; updateSyncPill();
-      toast('You\'re up to date.');
-    } else {
-      S = Object.assign({}, S, j.data);
-      S.adhocColumns = S.adhocColumns || [];
-      LAST_PULL = j.updated;
-      localStorage.setItem(LS_KEY, JSON.stringify(S));   // persist without bumping meta.modified
-      renderAll();
-      SYNC_STATE='ok'; updateSyncPill();
-      toast('Updated with the latest changes.');
-    }
-  } catch (e) {
-    toast('Refresh failed — check your connection.');
-    SYNC_STATE='err'; updateSyncPill();
-  } finally {
-    // Keep the spinner visible for at least a beat so the tap feels responsive.
+    const res = await syncRequest({ action:'read' });
+    if (!res.ok) { SYNC_STATE='err'; SYNC_ERR=res.reason; updateSyncPill(); toast(syncReasonMsg(res.reason)); return; }
+    const { changed } = applyMerge(res.data);
+    LAST_PULL = res.updated || new Date().toISOString(); LAST_PULL_MS = Date.now();
+    SYNC_STATE='ok'; SYNC_ERR=null;
+    if (changed) { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} renderAll(); }
+    updateSyncPill();
+    toast(changed ? 'Updated with the latest changes.' : 'You\u2019re up to date.');
+  } catch (e) { SYNC_STATE='err'; SYNC_ERR='network'; updateSyncPill(); toast('Refresh failed \u2014 check your connection.'); }
+  finally {
+    __syncBusy = false;
     const elapsed = Date.now() - started;
     setTimeout(() => { if (btn) btn.classList.remove('spinning'); __manualRefreshing = false; }, Math.max(0, 500 - elapsed));
   }
 }
+
 async function forcePush() {
   if (!WEBHOOK_URL) { setStatus('No webhook configured.', 'red'); return; }
-  setStatus('Pushing…', 'gry');
+  if (__syncBusy) { setStatus('Sync in progress\u2026', 'gry'); return; }
+  setStatus('Pushing\u2026', 'gry');
+  __syncBusy = true;
   try {
     S.meta = { version:1, modified: new Date().toISOString() };
-    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'write', data: S }) });
-    const j = await r.json();
-    if (j.ok) { LAST_PULL = j.updated; setStatus('✓ Pushed at ' + j.updated, 'grn'); SYNC_STATE='ok'; updateSyncPill(); }
-    else setStatus('Server returned: ' + JSON.stringify(j), 'red');
-  } catch (e) { setStatus('✗ Push failed: ' + e.message, 'red'); SYNC_STATE='err'; updateSyncPill(); }
+    SYNCED_BASE = __clone(S);
+    try { localStorage.setItem(LS_BASE, JSON.stringify(SYNCED_BASE)); } catch (e) {}
+    const w = await syncRequest({ action:'write', data: S });
+    if (w.ok) { LAST_PULL = w.updated; LAST_PULL_MS = Date.now(); SYNC_STATE='ok'; SYNC_ERR=null; updateSyncPill(); setStatus('\u2713 Pushed at ' + w.updated, 'grn'); }
+    else { SYNC_STATE='err'; SYNC_ERR=w.reason; updateSyncPill(); setStatus('\u2717 ' + syncReasonMsg(w.reason), 'red'); }
+  } catch (e) { SYNC_STATE='err'; SYNC_ERR='network'; updateSyncPill(); setStatus('\u2717 Push failed: ' + e.message, 'red'); }
+  finally { __syncBusy = false; }
 }
 function clearAll() {
   if (!confirm('Clear ALL local data? (Sheet not affected.)')) return;
-  localStorage.removeItem(LS_KEY); location.reload();
+  localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_BASE); location.reload();
 }
 function setStatus(msg, color) {
   const el = eid('ss-status'); if (!el) return;
   const c = ({grn:'var(--accent-dim)', red:'var(--negative)', wrn:'var(--warn)', gry:'var(--text-muted)'})[color] || 'var(--text-muted)';
   el.style.color = c; el.textContent = msg;
 }
+function relSyncTime(ms) {
+  if (!ms) return 'never';
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 10) return 'just now';
+  if (s < 60) return s + 's ago';
+  const m = Math.round(s / 60); if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+  return Math.round(h / 24) + 'd ago';
+}
 function updateSyncPill() {
-  const p = eid('last-sync');
-  if (!WEBHOOK_URL) { p.className = 'sync-pill ok'; p.textContent = 'SAVED'; p.title='Auto-saved on this device. Set a Sheet URL in Settings to sync with your spouse.'; return; }
-  if (SYNC_STATE === 'ok') { p.className = 'sync-pill ok'; p.textContent = 'SYNCED'; p.title='Last sync: ' + (LAST_PULL || 'never'); return; }
-  if (SYNC_STATE === 'err') { p.className = 'sync-pill err'; p.textContent = 'ERROR'; return; }
-  p.className = 'sync-pill'; p.textContent = 'IDLE'; p.title='';
+  const p = eid('last-sync'); if (!p) return;
+  if (!WEBHOOK_URL) { p.className='sync-pill ok'; p.textContent='SAVED'; p.title='Auto-saved on this device. Add a Sheet URL in Settings to sync across devices.'; return; }
+  if (SYNC_STATE === 'syncing') { p.className='sync-pill'; p.textContent='SYNCING\u2026'; p.title='Talking to the sheet\u2026'; return; }
+  if (SYNC_STATE === 'err') { p.className='sync-pill err'; p.textContent='ERROR'; p.title=syncReasonMsg(SYNC_ERR) + '  (last good sync ' + relSyncTime(LAST_PULL_MS) + ')'; return; }
+  if (SYNC_STATE === 'ok') { p.className='sync-pill ok'; p.textContent='SYNCED'; p.title='Synced ' + relSyncTime(LAST_PULL_MS); return; }
+  p.className='sync-pill'; p.textContent='IDLE'; p.title='';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -4805,6 +4844,7 @@ function importJSON(ev) {
       snapshot();
       S = Object.assign({}, S, data); S.adhocColumns = S.adhocColumns || [];
       saveLocal(); renderAll(); toast('Imported');
+      if (WEBHOOK_URL) forcePush();
     } catch (err) { alert('Invalid JSON: ' + err.message); }
   };
   reader.readAsText(file);
@@ -4814,59 +4854,31 @@ function importJSON(ev) {
 //  PERSISTENCE
 // ═══════════════════════════════════════════════════════════════════
 let saveTimer = null;
-let lastEditMs = 0;     // touched on every scheduled save → throttles auto-pull
+let lastEditMs = 0;
 function scheduleSave() {
   lastEditMs = Date.now();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { saveLocal(); if (WEBHOOK_URL) backgroundPush(); }, 800);
+  saveTimer = setTimeout(() => { saveLocal(); if (WEBHOOK_URL) syncPush(); }, 800);
 }
-function saveAndRender() { lastEditMs = Date.now(); saveLocal(); if (WEBHOOK_URL) backgroundPush(); renderAll(); }
+function saveAndRender() { lastEditMs = Date.now(); saveLocal(); if (WEBHOOK_URL) syncPush(); renderAll(); }
 function saveLocal() {
   S.meta = S.meta || {};
   S.meta.modified = new Date().toISOString();
   localStorage.setItem(LS_KEY, JSON.stringify(S));
 }
-async function backgroundPush() {
-  SYNC_STATE = 'syncing'; updateSyncPill();
-  try {
-    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'write', data: S }) });
-    const j = await r.json();
-    SYNC_STATE = j.ok ? 'ok' : 'err';
-    if (j.ok) LAST_PULL = j.updated;
-  } catch { SYNC_STATE = 'err'; }
-  updateSyncPill();
-}
 
-// Quiet pull every ~25s and on tab focus. Pulls only when the remote
-// has changed AND no edit is in progress / no recent local edit. This
-// is what makes spouse-side edits appear automatically here.
-let __pullBusy = false;
 async function backgroundPull() {
-  if (!WEBHOOK_URL || __pullBusy || document.hidden) return;
-  if (typeof activeCell !== 'undefined' && activeCell) return;     // never yank state while a cell is open
-  if (Date.now() - lastEditMs < 4000) return;                      // recent local edit — let push settle first
-  __pullBusy = true;
-  try {
-    const r = await fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'read' }) });
-    const j = await r.json();
-    if (!j || !j.ok || !j.data) { return; }
-    const remoteMod = (j.data.meta && j.data.meta.modified) || '';
-    const localMod  = (S.meta && S.meta.modified) || '';
-    if (remoteMod && localMod && remoteMod <= localMod) {
-      LAST_PULL = j.updated; SYNC_STATE = 'ok'; updateSyncPill(); return;
-    }
-    // Server is newer (spouse pushed). Merge in and re-render.
-    S = Object.assign({}, S, j.data);
-    LAST_PULL = j.updated;
-    localStorage.setItem(LS_KEY, JSON.stringify(S));     // persist without bumping meta.modified
-    renderAll();
-    SYNC_STATE = 'ok'; updateSyncPill();
-  } catch { SYNC_STATE = 'err'; updateSyncPill(); }
-  finally { __pullBusy = false; }
+  if (!WEBHOOK_URL || __syncBusy || document.hidden) return;
+  if (typeof activeCell !== 'undefined' && activeCell) return;
+  if (Date.now() - lastEditMs < 4000) return;
+  __syncBusy = true;
+  try { await syncPull(); }
+  finally { __syncBusy = false; }
 }
 function loadLocal() {
   const raw = localStorage.getItem(LS_KEY);
   if (raw) { try { const data = JSON.parse(raw); S = Object.assign({}, S, data); } catch {} }
+  try { const b = localStorage.getItem(LS_BASE); if (b) SYNCED_BASE = JSON.parse(b); } catch {}
   S.adhocColumns = S.adhocColumns || [];
   S.paychecks = S.paychecks || [];
   S.billLastConfirmed = S.billLastConfirmed || {};
@@ -4887,6 +4899,9 @@ function loadLocal() {
   S.partnerShare = S.partnerShare || { amount: 0, active: true, dates: ['','','','',''] };
   S.partnerShare.dates = (S.partnerShare.dates || []).slice(0, 5);
   while (S.partnerShare.dates.length < 5) S.partnerShare.dates.push('');
+  S.depositRows = S.depositRows || [];
+  S.depositOverrides = S.depositOverrides || {};
+  if (S.depositStart === undefined) S.depositStart = 0;
   (S.vacations || []).forEach(v => { v.links = v.links || []; });
   // Migrate legacy single-rule fields to the new paycheck list
   if (S.paychecks.length === 0 && (S.paycheckMonthly || S.paycheckWeekly)) {
@@ -6068,31 +6083,6 @@ function calModal(html) {
   host.style.display='block';
 }
 function closeCalModal(){ const h=eid('cal-modal'); if(h){ h.style.display='none'; h.innerHTML=''; } }
-function showInsightsModal() {
-  let host = eid('insights-modal');
-  if (!host) { host = document.createElement('div'); host.id='insights-modal'; document.body.appendChild(host); }
-  host.innerHTML = `<div class="im-wrap" onclick="if(event.target===this)closeInsightsModal()">
-    <div class="im-card">
-      <div class="im-hdr">
-        <h3>Financial Insights</h3>
-        <span class="close" onclick="closeInsightsModal()">×</span>
-      </div>
-      <div class="im-body">
-        <div class="im-buttons">
-          <button class="btn primary" onclick="analyzeSpending()">💰 Spending</button>
-          <button class="btn" onclick="analyzeRetirement()">🎯 Retirement</button>
-          <button class="btn" onclick="optimizeExpenses()">✂️ Optimize</button>
-          <button class="btn" onclick="calculatePaycheckGoal()">🎉 FI Goal</button>
-        </div>
-        <div id="insights-modal-content" style="font-size:13px;line-height:1.6;color:var(--text-muted);">
-          <p>Select an analysis above to get Claude's insights on your finances.</p>
-        </div>
-      </div>
-    </div>
-  </div>`;
-  host.style.display='block';
-}
-function closeInsightsModal(){ const h=eid('insights-modal'); if(h){ h.style.display='none'; h.innerHTML=''; } }
 function addCalEvent(iso) {
   const date = (typeof iso==='string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso : localISO(calCursor);
   openCalForm({ id:'', title:'', date, time:'', notes:'', recur:'none', remindMins:'' });
@@ -6738,6 +6728,8 @@ function boot() {
   window.addEventListener('beforeunload', flush);
   // Quiet 2-way sync: poll the Sheet so the spouse's edits appear here.
   if (WEBHOOK_URL) setInterval(backgroundPull, 25000);
+  // Refresh the relative "synced N min ago" label so it doesn't go stale.
+  setInterval(() => { if (WEBHOOK_URL && (SYNC_STATE === 'ok' || SYNC_STATE === 'err')) updateSyncPill(); }, 30000);
 }
 
 // Budget grid: lock a scroll gesture to ONE axis (no diagonal). Whichever
