@@ -5579,7 +5579,7 @@ async function sendAIChat() {
   renderAIChat();
   try {
     const msgs = [
-      { role: 'system', content: 'You are a practical personal-finance and travel planning assistant for a family in San Antonio, TX. Be concise and specific. Here is their current financial context: ' + budgetContextString() },
+      { role: 'system', content: `You are a practical personal-finance and travel planning assistant for a family in San Antonio, TX. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}. Be concise and specific. You have NO live internet access — do not invent current event dates, live prices, or this-week deals; for those, recommend the user check a live source. Here is their current financial context: ` + budgetContextString() },
       ...AI_CHAT.filter(m => m.content !== '…thinking…').slice(-8),
     ];
     const ans = await aiChat(msgs, { timeoutMs: 45000 });
@@ -5663,9 +5663,10 @@ async function aiIdeaBudget(id) {
   const place = (it.place || '').trim(); if (!place) { toast('Enter a place first'); return; }
   const box = aiBox('idea-ai-' + id); eid('idea-ai-' + id).style.display = 'block'; box.loading('Estimating a budget & current deal angles for ' + place);
   try {
+    const yr = new Date().getFullYear();
     const ans = await aiAsk(
-      `A family of from San Antonio, TX is considering ${place}. Give a realistic per-trip budget breakdown (flights/drive, lodging, food, activities) for ~4-5 days, typical total range, the cheapest season to go, and 3 concrete money-saving / deal strategies (booking timing, passes, alternatives). ${it.notes ? 'Their notes: ' + it.notes : ''}`,
-      'You are a budget-travel expert. Use round, realistic USD numbers and be concrete.');
+      `A family from San Antonio, TX is considering ${place}. Give a realistic per-trip budget breakdown (flights/drive, lodging, food, activities) for ~4-5 days, typical total range, the cheapest season to go, and 3 time-tested money-saving strategies (booking timing, passes, alternatives). ${it.notes ? 'Their notes: ' + it.notes : ''}`,
+      `You are a budget-travel expert. Use round, realistic USD numbers and be concrete. You have no live pricing data — give typical ballpark ranges and note costs vary; do NOT claim to know current live prices or specific limited-time deals. Assume roughly ${yr} dollars.`);
     it.ai = `Budget & deals — ${place}\n\n` + ans; scheduleSave(); box.text(it.ai);
   } catch (e) { box.error(); }
 }
@@ -5674,9 +5675,10 @@ async function aiTrendingDestinations() {
   host.style.display = 'block';
   const box = aiBox('vac-trending'); box.loading('Pulling trending destinations & deals');
   try {
+    const season = new Date().toLocaleDateString('en-US', { month:'long' });
     const ans = await aiAsk(
-      'What are 6 trending vacation destinations right now for a US family, with one line each on why it\'s trending and a rough budget signal (cheap / moderate / splurge). Then 3 current general travel deal tips. Skimmable bullets.',
-      'You are a travel-trends analyst. Be current, concise, practical.');
+      `Suggest 6 popular, well-loved vacation destinations for a US family that are especially good to visit around ${season}, with one line each on why they shine then and a rough budget signal (cheap / moderate / splurge). Then 3 time-tested travel money-saving tips. Skimmable bullets.`,
+      'You are a travel advisor. You have no live data on prices or this week\'s trends, so recommend reliably popular destinations and seasonal fits, and give general (not time-limited) savings tips. Do not claim to know current deals. Concise, practical.');
     box.text(ans);
   } catch (e) { box.error(); }
 }
@@ -5695,9 +5697,10 @@ async function aiVacBudget(vid) {
   const box = aiBox('vac-ai-' + vid); eid('vac-ai-' + vid).style.display = 'block'; box.loading('Budget & deals for ' + (v.name||'this trip'));
   try {
     const target = Number(v.targetAmount)||0, saved = Number(v.savedAmount)||0;
+    const yr = new Date().getFullYear();
     const ans = await aiAsk(
-      `Trip "${v.name}" from San Antonio, TX. Budget target ${fmt$(target)}, saved so far ${fmt$(saved)}. Give a realistic cost breakdown, whether the target is reasonable, where to cut, and 3 current deal/booking strategies.`,
-      'You are a budget-travel expert. Use realistic round USD numbers.');
+      `Trip "${v.name}" from San Antonio, TX. Budget target ${fmt$(target)}, saved so far ${fmt$(saved)}. Give a realistic cost breakdown, whether the target is reasonable, where to cut, and 3 proven booking strategies.`,
+      `You are a budget-travel expert. Use realistic round USD numbers (roughly ${yr} dollars). You have no live pricing — give typical ballpark ranges and note costs vary; do NOT claim current live prices or specific limited-time deals.`);
     box.text(ans);
   } catch (e) { box.error(); }
 }
@@ -6656,9 +6659,10 @@ async function aiHouseEstimate(id) {
   const el = eid('house-ai-' + id); el.style.display = 'block';
   el.innerHTML = `<span class="ai-loading">Estimating "${escHTML(name)}" costs near ${escHTML(homeAreaStr())}<span class="ai-dots"></span></span>`;
   try {
+    const yr = new Date().getFullYear();
     const ans = await aiAsk(
       `Give a realistic ballpark cost for this home project for a single-family home near ${homeAreaStr()} (San Antonio, TX area): "${name}". ${p.notes?('Details: '+p.notes+'. '):''}Include a typical low–high price range in USD for this region, the main cost drivers, DIY vs. hiring a pro, and 2-3 ways to save. Be concrete with numbers; note it's a rough estimate, not a quote.`,
-      'You are a practical home-improvement cost estimator familiar with the San Antonio, Texas market. Use round USD ranges and be concise.');
+      `You are a practical home-improvement cost estimator familiar with the San Antonio, Texas market. Use round USD ranges (roughly ${yr} dollars) and be concise. You have no live pricing feed, so material/labor costs may have shifted — tell the user to get local quotes to confirm current pricing.`);
     p.ai = 'Ballpark — ' + name + ' (near ' + homeAreaStr() + ')\n\n' + ans;
     scheduleSave();
     el.innerHTML = linkify(p.ai).replace(/\n/g,'<br>');
