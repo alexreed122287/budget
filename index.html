@@ -1611,8 +1611,15 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
       </div>
       <div class="field"><label>Home address / area</label>
         <input id="home-addr" type="text" placeholder="Home address" style="width:100%;" oninput="updateHomeLoc('address',this.value)"></div>
-      <div class="field" style="margin-bottom:0;"><label>ZIP</label>
+      <div class="field"><label>ZIP</label>
         <input id="home-zip" type="text" inputmode="numeric" placeholder="78245" style="max-width:140px;" oninput="updateHomeLoc('zip',this.value)"></div>
+      <div style="font-size:13px;color:var(--text-muted);margin:14px 0 10px;line-height:1.6;border-top:1px solid var(--border);padding-top:14px;">
+        <b>Live events</b> for the <b>Things to do</b> ticker. Paste a free Ticketmaster
+        Discovery API key (get one at <code>developer.ticketmaster.com</code>) to show real,
+        dated local events. Without a key, the ticker falls back to AI-suggested ideas. Stays in this browser.
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Ticketmaster API key (optional)</label>
+        <input id="tm-key" type="text" placeholder="Consumer Key" style="width:100%;" oninput="updateHomeLoc('tmKey',this.value)"></div>
     </div>
   </details>
 
@@ -4653,6 +4660,7 @@ function renderSettings() {
   S.homeLocation = S.homeLocation || { address:'', zip:'' };
   if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
   if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
+  if (eid('tm-key'))    eid('tm-key').value     = S.homeLocation.tmKey || '';
   S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
   if (eid('push-url'))   eid('push-url').value   = S.pushConfig.workerUrl || '';
   if (eid('push-vapid')) eid('push-vapid').value = S.pushConfig.vapidPublic || '';
@@ -5457,20 +5465,77 @@ function renderTicker(hostId) {
   el.innerHTML = `<div class="tk-track">${inner}${inner}</div>`;
 }
 function renderAllTickers() { renderTicker('ticker-vacation'); renderTicker('ticker-things'); }
+// Pull genuine, dated upcoming events from the Ticketmaster Discovery API
+// (free key). Returns [{text, url}] sorted by date, or null if no key / error.
+async function fetchTicketmasterEvents() {
+  const key = (S.homeLocation && S.homeLocation.tmKey || '').trim();
+  if (!key) return null;
+  const zip = (S.homeLocation && S.homeLocation.zip || '').trim();
+  const params = new URLSearchParams({
+    apikey: key,
+    sort: 'date,asc',
+    size: '12',
+    classificationName: 'music,sports,arts,family',
+  });
+  // Prefer a precise radius around the user's ZIP; fall back to the metro name.
+  if (/^\d{5}$/.test(zip)) { params.set('postalCode', zip); params.set('radius', '40'); params.set('unit', 'miles'); }
+  else { params.set('city', 'San Antonio'); params.set('stateCode', 'TX'); }
+  const url = 'https://app.ticketmaster.com/discovery/v2/events.json?' + params.toString();
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 15000);
+  let res;
+  try { res = await fetch(url, { signal: ctrl.signal }); } finally { clearTimeout(to); }
+  if (!res.ok) throw new Error('Ticketmaster HTTP ' + res.status);
+  const data = await res.json();
+  const evs = (data._embedded && data._embedded.events) || [];
+  const out = [];
+  const seen = new Set();
+  for (const ev of evs) {
+    const name = ev.name; if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const d = ev.dates && ev.dates.start && (ev.dates.start.localDate || ev.dates.start.dateTime);
+    let when = '';
+    if (d) {
+      const dt = new Date(d.length === 10 ? d + 'T00:00:00' : d);
+      if (!isNaN(dt)) when = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    const venue = ev._embedded && ev._embedded.venues && ev._embedded.venues[0] && ev._embedded.venues[0].name;
+    const text = name + (venue ? ' @ ' + venue : '') + (when ? ' — ' + when : '');
+    out.push({ text: text.slice(0, 110), url: ev.url || '' });
+    if (out.length >= 7) break;
+  }
+  return out.length ? out : null;
+}
 async function aiRefreshTicker(manual) {
   if (__tickerFetching) return;
   __tickerFetching = true;
-  if (manual) toast('Fetching trending ideas…');
+  if (manual) toast('Fetching local events…');
   try {
+    // 1) Real, dated events via Ticketmaster when a key is configured.
+    try {
+      const tm = await fetchTicketmasterEvents();
+      if (tm && tm.length) {
+        S.tickerCache = { items: tm.slice(0, 8), ts: Date.now(), src: 'ticketmaster' };
+        saveLocal(); renderAllTickers();
+        if (manual) toast('Live events updated');
+        return;
+      }
+    } catch (e) {
+      if (manual) toast('Ticketmaster error — trying AI ideas');
+    }
+    // 2) Fall back to a date-anchored, evergreen AI prompt (no stale one-off dates).
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    const season = today.toLocaleDateString('en-US', { month:'long', year:'numeric' });
     const txt = await aiAsk(
-      'List the 5 most talked-about or highly-rated upcoming events or things to do in and around San Antonio, Texas in the next few weeks, PLUS 2 currently-trending vacation destinations. Respond ONLY as a JSON array of objects {"text":"short headline (<90 chars)","url":"a relevant link or empty string"}.',
-      'You are a concise local-events and travel trends assistant. Output strictly JSON, no prose.',
+      `Today is ${dateStr}. For a family in San Antonio, Texas, suggest 5 evergreen things to do that are reliably good around ${season} — focus on well-known attractions, parks, museums, and ANNUAL recurring events that happen this time of year (name the event and its usual month, e.g. "Fiesta San Antonio (usually April)"). Do NOT invent specific one-off dates. Then add 2 timeless trending vacation destinations. Respond ONLY as a JSON array of objects {"text":"short headline (<90 chars)","url":"a relevant link or empty string"}.`,
+      'You are a concise local-attractions and travel assistant. You have no live data, so suggest only timeless attractions and well-established annual events — never specific dated listings. Output strictly JSON, no prose.',
       { json: true, timeoutMs: 40000 });
     const arr = parseAIJSON(txt);
     if (Array.isArray(arr) && arr.length) {
-      S.tickerCache = { items: arr.filter(x => x && x.text).slice(0, 8), ts: Date.now() };
+      S.tickerCache = { items: arr.filter(x => x && x.text).slice(0, 8), ts: Date.now(), src: 'ai' };
       saveLocal(); renderAllTickers();
-      if (manual) toast('Ticker updated');
+      if (manual) toast('Ideas updated');
     } else if (manual) toast('Could not parse AI ideas');
   } catch (e) {
     if (manual) toast('AI busy — showing saved items');
@@ -5666,20 +5731,29 @@ function addThing() { snapshot(); S.thingsToDo = S.thingsToDo || []; S.thingsToD
 function updateThing(id, f, v) { const t = (S.thingsToDo||[]).find(x=>x.id===id); if(!t)return; maybeSnapshot(); t[f]=v; scheduleSave(); }
 function toggleThing(id, on) { const t = (S.thingsToDo||[]).find(x=>x.id===id); if(!t)return; snapshot(); t.done=on; saveAndRender(); }
 function deleteThing(id) { snapshot(); S.thingsToDo=(S.thingsToDo||[]).filter(x=>x.id!==id); saveAndRender(); }
+// Render a {title, when, url} list into the Things-to-do AI box.
+function renderThingsList(label, arr, note) {
+  const box = aiBox('things-ai');
+  box.html('<div style="font-weight:600;margin-bottom:8px;">' + escHTML(label) +
+    (note ? ` <span style="font-weight:400;color:var(--text-muted);font-size:11px;">${escHTML(note)}</span>` : '') + '</div>' +
+    arr.map((x) => `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;"><b>${escHTML(x.title||'')}</b>${x.when?` <span style="color:var(--text-muted);font-size:12px;">— ${escHTML(x.when)}</span>`:''}${x.url?` <a href="${escHTML(normUrl(x.url))}" target="_blank" rel="noopener" style="font-size:12px;">↗</a>`:''}</div>
+      <button class="btn" style="padding:3px 8px;font-size:11px;" onclick='saveThingFromAI(${JSON.stringify(JSON.stringify(x))})'>+ Save</button>
+    </div>`).join(''));
+}
 async function aiThings(prompt, label) {
   const host = eid('things-ai'); if (!host) return;
   host.style.display = 'block';
   const box = aiBox('things-ai'); box.loading(label);
   try {
-    const txt = await aiAsk(prompt + ' Respond ONLY as a JSON array of {"title":"...","when":"...","url":"link or empty"}. Max 8 items.',
-      'You are a San Antonio, TX local events concierge. Output strictly JSON.', { json: true });
+    const today = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    const txt = await aiAsk(
+      `Today is ${today}. ${prompt} Respond ONLY as a JSON array of {"title":"...","when":"...","url":"link or empty"}. Max 8 items.`,
+      'You are a San Antonio, TX local-attractions assistant. You have NO live data, so recommend timeless attractions and well-established ANNUAL events only — name an event with its usual month (e.g. "usually April"), and never invent specific one-off calendar dates. Output strictly JSON.',
+      { json: true });
     const arr = parseAIJSON(txt);
     if (!Array.isArray(arr) || !arr.length) { box.text(txt); return; }
-    box.html('<div style="font-weight:600;margin-bottom:8px;">' + escHTML(label) + '</div>' +
-      arr.map((x,i) => `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);">
-        <div style="flex:1;"><b>${escHTML(x.title||'')}</b>${x.when?` <span style="color:var(--text-muted);font-size:12px;">— ${escHTML(x.when)}</span>`:''}${x.url?` <a href="${escHTML(normUrl(x.url))}" target="_blank" rel="noopener" style="font-size:12px;">↗</a>`:''}</div>
-        <button class="btn" style="padding:3px 8px;font-size:11px;" onclick='saveThingFromAI(${JSON.stringify(JSON.stringify(x))})'>+ Save</button>
-      </div>`).join(''));
+    renderThingsList(label, arr, 'AI suggestions — verify dates before planning');
   } catch (e) { box.error(); }
 }
 function saveThingFromAI(json) {
@@ -5688,8 +5762,30 @@ function saveThingFromAI(json) {
   S.thingsToDo.unshift({ id: uid(), title: x.title||'', when: x.when||'', url: x.url||'', notes: '', done: false });
   saveAndRender(); toast('Saved to Things to do');
 }
-function aiThingsWeekend() { aiThings('What are the best things to do in and around San Antonio, Texas THIS coming weekend (events, festivals, family-friendly, outdoors, food)?', 'This weekend in San Antonio'); }
-function aiThingsUpcoming() { aiThings('What notable upcoming events, concerts, festivals, and seasonal activities are happening in San Antonio, Texas over the next 1-2 months?', 'Upcoming around San Antonio'); }
+function aiThingsWeekend() {
+  aiThings('Suggest the best evergreen things to do in and around San Antonio, Texas on a typical weekend at this time of year (parks, outdoors, museums, family-friendly spots, food) plus any well-known annual event that usually runs around now.', 'This weekend in San Antonio');
+}
+async function aiThingsUpcoming() {
+  const host = eid('things-ai'); if (!host) return;
+  host.style.display = 'block';
+  const box = aiBox('things-ai'); box.loading('Upcoming around San Antonio');
+  // Prefer real, dated events from Ticketmaster when a key is set.
+  try {
+    const tm = await fetchTicketmasterEvents();
+    if (tm && tm.length) {
+      const arr = tm.map(e => {
+        const dash = e.text.lastIndexOf(' — ');
+        return dash > 0
+          ? { title: e.text.slice(0, dash), when: e.text.slice(dash + 3), url: e.url || '' }
+          : { title: e.text, when: '', url: e.url || '' };
+      });
+      renderThingsList('Upcoming around San Antonio', arr, 'Live from Ticketmaster');
+      return;
+    }
+  } catch (e) { /* fall through to AI */ }
+  // No key or API down → date-anchored evergreen AI suggestions.
+  aiThings('What well-known seasonal activities and established annual events (festivals, concerts series, sports seasons) typically happen in San Antonio, Texas around this time of year? Name each event with its usual month.', 'Upcoming around San Antonio');
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  GOALS  (financial / motivational / aspirational)
