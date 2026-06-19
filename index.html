@@ -2868,7 +2868,10 @@ function wireBudgetInteractions() {
   wrap.addEventListener('mouseleave',  onSelMouseUp);
   wrap.addEventListener('contextmenu', onSelContextMenu);
   // Row drag (reorder)
-  wrap.querySelectorAll('tr.bill').forEach(tr => {
+  const billRows = wrap.querySelectorAll('tr.bill');
+  console.log('Found bill rows:', billRows.length, billRows);
+  billRows.forEach((tr, i) => {
+    console.log(`Attaching drag listeners to bill row ${i}:`, tr.dataset.billId, tr.draggable);
     tr.addEventListener('dragstart', onBillRowDragStart);
     tr.addEventListener('dragover', onBillRowDragOver);
     tr.addEventListener('dragleave', onBillRowDragLeave);
@@ -3485,8 +3488,10 @@ let dragMode = null;
 function onBillRowDragStart(ev) {
   // Only initiate row drag when the drag began on the cat cell (drag handle)
   const startTd = ev.target.closest('td');
+  console.log('Bill dragstart:', {target: ev.target.tagName, isCat: startTd?.classList.contains('cat')});
   if (!startTd || !startTd.classList.contains('cat')) return;
   dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
+  console.log('Bill drag initiated:', dragSrcId);
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
   ev.currentTarget.classList.add('dragging');
