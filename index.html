@@ -3488,8 +3488,18 @@ let dragMode = null;
 function onBillRowDragStart(ev) {
   // Only initiate row drag when the drag began on the cat cell (drag handle)
   const startTd = ev.target.closest('td');
-  console.log('Bill dragstart:', {target: ev.target.tagName, isCat: startTd?.classList.contains('cat')});
-  if (!startTd || !startTd.classList.contains('cat')) return;
+  console.log('Bill dragstart:', {
+    targetTag: ev.target.tagName,
+    targetClass: ev.target.className,
+    startTd: startTd?.tagName,
+    startTdClass: startTd?.className,
+    isCat: startTd?.classList.contains('cat'),
+    hasCatClass: startTd?.classList.contains('cat') ? 'YES' : 'NO'
+  });
+  if (!startTd || !startTd.classList.contains('cat')) {
+    console.log('REJECTED: not a cat cell');
+    return;
+  }
   dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
   console.log('Bill drag initiated:', dragSrcId);
   ev.dataTransfer.effectAllowed = 'move';
