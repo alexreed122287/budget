@@ -3497,12 +3497,14 @@ function onBillRowDragStart(ev) {
   ev.currentTarget.classList.add('dragging');
 }
 function onBillRowDragOver(ev) {
-  if (dragMode !== 'budget-bill') return;
+  if (dragMode !== 'budget-bill') { console.log('dragover: mode mismatch', dragMode); return; }
+  console.log('Bill dragover: dropping on', ev.currentTarget.dataset.billId);
   ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
   ev.currentTarget.classList.add('drag-over');
 }
 function onBillRowDragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
 function onBillRowDrop(ev) {
+  console.log('Bill drop event fired:', {dragMode, dragSrcId, tgtId: ev.currentTarget.dataset.billId});
   if (dragMode !== 'budget-bill') return;
   ev.preventDefault();
   ev.currentTarget.classList.remove('drag-over');
