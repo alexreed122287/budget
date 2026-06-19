@@ -3486,20 +3486,15 @@ let dragSrcId = null;
 let dragMode = null;
 
 function onBillRowDragStart(ev) {
-  // Only initiate row drag when the drag began on the cat cell (drag handle)
-  const startTd = ev.target.closest('td');
+  // dragstart's ev.target is the draggable element (TR), not what was clicked.
+  // Use elementFromPoint to find what's actually under the cursor.
+  const clickedEl = document.elementFromPoint(ev.clientX, ev.clientY);
+  const startTd = clickedEl?.closest('td.cat');
   console.log('Bill dragstart:', {
-    targetTag: ev.target.tagName,
-    targetClass: ev.target.className,
-    startTd: startTd?.tagName,
-    startTdClass: startTd?.className,
-    isCat: startTd?.classList.contains('cat'),
-    hasCatClass: startTd?.classList.contains('cat') ? 'YES' : 'NO'
+    clickedEl: clickedEl?.tagName,
+    isCatCell: !!startTd
   });
-  if (!startTd || !startTd.classList.contains('cat')) {
-    console.log('REJECTED: not a cat cell');
-    return;
-  }
+  if (!startTd) return;
   dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
   console.log('Bill drag initiated:', dragSrcId);
   ev.dataTransfer.effectAllowed = 'move';
@@ -3534,8 +3529,9 @@ function onBillRowDragEnd(ev) {
 
 // ── Deposit row reorder (desktop HTML5 drag) ──
 function onDepRowDragStart(ev) {
-  const startTd = ev.target.closest('td');
-  if (!startTd || !startTd.classList.contains('cat')) return;
+  const clickedEl = document.elementFromPoint(ev.clientX, ev.clientY);
+  const startTd = clickedEl?.closest('td.cat');
+  if (!startTd) return;
   dragSrcId = ev.currentTarget.dataset.depId; dragMode = 'budget-dep';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
