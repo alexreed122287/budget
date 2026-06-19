@@ -2868,10 +2868,7 @@ function wireBudgetInteractions() {
   wrap.addEventListener('mouseleave',  onSelMouseUp);
   wrap.addEventListener('contextmenu', onSelContextMenu);
   // Row drag (reorder)
-  const billRows = wrap.querySelectorAll('tr.bill');
-  console.log('Found bill rows:', billRows.length, billRows);
-  billRows.forEach((tr, i) => {
-    console.log(`Attaching drag listeners to bill row ${i}:`, tr.dataset.billId, tr.draggable);
+  wrap.querySelectorAll('tr.bill').forEach(tr => {
     tr.addEventListener('dragstart', onBillRowDragStart);
     tr.addEventListener('dragover', onBillRowDragOver);
     tr.addEventListener('dragleave', onBillRowDragLeave);
@@ -3486,30 +3483,19 @@ let dragSrcId = null;
 let dragMode = null;
 
 function onBillRowDragStart(ev) {
-  // dragstart's ev.target is the draggable element (TR), not what was clicked.
-  // Use elementFromPoint to find what's actually under the cursor.
-  const clickedEl = document.elementFromPoint(ev.clientX, ev.clientY);
-  const startTd = clickedEl?.closest('td.cat');
-  console.log('Bill dragstart:', {
-    clickedEl: clickedEl?.tagName,
-    isCatCell: !!startTd
-  });
-  if (!startTd) return;
-  dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
-  console.log('Bill drag initiated:', dragSrcId);
+  dragSrcId = ev.currentTarget.dataset.billId;
+  dragMode = 'budget-bill';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
   ev.currentTarget.classList.add('dragging');
 }
 function onBillRowDragOver(ev) {
-  if (dragMode !== 'budget-bill') { console.log('dragover: mode mismatch', dragMode); return; }
-  console.log('Bill dragover: dropping on', ev.currentTarget.dataset.billId);
+  if (dragMode !== 'budget-bill') return;
   ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
   ev.currentTarget.classList.add('drag-over');
 }
 function onBillRowDragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
 function onBillRowDrop(ev) {
-  console.log('Bill drop event fired:', {dragMode, dragSrcId, tgtId: ev.currentTarget.dataset.billId});
   if (dragMode !== 'budget-bill') return;
   ev.preventDefault();
   ev.currentTarget.classList.remove('drag-over');
@@ -3529,10 +3515,8 @@ function onBillRowDragEnd(ev) {
 
 // ── Deposit row reorder (desktop HTML5 drag) ──
 function onDepRowDragStart(ev) {
-  const clickedEl = document.elementFromPoint(ev.clientX, ev.clientY);
-  const startTd = clickedEl?.closest('td.cat');
-  if (!startTd) return;
-  dragSrcId = ev.currentTarget.dataset.depId; dragMode = 'budget-dep';
+  dragSrcId = ev.currentTarget.dataset.depId;
+  dragMode = 'budget-dep';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
   ev.currentTarget.classList.add('dragging');
