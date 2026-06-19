@@ -3485,7 +3485,7 @@ let dragMode = null;
 function onBillRowDragStart(ev) {
   // Only initiate row drag when the drag began on the cat cell (drag handle)
   const startTd = ev.target.closest('td');
-  if (!startTd || !startTd.classList.contains('cat')) { ev.preventDefault(); return; }
+  if (!startTd || !startTd.classList.contains('cat')) return;
   dragSrcId = ev.currentTarget.dataset.billId; dragMode = 'budget-bill';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
@@ -3518,7 +3518,7 @@ function onBillRowDragEnd(ev) {
 // ── Deposit row reorder (desktop HTML5 drag) ──
 function onDepRowDragStart(ev) {
   const startTd = ev.target.closest('td');
-  if (!startTd || !startTd.classList.contains('cat')) { ev.preventDefault(); return; }
+  if (!startTd || !startTd.classList.contains('cat')) return;
   dragSrcId = ev.currentTarget.dataset.depId; dragMode = 'budget-dep';
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', dragSrcId);
