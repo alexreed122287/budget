@@ -3333,6 +3333,7 @@ function startFitObserver() {
 document.addEventListener('focusin', (ev) => {
   const t = ev.target;
   if (!t || !t.classList || !t.classList.contains('money') || t.readOnly) return;
+  if (t.classList.contains('cell-edit')) return;
   const n = parseMoney(t.value);
   t.value = n ? String(n) : '';                 // raw digits for editing
   fitInputText(t);                              // back to full size for editing
@@ -3468,6 +3469,12 @@ function onCellKey(e) {
   else if (e.key === 'ArrowUp') { e.preventDefault(); navigateCell('up'); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); navigateCell('down'); }
 }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && activeCell && activeCell.inp === document.activeElement) {
+    e.preventDefault();
+    navigateCell(e.shiftKey ? 'left' : 'right');
+  }
+}, true);
 
 // ═══════════════════════════════════════════════════════════════════
 //  ROW REORDER (BUDGET BILLS)
