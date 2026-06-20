@@ -1624,6 +1624,22 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
   </details>
 
   <details class="set-card">
+    <summary>Travel pricing (live flights &amp; hotels)</summary>
+    <div class="set-body">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        Real flight &amp; hotel prices on the <b>Vacation</b> tab, from the free
+        <b>Amadeus</b> Self-Service API. Amadeus needs a secret key that can't be exposed on
+        a public page, so prices route through a tiny Cloudflare Worker you deploy once
+        (see <code>AMADEUS.md</code> — paste <code>amadeus-worker.js</code>, add your
+        Amadeus key/secret as Worker variables). Then paste the Worker URL below. Leave
+        blank to keep using AI ballpark estimates.
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Amadeus proxy Worker URL</label>
+        <input id="amadeus-url" type="url" placeholder="https://your-amadeus-worker.workers.dev" style="width:100%;" oninput="updateAmadeusSetting('proxyUrl',this.value)"></div>
+    </div>
+  </details>
+
+  <details class="set-card">
     <summary>Push notifications</summary>
     <div class="set-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
@@ -4661,6 +4677,8 @@ function renderSettings() {
   if (eid('home-addr')) eid('home-addr').value = S.homeLocation.address || '';
   if (eid('home-zip'))  eid('home-zip').value  = S.homeLocation.zip || '';
   if (eid('tm-key'))    eid('tm-key').value     = S.homeLocation.tmKey || '';
+  S.amadeus = S.amadeus || { proxyUrl:'' };
+  if (eid('amadeus-url')) eid('amadeus-url').value = S.amadeus.proxyUrl || '';
   S.pushConfig = S.pushConfig || { workerUrl:'', vapidPublic:'' };
   if (eid('push-url'))   eid('push-url').value   = S.pushConfig.workerUrl || '';
   if (eid('push-vapid')) eid('push-vapid').value = S.pushConfig.vapidPublic || '';
@@ -4690,6 +4708,11 @@ function updateAISetting(field, value) {
 function updateHomeLoc(field, value) {
   S.homeLocation = S.homeLocation || { address:'', zip:'' };
   S.homeLocation[field] = value;
+  scheduleSave();
+}
+function updateAmadeusSetting(field, value) {
+  S.amadeus = S.amadeus || { proxyUrl:'' };
+  S.amadeus[field] = (value || '').trim();
   scheduleSave();
 }
 async function testAI() {
@@ -5615,6 +5638,14 @@ function renderVacationIdeas() {
         <button class="btn danger" onclick="deleteVacationIdea('${it.id}')">Delete</button>
       </div>
       <input type="text" value="${escHTML(it.notes||'')}" placeholder="Notes" style="width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:13px;" oninput="updateVacationIdea('${it.id}','notes',this.value)">
+      <div class="idea-price-ctl" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;">
+        <span style="font-size:12px;color:var(--text-muted);">Live prices:</span>
+        <input type="date" value="${escHTML(it.travelDate||'')}" title="Departure date" onchange="updateVacationIdea('${it.id}','travelDate',this.value)" style="padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:12px;">
+        <input type="number" min="1" max="30" value="${escHTML(String(it.nights||4))}" title="Nights" onchange="updateVacationIdea('${it.id}','nights',this.value)" style="width:54px;padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:12px;">
+        <input type="number" min="1" max="9" value="${escHTML(String(it.adults||2))}" title="Travelers" onchange="updateVacationIdea('${it.id}','adults',this.value)" style="width:54px;padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:12px;">
+        <button class="btn" onclick="amadeusIdeaPrice('${it.id}')">✦ Flights &amp; hotels</button>
+      </div>
+      <div id="idea-price-${it.id}" class="ai-region" style="margin-top:8px;display:none;"></div>
       <div style="margin-top:10px;">${linkChipsHTML(it.links, 'idea:'+it.id)}</div>
       <div class="link-add-row">
         <input type="text" id="ilk-l-${it.id}" placeholder="Label" style="flex:1;min-width:120px;">
@@ -5646,6 +5677,85 @@ function updateVacationIdea(id, field, value) {
 function deleteVacationIdea(id) {
   if (!confirm('Delete this idea?')) return;
   snapshot(); S.vacationIdeas = (S.vacationIdeas || []).filter(x => x.id !== id); saveAndRender();
+}
+// ── Live travel pricing via the Amadeus proxy Worker ──────────────────
+function amadeusProxy() { return ((S.amadeus && S.amadeus.proxyUrl) || '').replace(/\/+$/, ''); }
+function amadeusReady() { return !!amadeusProxy(); }
+async function amadeusGet(path) {
+  const base = amadeusProxy();
+  if (!base) throw new Error('Add the Amadeus proxy URL in Settings → Travel pricing.');
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 30000);
+  let r;
+  try { r = await fetch(base + path, { signal: ctrl.signal }); }
+  catch (e) { throw new Error('Could not reach the pricing worker.'); }
+  finally { clearTimeout(to); }
+  const txt = await r.text();
+  let j; try { j = JSON.parse(txt); } catch { throw new Error('Bad response from pricing worker.'); }
+  if (!r.ok || j.error) throw new Error(j.error || ('Worker HTTP ' + r.status));
+  return j;
+}
+function addDaysISO(baseISO, days) {
+  const d = baseISO ? new Date(baseISO + 'T00:00:00') : new Date();
+  d.setDate(d.getDate() + days);
+  return isoDate(d);
+}
+function prettyDate(iso) {
+  try { return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+  catch { return iso; }
+}
+async function amadeusResolveCity(name) {
+  const j = await amadeusGet('/iata?q=' + encodeURIComponent(name));
+  const data = j.data || [];
+  const city = data.find(x => x.subType === 'CITY') || data[0];
+  if (!city) throw new Error('No airport/city found for "' + name + '".');
+  return { iata: city.iataCode, cityCode: (city.address && city.address.cityCode) || city.iataCode, name: city.name || name };
+}
+// Price flights + hotels for a vacation idea and show it in the card.
+async function amadeusIdeaPrice(id) {
+  const it = (S.vacationIdeas || []).find(x => x.id === id); if (!it) return;
+  const place = (it.place || '').trim();
+  if (!place) { toast('Enter a place first'); return; }
+  if (!amadeusReady()) { toast('Add the Amadeus proxy URL in Settings → Travel pricing'); goTab('settings'); return; }
+  const host = eid('idea-price-' + id); if (host) host.style.display = 'block';
+  const box = aiBox('idea-price-' + id); box.loading('Pricing flights & hotels for ' + place);
+  try {
+    const dep = it.travelDate || addDaysISO(null, 45);
+    const nights = Math.max(1, parseInt(it.nights, 10) || 4);
+    const adults = Math.max(1, parseInt(it.adults, 10) || 2);
+    const ret = addDaysISO(dep, nights);
+    const dest = await amadeusResolveCity(place);
+
+    let flightLine = '• Flights: no offers found for those dates';
+    try {
+      const f = await amadeusGet(`/flights?from=SAT&to=${dest.iata}&date=${dep}&return=${ret}&adults=${adults}`);
+      const offers = f.data || [];
+      if (offers.length) {
+        const cheapest = offers.reduce((m, o) => (+o.price.grandTotal < +m.price.grandTotal ? o : m));
+        flightLine = `• Flights (SAT → ${dest.iata}, round trip, ${adults} ${adults > 1 ? 'travelers' : 'traveler'}): `
+          + `${fmt$(+cheapest.price.grandTotal)} total — cheapest of ${offers.length}`;
+      }
+    } catch (e) { flightLine = '• Flights: ' + (e.message || 'unavailable'); }
+
+    let hotelLine = '• Hotels: no priced offers found for those dates';
+    try {
+      const h = await amadeusGet(`/hotels?city=${dest.cityCode}&checkin=${dep}&checkout=${ret}&adults=${adults}`);
+      const priced = (h.data || [])
+        .map(x => (x.offers && x.offers[0] && x.offers[0].price && +x.offers[0].price.total) || null)
+        .filter(v => v != null).sort((a, b) => a - b);
+      if (priced.length) {
+        const lo = priced[0], mid = priced[Math.floor(priced.length / 2)];
+        hotelLine = `• Hotels (${nights} night${nights > 1 ? 's' : ''}): from ${fmt$(lo)} total `
+          + `(median ${fmt$(mid)}) across ${priced.length} option${priced.length > 1 ? 's' : ''}`;
+      }
+    } catch (e) { hotelLine = '• Hotels: ' + (e.message || 'unavailable'); }
+
+    const prod = (S.amadeus && S.amadeus.env === 'production');
+    const out = `Live prices — ${dest.name}\nDepart ${prettyDate(dep)} · Return ${prettyDate(ret)} · ${adults} traveler${adults > 1 ? 's' : ''}\n\n`
+      + `${flightLine}\n${hotelLine}\n\n`
+      + `Source: Amadeus${prod ? '' : ' test data (samples — limited routes/hotels; deploy production for full coverage)'}.`;
+    box.text(out);
+  } catch (e) { box.error(e.message || 'Pricing failed'); }
 }
 async function aiIdeaSuggest(id) {
   const it = (S.vacationIdeas || []).find(x => x.id === id); if (!it) return;
@@ -6630,6 +6740,7 @@ function renderHouse() {
         <button class="btn" onclick="aiHouseEstimate('${p.id}')">✦ Ballpark cost in my area</button>
         <button class="btn" onclick="aiHouseTips('${p.id}')">✦ How-to &amp; what to watch for</button>
       </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;">AI ballpark from past market data — no live retail-price feed exists for materials, so confirm with local quotes.</div>
       <div id="house-ai-${p.id}" class="cost-callout" style="margin-top:12px;${p.ai?'':'display:none;'}">${p.ai ? linkify(p.ai).replace(/\n/g,'<br>') : ''}</div>
       </div>
     </div>`;
