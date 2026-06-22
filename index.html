@@ -578,6 +578,8 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
   min-height:calc(34px + var(--rib-rows,0) * 22px + 8px);}
 .cal-cell.out{opacity:.35;}
 .cal-cell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-cell.selecting{background:var(--accent-soft,rgba(80,120,255,.16));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-cell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .cal-cell .cd{font-size:12px;font-weight:700;color:var(--text);}
 .cal-ribbons{position:absolute;left:0;right:0;top:26px;pointer-events:none;}
 .cal-ribbon{position:absolute;height:20px;line-height:20px;
@@ -6525,7 +6527,7 @@ function renderCalendar() {
         const cell = addDays(weekStart, i);
         const inMonth = cell.getMonth() === m;
         const iso = localISO(cell);
-        h += `<div class="cal-cell ${inMonth?'':'out'} ${iso===todayISO?'today':''}" onclick="addCalEvent('${iso}')"><div class="cd">${cell.getDate()}</div></div>`;
+        h += `<div class="cal-cell ${inMonth?'':'out'} ${iso===todayISO?'today':''}" data-iso="${iso}"><div class="cd">${cell.getDate()}</div></div>`;
       }
       h += '</div>';
       if (rows > 0) {
@@ -6563,6 +6565,81 @@ function renderCalendar() {
     const evs = eventsOn(calCursor);
     body.innerHTML = '<div class="cal-list">' + (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div class="cal-empty">No events. Tap <b>+ Event</b> to add one.</div>') + '</div>';
   }
+  wireCalMonth();
+}
+
+// ── Month-grid drag-select: click-drag (mouse) or finger-drag (touch) across
+//    days to set an event's From/To range. A plain click/tap = single day. ──
+let calSel = null;
+function calCellISOFrom(el) { const c = el && el.closest && el.closest('.cal-cell'); return c ? c.dataset.iso : null; }
+function calSelPaint(aISO, bISO) {
+  document.querySelectorAll('.cal-cell.selecting').forEach(c => c.classList.remove('selecting'));
+  if (!aISO || !bISO) return;
+  const lo = aISO < bISO ? aISO : bISO, hi = aISO < bISO ? bISO : aISO;
+  document.querySelectorAll('.cal-cell').forEach(c => {
+    const iso = c.dataset.iso;
+    if (iso && iso >= lo && iso <= hi) c.classList.add('selecting');
+  });
+}
+function calSelFinish() {
+  if (!calSel) return;
+  const sel = calSel; calSel = null;
+  document.querySelectorAll('.cal-cell.selecting').forEach(c => c.classList.remove('selecting'));
+  const a = sel.anchorISO < sel.lastISO ? sel.anchorISO : sel.lastISO;
+  const b = sel.anchorISO < sel.lastISO ? sel.lastISO : sel.anchorISO;
+  openCalForm({ id:'', title:'', date:a, endDate:b, time:'', notes:'', recur:'none', remindMins:'' });
+}
+function onCalMouseDown(ev) {
+  if (ev.button !== 0) return;
+  if (ev.target.closest('.cal-ribbon')) return;       // clicking a ribbon edits its event
+  const iso = calCellISOFrom(ev.target);
+  if (!iso) return;
+  ev.preventDefault();
+  calSel = { anchorISO: iso, lastISO: iso };
+  calSelPaint(iso, iso);
+}
+function onCalMouseOver(ev) {
+  if (!calSel) return;
+  const iso = calCellISOFrom(ev.target);
+  if (!iso || iso === calSel.lastISO) return;
+  calSel.lastISO = iso;
+  calSelPaint(calSel.anchorISO, iso);
+}
+function onCalMouseUp() { if (calSel) calSelFinish(); }
+function onCalTouchStart(ev) {
+  if (!ev.touches || ev.touches.length !== 1) return;
+  const t = ev.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.closest('.cal-ribbon')) return;
+  const iso = calCellISOFrom(el);
+  if (!iso) return;
+  calSel = { anchorISO: iso, lastISO: iso, touch: true };
+  calSelPaint(iso, iso);
+}
+function onCalTouchMove(ev) {
+  if (!calSel || !calSel.touch || !ev.touches || !ev.touches.length) return;
+  const t = ev.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const iso = calCellISOFrom(el);
+  if (!iso) return;
+  if (iso !== calSel.lastISO) {
+    calSel.lastISO = iso;
+    calSelPaint(calSel.anchorISO, iso);
+    ev.preventDefault();                              // stop page scroll once dragging across days
+  }
+}
+function onCalTouchEnd() { if (calSel && calSel.touch) calSelFinish(); }
+function wireCalMonth() {
+  const body = eid('cal-body');
+  if (!body || body.__calWired) return;
+  body.__calWired = true;
+  body.addEventListener('mousedown', onCalMouseDown);
+  body.addEventListener('mouseover', onCalMouseOver);
+  document.addEventListener('mouseup', onCalMouseUp);
+  body.addEventListener('touchstart', onCalTouchStart, { passive: true });
+  body.addEventListener('touchmove',  onCalTouchMove,  { passive: false });
+  body.addEventListener('touchend',   onCalTouchEnd);
+  body.addEventListener('touchcancel', onCalTouchEnd);
 }
 function recurLabel(e) {
   if (!e.recur || e.recur === 'none') return '';
