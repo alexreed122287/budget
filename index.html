@@ -590,6 +590,12 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .cal-ribbon.cont-l{border-top-left-radius:0;border-bottom-left-radius:0;margin-left:-2px;padding-left:6px;}
 .cal-ribbon.cont-r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:-2px;padding-right:6px;}
 .cal-list{display:flex;flex-direction:column;gap:8px;}
+.cal-wkday{border:1px solid var(--border);border-radius:12px;padding:8px 12px 10px;background:var(--bg-soft);
+  cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.cal-wkday.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-wkday.selecting{background:var(--accent-soft,rgba(80,120,255,.16));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-wkday-hd{font-weight:700;font-size:13px;margin:2px 0 6px;color:var(--text);}
+.cal-wkday-empty{font-size:12px;color:var(--text-light);padding:2px 0;}
 .cal-ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;
   padding:12px 14px;background:var(--bg-soft);}
 .cal-ev .ceicon{font-size:18px;line-height:1.2;flex:0 0 auto;}
@@ -6527,7 +6533,7 @@ function renderCalendar() {
         const cell = addDays(weekStart, i);
         const inMonth = cell.getMonth() === m;
         const iso = localISO(cell);
-        h += `<div class="cal-cell ${inMonth?'':'out'} ${iso===todayISO?'today':''}" data-iso="${iso}"><div class="cd">${cell.getDate()}</div></div>`;
+        h += `<div class="cal-cell caldsel ${inMonth?'':'out'} ${iso===todayISO?'today':''}" data-iso="${iso}"><div class="cd">${cell.getDate()}</div></div>`;
       }
       h += '</div>';
       if (rows > 0) {
@@ -6553,11 +6559,14 @@ function renderCalendar() {
   } else if (calView === 'week') {
     const start = addDays(calCursor, -calCursor.getDay());
     titleEl.textContent = 'Week of ' + start.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const todayISO = localISO(new Date());
     let h = '<div class="cal-list">';
     for (let i=0;i<7;i++){
-      const d = addDays(start,i); const evs = eventsOn(d);
-      h += `<div><div style="font-weight:700;font-size:13px;margin:6px 0;">${fmtDate(d)}</div>` +
-        (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div style="font-size:12px;color:var(--text-light);padding:2px 0 8px;">—</div>') + '</div>';
+      const d = addDays(start,i); const iso = localISO(d); const evs = eventsOn(d);
+      h += `<div class="cal-wkday caldsel${iso===todayISO?' today':''}" data-iso="${iso}">` +
+        `<div class="cal-wkday-hd">${fmtDate(d)}</div>` +
+        (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div class="cal-wkday-empty">—</div>') +
+        '</div>';
     }
     body.innerHTML = h + '</div>';
   } else {
@@ -6571,12 +6580,12 @@ function renderCalendar() {
 // ── Month-grid drag-select: click-drag (mouse) or finger-drag (touch) across
 //    days to set an event's From/To range. A plain click/tap = single day. ──
 let calSel = null;
-function calCellISOFrom(el) { const c = el && el.closest && el.closest('.cal-cell'); return c ? c.dataset.iso : null; }
+function calCellISOFrom(el) { const c = el && el.closest && el.closest('.caldsel'); return c ? c.dataset.iso : null; }
 function calSelPaint(aISO, bISO) {
-  document.querySelectorAll('.cal-cell.selecting').forEach(c => c.classList.remove('selecting'));
+  document.querySelectorAll('.caldsel.selecting').forEach(c => c.classList.remove('selecting'));
   if (!aISO || !bISO) return;
   const lo = aISO < bISO ? aISO : bISO, hi = aISO < bISO ? bISO : aISO;
-  document.querySelectorAll('.cal-cell').forEach(c => {
+  document.querySelectorAll('.caldsel').forEach(c => {
     const iso = c.dataset.iso;
     if (iso && iso >= lo && iso <= hi) c.classList.add('selecting');
   });
@@ -6591,7 +6600,7 @@ function calSelFinish() {
 }
 function onCalMouseDown(ev) {
   if (ev.button !== 0) return;
-  if (ev.target.closest('.cal-ribbon')) return;       // clicking a ribbon edits its event
+  if (ev.target.closest('.cal-ribbon, .cal-ev, button, a')) return;   // event/edit interactions
   const iso = calCellISOFrom(ev.target);
   if (!iso) return;
   ev.preventDefault();
@@ -6610,7 +6619,7 @@ function onCalTouchStart(ev) {
   if (!ev.touches || ev.touches.length !== 1) return;
   const t = ev.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
-  if (el && el.closest('.cal-ribbon')) return;
+  if (el && el.closest('.cal-ribbon, .cal-ev, button, a')) return;
   const iso = calCellISOFrom(el);
   if (!iso) return;
   calSel = { anchorISO: iso, lastISO: iso, touch: true };
