@@ -3368,7 +3368,13 @@ document.addEventListener('focusin', (ev) => {
   const n = parseMoney(t.value);
   t.value = n ? String(n) : '';                 // raw digits for editing
   fitInputText(t);                              // back to full size for editing
-  requestAnimationFrame(() => { try { t.select(); } catch {} });
+  // Select the whole value so the next keystroke REPLACES it. iOS often
+  // ignores .select() on focus, leaving the caret at the end so typing
+  // appends to the old number (looks like a doubled/garbled value) — so we
+  // use setSelectionRange and retry on the next frame, which iOS honors.
+  const selAll = () => { try { t.setSelectionRange(0, t.value.length); } catch { try { t.select(); } catch {} } };
+  selAll();
+  requestAnimationFrame(selAll);
 }, true);
 document.addEventListener('focusout', (ev) => {
   const t = ev.target;
@@ -5050,7 +5056,10 @@ async function syncPush() {
   __syncBusy = true; SYNC_STATE = 'syncing'; updateSyncPill();
   try {
     const rd = await syncRequest({ action:'read' });
-    if (rd.ok) { applyMerge(rd.data); }
+    // Don't merge the remote into S while the user is mid-edit — it could
+    // overwrite the value under their cursor. Push the local value up as-is;
+    // the next idle pull reconciles any concurrent remote change.
+    if (rd.ok) { if (!isUserEditing()) applyMerge(rd.data); }
     else if (rd.reason !== 'badjson') { SYNC_STATE = 'err'; SYNC_ERR = rd.reason; updateSyncPill(); return rd; }
     S.meta = { version:1, modified: new Date().toISOString() };
     SYNCED_BASE = __clone(S);
