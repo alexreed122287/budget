@@ -2720,7 +2720,7 @@ function renderBudget() {
   cols.forEach((c, ci) => {
     const isOverride = !c.isCurrent && !c.isAdhoc && S.paycheckOverrides[c.date] !== undefined;
     let cellType, amt, cls;
-    if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; console.log('[CURDBG] renderBudget current cell amt=', amt, 'S.currentBalance=', S.currentBalance); }
+    if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; }
     else if (c.isAdhoc) { cellType = 'adhoc'; amt = c.amount * (c.adhocType === 'expense' ? -1 : 1); cls = 'editable adhoc-cell'; }
     else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : '') + (c.isPartnerShare ? ' pshare-cell' : '') + (!c.isPartnerShare && c.isCombined ? ' merge-cell' : ''); }
     const dataAdhoc = c.isAdhoc ? ` data-adhoc-id="${c.adhocId}"` : '';
@@ -3202,7 +3202,6 @@ function enterCellEdit(td) {
     // Ensure currentBalance is always treated as a number, not a formatted string
     const rawBal = parseMoney(S.currentBalance);
     curVal = rawBal ? String(rawBal) : '';
-    console.log('[CURDBG] enterCellEdit prefill curVal=', JSON.stringify(curVal), 'from S.currentBalance=', S.currentBalance);
     placeholder = '0';
   } else if (type === 'adhoc') {
     const a = (S.adhocColumns || []).find(x => x.id === adhocId);
@@ -3435,9 +3434,7 @@ function commitCellEdit(opts = {}) {
     snapshot();
     // Use parseMoney to handle any currency formatting that might exist
     const n = parseMoney(raw);
-    console.log('[CURDBG] commit raw=', JSON.stringify(raw), 'parsed=', n, 'before=', S.currentBalance, 'origVal=', JSON.stringify(originalValue));
     S.currentBalance = isNaN(n) || n === null ? 0 : n;
-    console.log('[CURDBG] commit AFTER set currentBalance=', S.currentBalance);
   } else if (type === 'adhoc') {
     snapshot();
     const n = parseFloat(raw);
@@ -7300,7 +7297,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-25-cur-fix-3';
+const BUILD_ID = '2026-06-25-clean';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
