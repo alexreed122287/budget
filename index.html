@@ -2587,7 +2587,8 @@ function buildBudget(weeks) {
   const lastDate = parseISO(cols[cols.length-1].date);
 
   const matrix = {};
-  cols.forEach(c => matrix[c.date] = {});
+  const naturalBill = {};   // [date][billId] = pre-override recurring total for that column
+  cols.forEach(c => { matrix[c.date] = {}; naturalBill[c.date] = {}; });
 
   S.bills.filter(b => b.active !== false).forEach(bill => {
     const due = billDueDates(bill, lookbackFrom, lastDate);
@@ -2601,6 +2602,7 @@ function buildBudget(weeks) {
       if (!colDate) return;
       natural[colDate] = (natural[colDate] || 0) + recur;
     });
+    Object.keys(natural).forEach(colDate => { if (naturalBill[colDate]) naturalBill[colDate][bill.id] = natural[colDate]; });
     // For columns that have natural occurrences: an override REPLACES the whole
     // column total (applied once), otherwise use the summed recurring amount.
     // (Previously the override was added once PER occurrence, so editing a cell
@@ -2677,7 +2679,7 @@ function buildBudget(weeks) {
     c.savedRunning = savedRun;
   });
 
-  return { cols, matrix, matrixDep };
+  return { cols, matrix, matrixDep, naturalBill };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2690,7 +2692,7 @@ function renderBudget() {
   // become detached DOM nodes. Drop the selection so the sum bar reflects the
   // visible state and we don't hold onto garbage references.
   if (selSet && selSet.size) clearCellSelection();
-  const { cols, matrix, matrixDep } = buildBudget(BUDGET_WEEKS);
+  const { cols, matrix, matrixDep, naturalBill } = buildBudget(BUDGET_WEEKS);
   if (!cols.length) { wrap.innerHTML = '<div style="padding:30px;color:var(--text-muted);text-align:center;">No data</div>'; return; }
 
   const visibleBills = S.bills.filter(b => b.active !== false);
@@ -2756,7 +2758,8 @@ function renderBudget() {
       const cls = 'bill-cell ' + (amt === 0 ? 'zero ' : 'has-value ') + 'editable' + (isOverride ? ' override' : '');
       const display = hasValue ? fmt$2(amt) : '·';
       const dragAttr = hasValue ? ' draggable="true"' : '';
-      h += `<td class="${cls}" data-cell-type="bill" data-bill-id="${bill.id}" data-date="${c.date}" data-r="${bi+1}" data-c="${ci}" tabindex="0"${dragAttr}>${display}</td>`;
+      const nat = (naturalBill[c.date] && naturalBill[c.date][bill.id]) || 0;
+      h += `<td class="${cls}" data-cell-type="bill" data-bill-id="${bill.id}" data-date="${c.date}" data-natural="${nat}" data-r="${bi+1}" data-c="${ci}" tabindex="0"${dragAttr}>${display}</td>`;
     });
     h += '</tr>';
   });
@@ -3416,8 +3419,14 @@ function commitCellEdit(opts = {}) {
         // No prompt to propagate to future weeks.
         snapshot();
         if (!S.billOverrides[billId]) S.billOverrides[billId] = {};
-        if (n === (Number(bill.amount) || 0)) {
-          // Value matches recurring default — clear any override for this date.
+        // Clear the override only when the entry equals THIS column's natural
+        // total (a column can hold several occurrences, e.g. weekly groceries in
+        // a monthly column = N×amount). Comparing against the single recurring
+        // amount cleared the override and the cell fell back to the N× total —
+        // which read as the value doubling.
+        const colNatural = td && td.dataset && td.dataset.natural !== undefined
+          ? Number(td.dataset.natural) : (Number(bill.amount) || 0);
+        if (n === colNatural) {
           delete S.billOverrides[billId][date];
         } else {
           S.billOverrides[billId][date] = n;
@@ -7311,7 +7320,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-25-bill-double-fix';
+const BUILD_ID = '2026-06-25-bill-fix-2';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
