@@ -7300,7 +7300,9 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
+const BUILD_ID = '2026-06-25-cur-fix-3';
 function boot() {
+  console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
   seedIfEmpty();
   S.vacations = S.vacations || [];
