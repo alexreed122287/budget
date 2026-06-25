@@ -4992,12 +4992,13 @@ function applyMerge(remoteData) {
   const localMod  = (S.meta && S.meta.modified) || '';
   const remoteMod = (remoteData.meta && remoteData.meta.modified) || '';
   const localNewer = !remoteMod || (!!localMod && localMod >= remoteMod);
-  const before = __stable(S);
-  console.log('[CURDBG] applyMerge BEFORE local=', S.currentBalance, 'remote=', remoteData && remoteData.currentBalance, 'base=', SYNCED_BASE && SYNCED_BASE.currentBalance, 'localNewer=', localNewer, 'editing=', (typeof isUserEditing==='function'&&isUserEditing()));
+  // Compare DATA only (ignore meta.modified) so a pure-timestamp difference
+  // doesn't look like a change and trigger an endless re-render every pull.
+  const __noMeta = o => { const c = Object.assign({}, o); delete c.meta; return __stable(c); };
+  const before = __noMeta(S);
   const merged = merge3(SYNCED_BASE === null ? undefined : SYNCED_BASE, S, remoteData, localNewer, '');
-  console.log('[CURDBG] applyMerge AFTER merged.currentBalance=', merged.currentBalance);
   merged.meta = { version: 1, modified: (localMod > remoteMod ? localMod : remoteMod) || new Date().toISOString() };
-  const changed = __stable(merged) !== before;
+  const changed = __noMeta(merged) !== before;
   S = merged;
   SYNCED_BASE = __clone(merged);
   try { localStorage.setItem(LS_BASE, JSON.stringify(SYNCED_BASE)); } catch (e) {}
