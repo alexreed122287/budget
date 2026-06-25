@@ -5018,15 +5018,28 @@ function syncReasonMsg(reason) {
   })[reason] || 'Sync error.';
 }
 
+// True whenever the user is actively typing into ANY editable field — the
+// budget-grid cell editor, or any normal input/textarea/select/contenteditable
+// (Net Worth balances, bills, etc.). A background merge must never mutate state
+// or re-render while this is true, or it would wipe the in-progress entry.
+function isUserEditing() {
+  if (typeof activeCell !== 'undefined' && activeCell) return true;
+  const el = document.activeElement;
+  if (!el || el === document.body) return false;
+  const tag = (el.tagName || '').toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
+}
 async function syncPull() {
   const res = await syncRequest({ action:'read' });
   if (!res.ok) { SYNC_STATE = 'err'; SYNC_ERR = res.reason; updateSyncPill(); return res; }
-  const wasEditing = (typeof activeCell !== 'undefined' && activeCell);
+  // Defer the merge if the user is mid-edit — applying it now would overwrite
+  // state under their cursor and the re-render would discard their entry.
+  if (isUserEditing()) { SYNC_STATE = 'ok'; SYNC_ERR = null; updateSyncPill(); return { ok:true, deferred:true }; }
   const { changed } = applyMerge(res.data);
   LAST_PULL = res.updated || new Date().toISOString();
   LAST_PULL_MS = Date.now();
   SYNC_STATE = 'ok'; SYNC_ERR = null;
-  if (changed && !wasEditing) { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} renderAll(); }
+  if (changed) { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} renderAll(); }
   updateSyncPill();
   return { ok:true, changed };
 }
@@ -5190,7 +5203,7 @@ function saveLocal() {
 
 async function backgroundPull() {
   if (!WEBHOOK_URL || __syncBusy || document.hidden) return;
-  if (typeof activeCell !== 'undefined' && activeCell) return;
+  if (isUserEditing()) return;
   if (Date.now() - lastEditMs < 4000) return;
   __syncBusy = true;
   try { await syncPull(); }
