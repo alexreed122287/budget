@@ -2720,7 +2720,7 @@ function renderBudget() {
   cols.forEach((c, ci) => {
     const isOverride = !c.isCurrent && !c.isAdhoc && S.paycheckOverrides[c.date] !== undefined;
     let cellType, amt, cls;
-    if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; }
+    if (c.isCurrent) { cellType = 'current-balance'; amt = Number(S.currentBalance) || 0; cls = 'editable'; console.log('[CD] render amt=', amt, 'cb=', S.currentBalance); }
     else if (c.isAdhoc) { cellType = 'adhoc'; amt = c.amount * (c.adhocType === 'expense' ? -1 : 1); cls = 'editable adhoc-cell'; }
     else { cellType = 'paycheck'; amt = c.amount; cls = 'editable' + (isOverride ? ' override' : '') + (c.isPartnerShare ? ' pshare-cell' : '') + (!c.isPartnerShare && c.isCombined ? ' merge-cell' : ''); }
     const dataAdhoc = c.isAdhoc ? ` data-adhoc-id="${c.adhocId}"` : '';
@@ -3434,7 +3434,9 @@ function commitCellEdit(opts = {}) {
     snapshot();
     // Use parseMoney to handle any currency formatting that might exist
     const n = parseMoney(raw);
+    console.log('[CD] commit raw=', JSON.stringify(raw), 'parsed=', n, 'before=', S.currentBalance);
     S.currentBalance = isNaN(n) || n === null ? 0 : n;
+    console.log('[CD] commit AFTER cb=', S.currentBalance);
   } else if (type === 'adhoc') {
     snapshot();
     const n = parseFloat(raw);
@@ -4996,6 +4998,7 @@ function applyMerge(remoteData) {
   const merged = merge3(SYNCED_BASE === null ? undefined : SYNCED_BASE, S, remoteData, localNewer, '');
   merged.meta = { version: 1, modified: (localMod > remoteMod ? localMod : remoteMod) || new Date().toISOString() };
   const changed = __noMeta(merged) !== before;
+  console.log('[CD] applyMerge local=', S.currentBalance, 'remote=', remoteData.currentBalance, 'base=', SYNCED_BASE && SYNCED_BASE.currentBalance, 'merged=', merged.currentBalance, 'localNewer=', localNewer, 'changed=', changed, 'editing=', isUserEditing());
   S = merged;
   SYNCED_BASE = __clone(merged);
   try { localStorage.setItem(LS_BASE, JSON.stringify(SYNCED_BASE)); } catch (e) {}
@@ -7297,7 +7300,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-25-clean';
+const BUILD_ID = '2026-06-25-dbg2';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
