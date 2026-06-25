@@ -2591,23 +2591,31 @@ function buildBudget(weeks) {
 
   S.bills.filter(b => b.active !== false).forEach(bill => {
     const due = billDueDates(bill, lookbackFrom, lastDate);
-    const datesHit = new Set();
+    const overrides = S.billOverrides[bill.id] || {};
+    const recur = Number(bill.amount) || 0;
+    // Sum the natural recurring amount per column (a column can cover several
+    // due dates — e.g. weekly groceries inside a monthly paycheck column).
+    const natural = {};
     due.forEach(d => {
       const colDate = colCoveringDate(cols, d);
       if (!colDate) return;
-      const overrides = S.billOverrides[bill.id] || {};
-      const amt = overrides[colDate] !== undefined ? overrides[colDate] : (Number(bill.amount) || 0);
-      matrix[colDate][bill.id] = (matrix[colDate][bill.id] || 0) + amt;
-      datesHit.add(colDate);
+      natural[colDate] = (natural[colDate] || 0) + recur;
     });
-    // Also surface override-only entries: user typed a value into a column where the
-    // bill wasn't naturally due. Without this the saved override would be invisible.
-    const overrides = S.billOverrides[bill.id] || {};
+    // For columns that have natural occurrences: an override REPLACES the whole
+    // column total (applied once), otherwise use the summed recurring amount.
+    // (Previously the override was added once PER occurrence, so editing a cell
+    //  that held N occurrences multiplied the entered value by N — the doubling.)
+    Object.keys(natural).forEach(colDate => {
+      const amt = overrides[colDate] !== undefined ? (Number(overrides[colDate]) || 0) : natural[colDate];
+      matrix[colDate][bill.id] = (matrix[colDate][bill.id] || 0) + amt;
+    });
+    // Override-only entries: user typed a value into a column where the bill
+    // wasn't naturally due. Without this the saved override would be invisible.
     Object.keys(overrides).forEach(d => {
-      if (datesHit.has(d)) return;
-      if (!matrix[d]) return;   // override outside the visible window
+      if (natural[d] !== undefined) return;   // already applied above
+      if (!matrix[d]) return;                 // override outside the visible window
       const v = Number(overrides[d]) || 0;
-      if (v === 0) return;       // zero overrides shouldn't render
+      if (v === 0) return;                     // zero overrides shouldn't render
       matrix[d][bill.id] = (matrix[d][bill.id] || 0) + v;
     });
   });
@@ -7303,7 +7311,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-25-deposit-fix';
+const BUILD_ID = '2026-06-25-bill-double-fix';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
