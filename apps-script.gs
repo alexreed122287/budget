@@ -4,6 +4,9 @@
 
 var SHEET_NAME = '_data';
 
+// Who gets email reminders (comma-separated). Driven by the same cron as push.
+var REMINDER_EMAILS = 'alexander.s.reed@gmail.com,bflor_2012@outlook.com';
+
 function doGet(e) {
   return _ok(_read());
 }
@@ -51,14 +54,10 @@ function _unsubscribePush(endpoint) {
 //    computes each reminder's fire time (matching the client logic),
 //    and pings the Cloudflare push worker for everything due in the
 //    last 90 seconds that hasn't already fired.                     ──
-function sendDuePushes() {
-  var st = _readData();
-  if (!st || !st.push) return;
-  if (!st.push.subscriptions || !st.push.subscriptions.length) return;
-  if (!st.pushConfig || !st.pushConfig.workerUrl) return;
-  var now = new Date();
+// Collect every to-do / calendar reminder whose fire time landed in the last
+// 90 seconds. Shared by the email + push delivery in sendDueReminders().
+function _collectDue(st, now) {
   var due = [];
-  // To-dos
   (st.todos || []).forEach(function (t) {
     if (t.done || !t.dueDate || !t.remind || t.remind === 'none') return;
     var fire = _todoFireDate(t); if (!fire) return;
@@ -67,7 +66,6 @@ function sendDuePushes() {
                  title: 'To-Do', body: (t.text || 'To-do') + ' · due ' + _fmtMDY(t.dueDate) + (t.dueTime ? (' ' + t.dueTime) : '') });
     }
   });
-  // Calendar events
   ((st.calendar && st.calendar.events) || []).forEach(function (e) {
     if (e.remindMins === null || e.remindMins === undefined || !e.time) return;
     if (!_eventOccursOn(e, now)) return;
@@ -78,22 +76,54 @@ function sendDuePushes() {
       due.push({ key: 'c:' + e.id + ':' + _isoDate(now), title: 'Reminder', body: e.title + (e.time ? (' at ' + e.time) : '') });
     }
   });
+  return due;
+}
+
+// Cron entry-point — install ONE time-driven trigger on this (every minute).
+// Sends an EMAIL for every due reminder (always), and ALSO a native push to
+// each subscribed device when push is configured. One shared fired-key list so
+// neither channel repeats a reminder.
+function sendDueReminders() {
+  var st = _readData();
+  if (!st) return;
+  var now = new Date();
+  var due = _collectDue(st, now);
   if (!due.length) return;
+  st.push = st.push || { subscriptions: [], firedKeys: [] };
   st.push.firedKeys = st.push.firedKeys || [];
   var fired = {}; st.push.firedKeys.forEach(function (k) { fired[k] = 1; });
   due = due.filter(function (d) { return !fired[d.key]; });
   if (!due.length) return;
-  // Send each due reminder to each subscription via the Cloudflare worker.
+
+  var pushOn = !!(st.pushConfig && st.pushConfig.workerUrl &&
+                  st.push.subscriptions && st.push.subscriptions.length);
+
   due.forEach(function (d) {
-    st.push.subscriptions.forEach(function (sub) {
-      var ok = _postToWorker(st.pushConfig.workerUrl + '/send', { subscription: { endpoint: sub.endpoint, keys: sub.keys }, payload: { title: d.title, body: d.body, url: '/' } });
-      if (ok && ok.status === 410) _unsubscribePush(sub.endpoint);
-    });
+    // Email (always)
+    if (REMINDER_EMAILS) {
+      try {
+        MailApp.sendEmail({
+          to: REMINDER_EMAILS,
+          subject: (d.title === 'To-Do' ? 'To-Do reminder — ' : 'Reminder — ') + d.body,
+          body: d.body + '\n\n(Automatic reminder from your budget calendar.)',
+        });
+      } catch (e) { /* keep going; don't let one bad address block the rest */ }
+    }
+    // Native push (only when configured + at least one device subscribed)
+    if (pushOn) {
+      st.push.subscriptions.forEach(function (sub) {
+        var ok = _postToWorker(st.pushConfig.workerUrl + '/send', { subscription: { endpoint: sub.endpoint, keys: sub.keys }, payload: { title: d.title, body: d.body, url: '/' } });
+        if (ok && ok.status === 410) _unsubscribePush(sub.endpoint);
+      });
+    }
     fired[d.key] = 1;
   });
   st.push.firedKeys = Object.keys(fired).slice(-500);   // keep last 500
   _writeData(st);
 }
+
+// Back-compat alias so an existing trigger named sendDuePushes still works.
+function sendDuePushes() { sendDueReminders(); }
 function _postToWorker(url, body) {
   try {
     var res = UrlFetchApp.fetch(url, {
