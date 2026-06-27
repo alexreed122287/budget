@@ -83,43 +83,83 @@ function _collectDue(st, now) {
 // Sends an EMAIL for every due reminder (always), and ALSO a native push to
 // each subscribed device when push is configured. One shared fired-key list so
 // neither channel repeats a reminder.
+// Human-readable date line for a calendar event (single day, multi-day range,
+// time, and recurrence).
+function _eventAnnounceBody(e) {
+  var when = _fmtMDY(e.date);
+  if (e.endDate && e.endDate !== e.date) when += ' to ' + _fmtMDY(e.endDate);
+  if (e.time) when += ' at ' + e.time;
+  if (e.recur && e.recur !== 'none') when += ' (repeats ' + e.recur + ')';
+  var notes = e.notes ? ('\n\n' + e.notes) : '';
+  return (e.title || 'Event') + '\n' + when + notes + '\n\n(New event added to your budget calendar.)';
+}
+
 function sendDueReminders() {
   var st = _readData();
   if (!st) return;
   var now = new Date();
-  var due = _collectDue(st, now);
-  if (!due.length) return;
   st.push = st.push || { subscriptions: [], firedKeys: [] };
-  st.push.firedKeys = st.push.firedKeys || [];
-  var fired = {}; st.push.firedKeys.forEach(function (k) { fired[k] = 1; });
-  due = due.filter(function (d) { return !fired[d.key]; });
-  if (!due.length) return;
+  var changed = false;
 
-  var pushOn = !!(st.pushConfig && st.pushConfig.workerUrl &&
-                  st.push.subscriptions && st.push.subscriptions.length);
+  // 1) Announce newly-created calendar events — one email each, when added.
+  //    On the very first run we just record existing event IDs so we don't
+  //    blast emails for events that already existed.
+  var events = (st.calendar && st.calendar.events) || [];
+  if (!st.push.announcedEvents) {
+    st.push.announcedEvents = events.map(function (e) { return e.id; }).filter(Boolean);
+    changed = true;
+  } else {
+    var seen = {}; st.push.announcedEvents.forEach(function (id) { seen[id] = 1; });
+    events.forEach(function (e) {
+      if (!e.id || seen[e.id]) return;
+      if (REMINDER_EMAILS) {
+        try {
+          MailApp.sendEmail({
+            to: REMINDER_EMAILS,
+            subject: 'New event added — ' + (e.title || 'Event'),
+            body: _eventAnnounceBody(e),
+          });
+        } catch (err) { /* don't let one send block the rest */ }
+      }
+      st.push.announcedEvents.push(e.id);
+      changed = true;
+    });
+    if (st.push.announcedEvents.length > 1000) st.push.announcedEvents = st.push.announcedEvents.slice(-1000);
+  }
 
-  due.forEach(function (d) {
-    // Email (always)
-    if (REMINDER_EMAILS) {
-      try {
-        MailApp.sendEmail({
-          to: REMINDER_EMAILS,
-          subject: (d.title === 'To-Do' ? 'To-Do reminder — ' : 'Reminder — ') + d.body,
-          body: d.body + '\n\n(Automatic reminder from your budget calendar.)',
-        });
-      } catch (e) { /* keep going; don't let one bad address block the rest */ }
-    }
-    // Native push (only when configured + at least one device subscribed)
-    if (pushOn) {
-      st.push.subscriptions.forEach(function (sub) {
-        var ok = _postToWorker(st.pushConfig.workerUrl + '/send', { subscription: { endpoint: sub.endpoint, keys: sub.keys }, payload: { title: d.title, body: d.body, url: '/' } });
-        if (ok && ok.status === 410) _unsubscribePush(sub.endpoint);
+  // 2) Fire due to-do / calendar reminders (email always, push when configured).
+  var due = _collectDue(st, now);
+  if (due.length) {
+    st.push.firedKeys = st.push.firedKeys || [];
+    var fired = {}; st.push.firedKeys.forEach(function (k) { fired[k] = 1; });
+    due = due.filter(function (d) { return !fired[d.key]; });
+    if (due.length) {
+      var pushOn = !!(st.pushConfig && st.pushConfig.workerUrl &&
+                      st.push.subscriptions && st.push.subscriptions.length);
+      due.forEach(function (d) {
+        if (REMINDER_EMAILS) {
+          try {
+            MailApp.sendEmail({
+              to: REMINDER_EMAILS,
+              subject: (d.title === 'To-Do' ? 'To-Do reminder — ' : 'Reminder — ') + d.body,
+              body: d.body + '\n\n(Automatic reminder from your budget calendar.)',
+            });
+          } catch (e) { /* keep going */ }
+        }
+        if (pushOn) {
+          st.push.subscriptions.forEach(function (sub) {
+            var ok = _postToWorker(st.pushConfig.workerUrl + '/send', { subscription: { endpoint: sub.endpoint, keys: sub.keys }, payload: { title: d.title, body: d.body, url: '/' } });
+            if (ok && ok.status === 410) _unsubscribePush(sub.endpoint);
+          });
+        }
+        fired[d.key] = 1;
       });
+      st.push.firedKeys = Object.keys(fired).slice(-500);   // keep last 500
+      changed = true;
     }
-    fired[d.key] = 1;
-  });
-  st.push.firedKeys = Object.keys(fired).slice(-500);   // keep last 500
-  _writeData(st);
+  }
+
+  if (changed) _writeData(st);
 }
 
 // Back-compat alias so an existing trigger named sendDuePushes still works.
