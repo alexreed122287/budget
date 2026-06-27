@@ -590,12 +590,27 @@ tr.nw-linked input[readonly]{background:transparent;border:none;color:var(--text
 .cal-ribbon.cont-l{border-top-left-radius:0;border-bottom-left-radius:0;margin-left:-2px;padding-left:6px;}
 .cal-ribbon.cont-r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:-2px;padding-right:6px;}
 .cal-list{display:flex;flex-direction:column;gap:8px;}
-.cal-wkday{border:1px solid var(--border);border-radius:12px;padding:8px 12px 10px;background:var(--bg-soft);
-  cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-.cal-wkday.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
-.cal-wkday.selecting{background:var(--accent-soft,rgba(80,120,255,.16));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
-.cal-wkday-hd{font-weight:700;font-size:13px;margin:2px 0 6px;color:var(--text);}
-.cal-wkday-empty{font-size:12px;color:var(--text-light);padding:2px 0;}
+/* Week view — horizontal 7-column grid (Sun…Sat left to right) */
+.cal-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-wkcol{border:1px solid var(--border);border-radius:12px;padding:6px 6px 8px;background:var(--bg-soft);
+  min-height:150px;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  display:flex;flex-direction:column;}
+.cal-wkcol.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-wkcol.selecting{background:var(--accent-soft,rgba(80,120,255,.16));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.cal-wkcol-hd{text-align:center;margin-bottom:6px;display:flex;flex-direction:column;align-items:center;gap:1px;}
+.cal-wkcol-hd .wk-dow{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.cal-wkcol-hd .wk-num{font-size:15px;font-weight:700;color:var(--text);}
+.cal-wkcol-evs{display:flex;flex-direction:column;gap:4px;}
+.cal-chip{background:linear-gradient(90deg,var(--accent),var(--accent-dim));color:#fff;border-radius:7px;
+  padding:3px 7px;font-size:11px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  box-shadow:0 1px 2px rgba(0,0,0,.10);}
+@media (max-width:560px){
+  .cal-week-grid{gap:3px;}
+  .cal-wkcol{min-height:96px;padding:4px 3px 6px;border-radius:8px;}
+  .cal-wkcol-hd .wk-num{font-size:12px;}
+  .cal-wkcol-hd .wk-dow{font-size:8px;}
+  .cal-chip{font-size:9px;padding:2px 4px;border-radius:5px;}
+}
 .cal-ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;
   padding:12px 14px;background:var(--bg-soft);}
 .cal-ev .ceicon{font-size:18px;line-height:1.2;flex:0 0 auto;}
@@ -6608,12 +6623,13 @@ function renderCalendar() {
     const start = addDays(calCursor, -calCursor.getDay());
     titleEl.textContent = 'Week of ' + start.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const todayISO = localISO(new Date());
-    let h = '<div class="cal-list">';
+    let h = '<div class="cal-week-grid">';
     for (let i=0;i<7;i++){
       const d = addDays(start,i); const iso = localISO(d); const evs = eventsOn(d);
-      h += `<div class="cal-wkday caldsel${iso===todayISO?' today':''}" data-iso="${iso}">` +
-        `<div class="cal-wkday-hd">${fmtDate(d)}</div>` +
-        (evs.length ? evs.map(e=>calEvRow(e)).join('') : '<div class="cal-wkday-empty">—</div>') +
+      const dow = (CAL_DOW && CAL_DOW[i]) || d.toLocaleDateString('en-US',{weekday:'short'});
+      h += `<div class="cal-wkcol caldsel${iso===todayISO?' today':''}" data-iso="${iso}">` +
+        `<div class="cal-wkcol-hd"><span class="wk-dow">${dow}</span><span class="wk-num">${d.getDate()}</span></div>` +
+        `<div class="cal-wkcol-evs">${evs.map(e=>calChip(e)).join('')}</div>` +
         '</div>';
     }
     body.innerHTML = h + '</div>';
@@ -6648,7 +6664,7 @@ function calSelFinish() {
 }
 function onCalMouseDown(ev) {
   if (ev.button !== 0) return;
-  if (ev.target.closest('.cal-ribbon, .cal-ev, button, a')) return;   // event/edit interactions
+  if (ev.target.closest('.cal-ribbon, .cal-ev, .cal-chip, button, a')) return;   // event/edit interactions
   const iso = calCellISOFrom(ev.target);
   if (!iso) return;
   ev.preventDefault();
@@ -6667,7 +6683,7 @@ function onCalTouchStart(ev) {
   if (!ev.touches || ev.touches.length !== 1) return;
   const t = ev.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
-  if (el && el.closest('.cal-ribbon, .cal-ev, button, a')) return;
+  if (el && el.closest('.cal-ribbon, .cal-ev, .cal-chip, button, a')) return;
   const iso = calCellISOFrom(el);
   if (!iso) return;
   calSel = { anchorISO: iso, lastISO: iso, touch: true };
@@ -6715,6 +6731,11 @@ function calEvRow(e) {
       ${e.notes?`<div class="cenote">${escHTML(e.notes)}</div>`:''}</div>
     <div class="cebtns"><button onclick="editCalEvent('${e.id}')" title="Edit">✎</button><button onclick="deleteCalEvent('${e.id}')" title="Delete">🗑</button></div>
   </div>`;
+}
+// Compact event chip for the horizontal week grid; tap to edit.
+function calChip(e) {
+  const t = e.time ? (escHTML(e.time) + ' ') : '';
+  return `<div class="cal-chip" onclick="event.stopPropagation();editCalEvent('${e.id}')" title="${escHTML(e.title)}${e.time?(' · '+escHTML(e.time)):''}">${t}${escHTML(e.title)}</div>`;
 }
 function calModal(html) {
   let host = eid('cal-modal');
@@ -7320,7 +7341,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-25-bill-fix-2';
+const BUILD_ID = '2026-06-27-week-horizontal';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
