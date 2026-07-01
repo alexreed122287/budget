@@ -7386,7 +7386,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-advance-carry';
+const BUILD_ID = '2026-06-28-scroll-fix';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
@@ -7442,31 +7442,16 @@ function boot() {
   setInterval(() => { if (WEBHOOK_URL && (SYNC_STATE === 'ok' || SYNC_STATE === 'err')) updateSyncPill(); }, 30000);
 }
 
-// Budget grid: lock a scroll gesture to ONE axis (no diagonal). Whichever
-// direction the swipe starts in wins; the other axis is held until the
-// gesture ends. Native momentum on the active axis is preserved.
+// Budget grid scrolling. On touch we let the browser scroll natively in BOTH
+// axes — the old approach toggled overflow-y:hidden to "lock" to one axis, but
+// setting overflow:hidden on a container that's already scrolled down forces
+// the browser to reset scrollTop to 0, so panning sideways jumped back to the
+// top. Native 2D scroll preserves the position. Trackpad/wheel still moves the
+// dominant axis per event (which doesn't reset scroll position).
 function enableBudgetAxisLock() {
   const el = eid('budget-scroll');
   if (!el || el.__axisLock) return;
   el.__axisLock = true;
-  let sx = 0, sy = 0, axis = null;
-  const reset = () => { axis = null; el.style.overflowX = ''; el.style.overflowY = ''; };
-  el.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) { axis = 'both'; return; }
-    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; reset();
-  }, { passive: true });
-  el.addEventListener('touchmove', e => {
-    if (axis || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = Math.abs(t.clientX - sx), dy = Math.abs(t.clientY - sy);
-    if (dx < 6 && dy < 6) return;                 // wait for a clear intent
-    axis = dx > dy ? 'x' : 'y';
-    if (axis === 'x') el.style.overflowY = 'hidden';
-    else el.style.overflowX = 'hidden';
-  }, { passive: true });
-  el.addEventListener('touchend', reset, { passive: true });
-  el.addEventListener('touchcancel', reset, { passive: true });
-  // Trackpad / mouse wheel: move only the dominant axis per event.
   el.addEventListener('wheel', e => {
     const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY);
     if (!ax && !ay) return;
