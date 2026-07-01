@@ -3788,16 +3788,61 @@ function advanceToNextPaycheck() {
   const future = generatePaychecks(BUDGET_WEEKS);
   const next = future[0];
   if (!next) { toast('No upcoming paycheck found'); return; }
+  const prevISO = isoDate(currentBudgetDate());
+  const D2 = next.date;
   if (!confirm(
-    'Advance to ' + next.date + '?\n\n' +
-    'Shifts the budget forward. Income resets to $0 in the new Current column ' +
-    '(enter your actual balance manually). Bills carry forward by their recurrence rules.'
+    'Advance to ' + fmtMDY(D2) + '?\n\n' +
+    'The ' + fmt$(Number(next.amount) || 0) + ' paycheck is ADDED to your current balance, and the ' +
+    'expenses & deposits now showing in the next column carry into the new Current column. ' +
+    'They stay until you delete them.'
   )) return;
   snapshot();
-  S.currentBalance = 0;
-  S.currentDate = next.date;
+
+  // Snapshot what the promoted (next) column currently displays so we can pin
+  // those exact values onto the new Current date — WYSIWYG, no vanishing.
+  const built = buildBudget(BUDGET_WEEKS);
+  const matrix = built.matrix || {};
+  const matrixDep = built.matrixDep || {};
+
+  // Pin promoted-column BILL values as per-date overrides on the new Current
+  // date; fall back to the old Current column's override for cells the next
+  // column doesn't have, so nothing from either column is lost.
+  S.billOverrides = S.billOverrides || {};
+  (S.bills || []).forEach(b => {
+    if (b.active === false) return;
+    const shown = (matrix[D2] && matrix[D2][b.id]) || 0;
+    const prevOv = S.billOverrides[b.id] ? S.billOverrides[b.id][prevISO] : undefined;
+    let val = shown > 0 ? shown : (prevOv !== undefined ? prevOv : null);
+    if (val !== null && val !== undefined) {
+      S.billOverrides[b.id] = S.billOverrides[b.id] || {};
+      S.billOverrides[b.id][D2] = val;
+    }
+    // tidy: drop the now-past Current-column override
+    if (S.billOverrides[b.id]) delete S.billOverrides[b.id][prevISO];
+  });
+
+  // Pin promoted-column DEPOSIT values so they stay visible in Current.
+  S.depositOverrides = S.depositOverrides || {};
+  (S.depositRows || []).forEach(r => {
+    const shown = matrixDep[D2] ? matrixDep[D2][r.id] : undefined;
+    if (shown !== undefined && shown !== null) {
+      S.depositOverrides[r.id] = S.depositOverrides[r.id] || {};
+      S.depositOverrides[r.id][D2] = shown;
+    }
+    if (S.depositOverrides[r.id]) delete S.depositOverrides[r.id][prevISO];
+  });
+
+  // Add the advanced paycheck to the current balance.
+  S.currentBalance = (Number(S.currentBalance) || 0) + (Number(next.amount) || 0);
+  if (S.paycheckOverrides) delete S.paycheckOverrides[prevISO];
+
+  // Move the anchor. Set lastCurrentISO to the new date so carryOverridesToCurrent
+  // doesn't then move the old Current overrides on top of what we just pinned.
+  S.currentDate = D2;
+  S.lastCurrentISO = D2;
+
   saveAndRender();
-  toast('Advanced to ' + next.date);
+  toast('Advanced to ' + fmtMDY(D2));
 }
 
 function resetCurrentDate() {
@@ -7341,7 +7386,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-27-week-horizontal';
+const BUILD_ID = '2026-06-28-advance-carry';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
