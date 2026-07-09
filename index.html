@@ -2646,12 +2646,22 @@ function buildBudget(weeks) {
   // deposit row's default amount applies to every future (non-Current) column;
   // per-cell overrides win. The running total starts at depositStart.
   const depRows = S.depositRows || [];
+  // One-time migration: the old single combined "starting balance" becomes the
+  // first row's per-row start, since each row now has its own running total.
+  if ((Number(S.depositStart) || 0) > 0 && depRows.length &&
+      (depRows[0].start === undefined || depRows[0].start === null)) {
+    depRows[0].start = Number(S.depositStart) || 0;
+    S.depositStart = 0;
+  }
   const matrixDep = {};
   const colDepTotal = {};
   cols.forEach(c => { matrixDep[c.date] = {}; colDepTotal[c.date] = 0; });
   let savedRun = Number(S.depositStart) || 0;
+  const runByRow = {};                          // per-row cumulative running total
+  depRows.forEach(row => { runByRow[row.id] = Number(row.start) || 0; });
   cols.forEach(c => {
     let colDeposits = 0;
+    const rowRun = {};
     depRows.forEach(row => {
       const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
       let v;
@@ -2659,7 +2669,10 @@ function buildBudget(weeks) {
       else v = c.isCurrent ? 0 : (Number(row.amount) || 0);
       matrixDep[c.date][row.id] = v;
       colDeposits += v;
+      runByRow[row.id] += v;
+      rowRun[row.id] = runByRow[row.id];
     });
+    c.savedRunningByRow = rowRun;
     colDepTotal[c.date] = colDeposits;
     savedRun += colDeposits;
     c.savedRunning = savedRun;
@@ -2881,21 +2894,23 @@ function renderBudget() {
     h += '</tr>';
   });
 
-  // ── Running Saved total — cumulative deposits across columns ──
-  if ((S.depositRows || []).length || (Number(S.depositStart) || 0)) {
-    const rLabel = rowTitle('savedrunning', savedRunDefaultTitle());
-    h += '<tr class="saved-run"><td class="cat sv">' +
-      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the starting balance">${escHTML(rLabel)}</button>` +
+  // ── Per-row running-saved totals — each deposit/saved row gets its OWN
+  //    cumulative running row here, titled the same, built from that row's
+  //    per-column contributions plus an optional starting balance. ──
+  (S.depositRows || []).forEach(row => {
+    const nm = (row.label && row.label.trim()) || 'Saved';
+    h += `<tr class="saved-run" data-run-dep="${row.id}"><td class="cat sv">` +
+      `<button type="button" class="sv-label" onclick="svOpen(this)" title="Running total for ${escHTML(nm)} — tap to rename or set a starting balance">${escHTML(nm)}</button>` +
       '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
-      `<input type="text" class="xsave-name" value="${escHTML(rLabel)}" placeholder="${escHTML(savedRunDefaultTitle())}" ` +
-      `oninput="updateRowLabel('savedrunning',this.value)" title="Row title">` +
-      `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.depositStart)||0)}" ` +
-      `placeholder="$0.00" oninput="updateDepositStart(parseMoney(this.value))" ` +
+      `<input type="text" class="xsave-name" value="${escHTML(nm)}" placeholder="Saved" ` +
+      `oninput="updateDepositRow('${row.id}','label',this.value)" title="Row title">` +
+      `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(row.start)||0)}" ` +
+      `placeholder="$0.00" oninput="updateDepositRow('${row.id}','start',parseMoney(this.value))" ` +
       `title="Starting balance the running total builds on">` +
       '</span></td>';
-    cols.forEach(c => h += `<td>${fmt$(c.savedRunning)}</td>`);
+    cols.forEach(c => h += `<td>${fmt$((c.savedRunningByRow && c.savedRunningByRow[row.id]) || 0)}</td>`);
     h += '</tr>';
-  }
+  });
   h += '</tfoot></table>';
 
   wrap.innerHTML = h;
@@ -4056,8 +4071,13 @@ function patchDepositsLive() {
       td.classList.toggle('has-value', amt !== 0);
     });
   });
-  const trTot = wrap.querySelector('tfoot tr.saved-run');
-  if (trTot) { const tds = trTot.querySelectorAll('td:not(.cat)'); cols.forEach((c, i) => { if (tds[i]) tds[i].textContent = fmt$(c.savedRunning); }); }
+  // Per-row running-total footer rows.
+  (S.depositRows || []).forEach(row => {
+    const tr = wrap.querySelector(`tfoot tr.saved-run[data-run-dep="${row.id}"]`);
+    if (!tr) return;
+    const tds = tr.querySelectorAll('td:not(.cat)');
+    cols.forEach((c, i) => { if (tds[i]) tds[i].textContent = fmt$((c.savedRunningByRow && c.savedRunningByRow[row.id]) || 0); });
+  });
   // Deposits now affect the Remainder, so refresh those footer rows too.
   const patchFooter = (sel, textFn, clsFn) => {
     const tr = wrap.querySelector('tfoot ' + sel); if (!tr) return;
@@ -4079,17 +4099,13 @@ function patchDepositsLive() {
 function updateDepositRow(id, field, value) {
   const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
   maybeSnapshot();
-  row[field] = (field === 'amount') ? (Math.abs(Number(value)) || 0) : value;
+  row[field] = (field === 'amount' || field === 'start') ? (Math.abs(Number(value)) || 0) : value;
   scheduleSave();
-  if (field === 'label') {
-    // Live-mirror the name into the Running Saved title (unless custom-named).
-    const wrap = eid('budget-scroll');
-    const lbl = wrap && wrap.querySelector('tfoot tr.saved-run td.cat .sv-label');
-    const custom = S.rowLabels && S.rowLabels.savedrunning && S.rowLabels.savedrunning.trim();
-    if (lbl && !custom) lbl.textContent = savedRunDefaultTitle();
-  } else if (field === 'amount') {
-    patchDepositsLive();   // recompute cells + total without a full re-render
+  if (field === 'amount' || field === 'start') {
+    patchDepositsLive();   // recompute cells + per-row totals + remainder in place
   }
+  // 'label' updates on the next render (the sv-edit re-renders when it closes),
+  // keeping the grid row and its running-total footer row titles in sync.
 }
 function editDepositRow(id) {
   const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
@@ -7428,7 +7444,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-deposit-flash';
+const BUILD_ID = '2026-06-28-per-row-totals';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
