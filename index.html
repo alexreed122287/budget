@@ -2637,8 +2637,34 @@ function buildBudget(weeks) {
     });
   });
 
+  // ── Recurring deposit / saved rows → cumulative "running saved" total ──
+  // Computed BEFORE the Remainder so each column's deposits ALSO subtract from
+  // that column's Remainder: money you move to savings leaves checking just
+  // like a bill, and simultaneously builds the running saved total. Each
+  // deposit row's default amount applies to every future (non-Current) column;
+  // per-cell overrides win. The running total starts at depositStart.
+  const depRows = S.depositRows || [];
+  const matrixDep = {};
+  const colDepTotal = {};
+  cols.forEach(c => { matrixDep[c.date] = {}; colDepTotal[c.date] = 0; });
+  let savedRun = Number(S.depositStart) || 0;
+  cols.forEach(c => {
+    let colDeposits = 0;
+    depRows.forEach(row => {
+      const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
+      let v;
+      if (ov[c.date] !== undefined) v = Number(ov[c.date]) || 0;
+      else v = c.isCurrent ? 0 : (Number(row.amount) || 0);
+      matrixDep[c.date][row.id] = v;
+      colDeposits += v;
+    });
+    colDepTotal[c.date] = colDeposits;
+    savedRun += colDeposits;
+    c.savedRunning = savedRun;
+  });
+
   // Compute Remainder + projected Savings balance per column.
-  // Savings = current actual savings balance + cumulative future contributions.
+  // Remainder = running balance − bills − deposits (both leave checking).
   let bal = Number(S.currentBalance) || 0;
   let savingsRunning = Number(S.savingsBalance) || 0;
   let prevBal = bal;
@@ -2652,46 +2678,25 @@ function buildBudget(weeks) {
         if ((b.category || '').toLowerCase() === 'savings') savingsThis += amt;
       }
     });
+    const depOut = colDepTotal[c.date] || 0;   // deposits leave checking too
 
     if (c.isCurrent) {
-      bal = (Number(S.currentBalance) || 0) - billsTotal;
+      bal = (Number(S.currentBalance) || 0) - billsTotal - depOut;
       // Current shows just the existing savings balance — additions haven't happened yet.
       c.savingsTotal = savingsRunning;
     } else if (c.isAdhoc) {
       const sign = c.adhocType === 'expense' ? -1 : 1;
-      bal = bal + (sign * c.amount) - billsTotal;
+      bal = bal + (sign * c.amount) - billsTotal - depOut;
       savingsRunning += savingsThis;
       c.savingsTotal = savingsRunning;
     } else {
-      bal = bal + (Number(c.amount) || 0) - billsTotal;
+      bal = bal + (Number(c.amount) || 0) - billsTotal - depOut;
       savingsRunning += savingsThis;
       c.savingsTotal = savingsRunning;
     }
     c.remainder = bal;
     c.diff = (i === 0) ? null : bal - prevBal;
     prevBal = bal;
-  });
-
-  // ── Recurring deposit rows → cumulative "running saved" total ──
-  // Each deposit row's default amount applies to every future (non-Current)
-  // column; per-cell overrides win. The running total starts at depositStart
-  // and accumulates every row's deposit left-to-right across the columns.
-  const depRows = S.depositRows || [];
-  const matrixDep = {};
-  cols.forEach(c => matrixDep[c.date] = {});
-  let savedRun = Number(S.depositStart) || 0;
-  cols.forEach(c => {
-    let colDeposits = 0;
-    depRows.forEach(row => {
-      const ov = (S.depositOverrides && S.depositOverrides[row.id]) || {};
-      let v;
-      if (ov[c.date] !== undefined) v = Number(ov[c.date]) || 0;
-      else v = c.isCurrent ? 0 : (Number(row.amount) || 0);
-      matrixDep[c.date][row.id] = v;
-      colDeposits += v;
-    });
-    savedRun += colDeposits;
-    c.savedRunning = savedRun;
   });
 
   return { cols, matrix, matrixDep, naturalBill };
@@ -3972,11 +3977,12 @@ function toggleBudgetActions() {
   requestAnimationFrame(() => { sizeBudgetPane(); lockBudgetFooter(); });
 }
 function addSavingsExtra() {
-  const name = (prompt('Name this saved row (e.g. Crypto, HSA, 529):', 'Crypto') || '').trim();
-  if (!name) return;
+  // Creates a keyable, per-column contribution row (same engine as deposit
+  // rows) so it builds a running total AND subtracts from the Remainder.
+  // (No prompt() — iOS home-screen apps block it; rename the row inline.)
   snapshot();
-  S.savingsExtra = S.savingsExtra || [];
-  S.savingsExtra.push({ id: uid(), label: name, balance: 0 });
+  S.depositRows = S.depositRows || [];
+  S.depositRows.push({ id: uid(), label: 'New saved', amount: 0 });
   saveAndRender();
 }
 function updateSavingsExtra(id, field, value) {
@@ -3999,11 +4005,11 @@ function deleteSavingsExtra(id) {
 
 // ── Recurring deposit rows (running saved total) ──
 function addDepositRow() {
-  const name = (prompt('Name this deposit row (e.g. Savings, Emergency Fund, Vacation):', 'Savings') || '').trim();
-  if (!name) return;
+  // No prompt() — iOS home-screen apps block it, so the button did nothing.
+  // Add the row with a default name; the user renames it inline.
   snapshot();
   S.depositRows = S.depositRows || [];
-  S.depositRows.push({ id: uid(), label: name, amount: 0 });
+  S.depositRows.push({ id: uid(), label: 'New deposit', amount: 0 });
   saveAndRender();
 }
 // The Running Saved row's title mirrors the contribution row's name when
@@ -4033,6 +4039,23 @@ function patchDepositsLive() {
   });
   const trTot = wrap.querySelector('tfoot tr.saved-run');
   if (trTot) { const tds = trTot.querySelectorAll('td:not(.cat)'); cols.forEach((c, i) => { if (tds[i]) tds[i].textContent = fmt$(c.savedRunning); }); }
+  // Deposits now affect the Remainder, so refresh those footer rows too.
+  const patchFooter = (sel, textFn, clsFn) => {
+    const tr = wrap.querySelector('tfoot ' + sel); if (!tr) return;
+    const tds = tr.querySelectorAll('td:not(.cat)');
+    cols.forEach((c, i) => {
+      const td = tds[i]; if (!td) return;
+      td.textContent = textFn(c, i);
+      td.classList.remove('neg', 'pos');
+      const cl = clsFn ? clsFn(c, i) : '';
+      if (cl) td.classList.add(cl);
+    });
+  };
+  patchFooter('tr.balance', c => fmt$(c.remainder), c => c.remainder < 0 ? 'neg' : '');
+  patchFooter('tr.diff',
+    (c, i) => (i === 0 || c.diff == null) ? '—' : ((c.diff > 0 ? '+' : '') + fmt$(c.diff)),
+    (c, i) => (i === 0 || c.diff == null) ? '' : (c.diff > 0 ? 'pos' : c.diff < 0 ? 'neg' : ''));
+  patchFooter('tr.savings', c => fmt$(c.savingsTotal), null);
 }
 function updateDepositRow(id, field, value) {
   const row = (S.depositRows || []).find(x => x.id === id); if (!row) return;
@@ -7386,7 +7409,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-scroll-fix';
+const BUILD_ID = '2026-06-28-deposit-rows';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
