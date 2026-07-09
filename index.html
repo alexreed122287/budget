@@ -287,6 +287,8 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table tfoot tr.xsave td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 /* ── Recurring deposit input rows — white font like the rest of the sheet ── */
 .budget-table tbody.deposits-body tr.deposit td{background:var(--bg);color:var(--text);font-weight:400;border-top:1px solid var(--border);}
+@keyframes rowFlash{0%{background:var(--accent);}100%{background:transparent;}}
+.budget-table tr.deposit.row-flash td{animation:rowFlash 1.8s ease-out;}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.has-value{color:var(--text);font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.dep-cell.zero{color:var(--text-light);font-weight:400;}
 .budget-table tbody.deposits-body tr.deposit td.cat.sv{z-index:5;background:var(--bg);}
@@ -3982,8 +3984,23 @@ function addSavingsExtra() {
   // (No prompt() — iOS home-screen apps block it; rename the row inline.)
   snapshot();
   S.depositRows = S.depositRows || [];
-  S.depositRows.push({ id: uid(), label: 'New saved', amount: 0 });
+  const id = uid();
+  S.depositRows.push({ id, label: 'New saved', amount: 0 });
   saveAndRender();
+  flashNewDepositRow(id, 'Saved row added — tap its name to rename it');
+}
+// After adding a deposit/saved row, scroll it into view and flash it so the
+// user sees the new (empty) row instead of thinking the button did nothing.
+function flashNewDepositRow(id, msg) {
+  if (typeof toast === 'function') toast(msg);
+  requestAnimationFrame(() => {
+    const wrap = eid('budget-scroll');
+    const tr = wrap && wrap.querySelector(`tr.deposit[data-dep-id="${id}"]`);
+    if (!tr) return;
+    try { tr.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { tr.scrollIntoView(); }
+    tr.classList.add('row-flash');
+    setTimeout(() => tr.classList.remove('row-flash'), 1800);
+  });
 }
 function updateSavingsExtra(id, field, value) {
   const r = (S.savingsExtra || []).find(x => x.id === id); if (!r) return;
@@ -4009,8 +4026,10 @@ function addDepositRow() {
   // Add the row with a default name; the user renames it inline.
   snapshot();
   S.depositRows = S.depositRows || [];
-  S.depositRows.push({ id: uid(), label: 'New deposit', amount: 0 });
+  const id = uid();
+  S.depositRows.push({ id, label: 'New deposit', amount: 0 });
   saveAndRender();
+  flashNewDepositRow(id, 'Deposit row added — tap its name to rename it');
 }
 // The Running Saved row's title mirrors the contribution row's name when
 // there's a single deposit row and the user hasn't set a custom title.
@@ -7409,7 +7428,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-deposit-rows';
+const BUILD_ID = '2026-06-28-deposit-flash';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
