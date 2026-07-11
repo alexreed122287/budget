@@ -322,13 +322,14 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
   text-transform:uppercase;letter-spacing:.03em;padding:2px 4px;min-height:0;}
 .budget-table td.cat.sv .sv-edit input.xsave-name:focus{outline:none;border-bottom-color:var(--accent);color:var(--text);}
 .budget-table td.cat.sv .sv-edit input.cat-input{margin-left:0;}
-.budget-table td.cat.sv .sv-edit button.xsave-del{border:none;background:none;color:var(--text-light);cursor:pointer;font-size:13px;line-height:1;}
+.budget-table td.cat.sv .sv-edit button.xsave-del{border:1px solid var(--negative,#e5484d);background:transparent;color:var(--negative,#e5484d);cursor:pointer;font-size:12px;font-weight:700;line-height:1;border-radius:6px;padding:5px 10px;white-space:nowrap;}
+.budget-table td.cat.sv .sv-edit button.xsave-del:hover{background:var(--negative,#e5484d);color:#fff;}
 /* On narrow screens stack the row-title editor vertically so name + balance
    inputs don't run off the right edge of the (slim) Category column. */
 @media (max-width:560px){
   .budget-table td.cat.sv .sv-edit{flex-direction:column;align-items:flex-start;gap:4px;}
   .budget-table td.cat.sv .sv-edit input.xsave-name{width:130px;font-size:16px;letter-spacing:0;text-transform:none;color:var(--text);}
-  .budget-table td.cat.sv .sv-edit button.xsave-del{align-self:flex-end;}
+  .budget-table td.cat.sv .sv-edit button.xsave-del{align-self:flex-start;padding:8px 16px;font-size:14px;}
 }
 
 /* Sticky left: category column. Must be FULLY OPAQUE and above the
@@ -2907,7 +2908,7 @@ function renderBudget() {
       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(row.start)||0)}" ` +
       `placeholder="$0.00" oninput="updateDepositRow('${row.id}','start',parseMoney(this.value))" ` +
       `title="Starting balance the running total builds on">` +
-      `<button class="xsave-del" title="Delete ${escHTML(nm)}" onclick="deleteDepositRow('${row.id}')">×</button>` +
+      `<button class="xsave-del" title="Delete ${escHTML(nm)}" onclick="deleteDepositRow('${row.id}')">Delete</button>` +
       '</span></td>';
     cols.forEach(c => h += `<td>${fmt$((c.savedRunningByRow && c.savedRunningByRow[row.id]) || 0)}</td>`);
     h += '</tr>';
@@ -7449,7 +7450,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-deletable-rows';
+const BUILD_ID = '2026-06-28-delete-btn-v2';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
