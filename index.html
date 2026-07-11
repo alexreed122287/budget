@@ -2907,6 +2907,7 @@ function renderBudget() {
       `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(row.start)||0)}" ` +
       `placeholder="$0.00" oninput="updateDepositRow('${row.id}','start',parseMoney(this.value))" ` +
       `title="Starting balance the running total builds on">` +
+      `<button class="xsave-del" title="Delete ${escHTML(nm)}" onclick="deleteDepositRow('${row.id}')">×</button>` +
       '</span></td>';
     cols.forEach(c => h += `<td>${fmt$((c.savedRunningByRow && c.savedRunningByRow[row.id]) || 0)}</td>`);
     h += '</tr>';
@@ -4114,11 +4115,15 @@ function editDepositRow(id) {
   snapshot(); row.label = name; saveAndRender();
 }
 function deleteDepositRow(id) {
-  if (!confirm('Delete this deposit row? Its per-cell edits are removed too.')) return;
+  // No native confirm() — iOS home-screen apps block it. Delete immediately and
+  // rely on Undo (snapshot taken first); the toast tells the user how to undo.
+  const row = (S.depositRows || []).find(x => x.id === id);
+  const nm = (row && row.label && row.label.trim()) || 'row';
   snapshot();
   S.depositRows = (S.depositRows || []).filter(x => x.id !== id);
   if (S.depositOverrides) delete S.depositOverrides[id];
   saveAndRender();
+  if (typeof toast === 'function') toast('Deleted "' + nm + '" — tap ↩ (top right) to undo');
 }
 function updateDepositStart(value) {
   maybeSnapshot();
@@ -7444,7 +7449,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-per-row-totals';
+const BUILD_ID = '2026-06-28-deletable-rows';
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
