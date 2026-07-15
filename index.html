@@ -297,7 +297,7 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 /* ── Running Saved total — same green Saved-row look (Savings / custom saved rows) ── */
 .budget-table tfoot tr.saved-run td{background:var(--bg);color:var(--accent-dim);font-weight:600;border-top:1px solid var(--border);}
 .budget-table tfoot tr.saved-run td.cat{z-index:5;background:var(--bg);}
-.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:var(--accent-dim);text-transform:uppercase;letter-spacing:.04em;font-size:11px;font-weight:600;}
+.budget-table tfoot tr.saved-run td.cat.sv .sv-label{color:var(--accent-dim);text-transform:none;letter-spacing:normal;font-size:13px;font-weight:600;}
 /* Drag handle on deposit rows (reorder, desktop + touch) */
 .budget-table tbody.deposits-body tr.deposit td.cat .drag-handle{touch-action:none;cursor:grab;padding:6px 4px;margin:-6px 4px -6px -2px;}
 .budget-table tr.deposit.row-dragging{opacity:.92;}
@@ -7450,7 +7450,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-delete-btn-v2';
+const BUILD_ID = '2026-06-28-nocaps'
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
