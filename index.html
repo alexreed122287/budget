@@ -3569,8 +3569,10 @@ function navigateCell(dir) {
 }
 
 function onCellKey(e) {
-  if (e.key === 'Tab') { e.preventDefault(); navigateCell(e.shiftKey ? 'left' : 'right'); }
-  else if (e.key === 'Enter') { e.preventDefault(); navigateCell('down'); }
+  // Tab is handled once by the document-level capture listener below (so it
+  // can't escape to the URL bar). Handling it here too would navigate twice
+  // and skip a cell.
+  if (e.key === 'Enter') { e.preventDefault(); navigateCell('down'); }
   else if (e.key === 'Escape') { e.preventDefault(); cancelCellEdit(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navigateCell('right'); }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateCell('left'); }
@@ -7486,7 +7488,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-nocaps-input'
+const BUILD_ID = '2026-06-28-tab-fix'
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
