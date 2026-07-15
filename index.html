@@ -317,9 +317,9 @@ body.bg-active .budget-table thead tr.dates th.pshare-col,body.bg-active .budget
 .budget-table td.cat.sv.sv-open .sv-label{display:none;}
 .budget-table td.cat.sv.sv-open .sv-edit{display:inline-flex;}
 .budget-table td.cat.sv.sv-open{overflow:visible;z-index:6;}
-.budget-table td.cat.sv .sv-edit input.xsave-name{width:110px;font:inherit;font-size:12px;font-weight:600;
+.budget-table td.cat.sv .sv-edit input.xsave-name{width:130px;font:inherit;font-size:13px;font-weight:600;
   border:none;border-bottom:1px dashed var(--border-strong);background:none;color:var(--accent-dim);
-  text-transform:uppercase;letter-spacing:.03em;padding:2px 4px;min-height:0;}
+  text-transform:none;letter-spacing:normal;padding:2px 4px;min-height:0;}
 .budget-table td.cat.sv .sv-edit input.xsave-name:focus{outline:none;border-bottom-color:var(--accent);color:var(--text);}
 .budget-table td.cat.sv .sv-edit input.cat-input{margin-left:0;}
 .budget-table td.cat.sv .sv-edit button.xsave-del{border:1px solid var(--negative,#e5484d);background:transparent;color:var(--negative,#e5484d);cursor:pointer;font-size:12px;font-weight:700;line-height:1;border-radius:6px;padding:5px 10px;white-space:nowrap;}
@@ -7486,7 +7486,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-hide-rows'
+const BUILD_ID = '2026-06-28-nocaps-input'
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
