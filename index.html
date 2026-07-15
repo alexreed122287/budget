@@ -1154,6 +1154,7 @@ body.cell-select-mode .budget-table tfoot td:not(.cat){cursor:pointer;}
         <button class="btn subtle" onclick="resetCurrentDate()" id="btn-reset-date" title="Reset Current back to today">⤺ Today</button>
         <button class="btn" onclick="renderBudget()">↻ Refresh</button>
       </div>
+      <div class="ctrl-group" id="restore-rows-group" style="display:none;"><span id="restore-rows"></span></div>
     </div>
   </div>
 </div>
@@ -2836,6 +2837,7 @@ function renderBudget() {
   // Row titles are now tap-to-rename. Stored as overrides in S.rowLabels.
   h += '<tfoot>';
   S.rowLabels = S.rowLabels || { remainder:'', difference:'', savings:'' };
+  S.hiddenFooterRows = S.hiddenFooterRows || {};
   const rTitle = rowTitle('remainder', 'Remainder');
   const dTitle = rowTitle('difference', 'Difference');
   const sTitle = rowTitle('savings', 'Savings');
@@ -2848,11 +2850,13 @@ function renderBudget() {
   cols.forEach(c => h += `<td class="${c.remainder < 0 ? 'neg' : ''}">${fmt$(c.remainder)}</td>`);
   h += '</tr>';
 
+  if (!S.hiddenFooterRows.difference) {
   h += '<tr class="diff"><td class="cat sv">' +
-       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename this row">${escHTML(dTitle)}</button>` +
+       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or remove this row">${escHTML(dTitle)}</button>` +
        '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
        `<input type="text" class="xsave-name" value="${escHTML(dTitle)}" placeholder="Difference" ` +
        `oninput="updateRowLabel('difference',this.value)" title="Row title">` +
+       `<button class="xsave-del" title="Remove the Difference row" onclick="hideFooterRow('difference')">Delete</button>` +
        '</span></td>';
   cols.forEach((c, i) => {
     if (i === 0 || c.diff === null || c.diff === undefined) { h += '<td>—</td>'; }
@@ -2863,18 +2867,22 @@ function renderBudget() {
     }
   });
   h += '</tr>';
+  }
 
+  if (!S.hiddenFooterRows.savings) {
   h += '<tr class="savings"><td class="cat sv">' +
-       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename or set the balance">${escHTML(sTitle)}</button>` +
+       `<button type="button" class="sv-label" onclick="svOpen(this)" title="Tap to rename, set the balance, or remove this row">${escHTML(sTitle)}</button>` +
        '<span class="sv-edit" onfocusout="svMaybeClose(event,this)">' +
        `<input type="text" class="xsave-name" value="${escHTML(sTitle)}" placeholder="Savings" ` +
        `oninput="updateRowLabel('savings',this.value)" title="Row title">` +
        `<input type="text" inputmode="decimal" class="cat-input money" value="${fmt$2(Number(S.savingsBalance)||0)}" ` +
        `placeholder="$0.00" oninput="updateSavingsBalance(parseMoney(this.value))" ` +
        `title="Starting / current savings balance — overwrites the auto-grown value">` +
+       `<button class="xsave-del" title="Remove the Savings row" onclick="hideFooterRow('savings')">Delete</button>` +
        '</span></td>';
   cols.forEach(c => h += `<td>${fmt$(c.savingsTotal)}</td>`);
   h += '</tr>';
+  }
 
   // Custom "saved amount" rows (Crypto, etc.) — informational, constant
   // across columns, rendered beneath Savings. Same hide-behind-label UX.
@@ -2917,6 +2925,7 @@ function renderBudget() {
 
   wrap.innerHTML = h;
   wireBudgetInteractions();
+  renderRestoreRows();
   sizeBudgetPane();
   requestAnimationFrame(() => { sizeBudgetPane(); lockBudgetFooter(); });
   setTimeout(() => { sizeBudgetPane(); lockBudgetFooter(); }, 90);
@@ -3894,6 +3903,33 @@ function updateRowLabel(key, value) {
   const sel = `.budget-table tr.${ key === 'remainder' ? 'balance' : key === 'difference' ? 'diff' : 'savings' } td.cat.sv .sv-label`;
   const btn = document.querySelector(sel);
   if (btn) btn.textContent = (value && value.trim()) ? value : (key === 'remainder' ? 'Remainder' : key === 'difference' ? 'Difference' : 'Savings');
+}
+// Hide/restore the optional built-in footer rows (Savings, Difference). The
+// Remainder row is core and stays. Hidden rows can be brought back from the
+// Actions ▾ panel.
+function hideFooterRow(key) {
+  snapshot();
+  S.hiddenFooterRows = S.hiddenFooterRows || {};
+  S.hiddenFooterRows[key] = true;
+  saveAndRender();
+  const nm = key.charAt(0).toUpperCase() + key.slice(1);
+  if (typeof toast === 'function') toast('Removed the ' + nm + ' row — restore it under Actions ▾');
+}
+function restoreFooterRow(key) {
+  snapshot();
+  if (S.hiddenFooterRows) delete S.hiddenFooterRows[key];
+  saveAndRender();
+}
+function renderRestoreRows() {
+  const host = eid('restore-rows'), grp = eid('restore-rows-group');
+  if (!host || !grp) return;
+  const hidden = Object.keys(S.hiddenFooterRows || {}).filter(k => S.hiddenFooterRows[k]);
+  if (!hidden.length) { grp.style.display = 'none'; host.innerHTML = ''; return; }
+  grp.style.display = '';
+  host.innerHTML = hidden.map(k => {
+    const nm = k.charAt(0).toUpperCase() + k.slice(1);
+    return `<button class="btn subtle" onclick="restoreFooterRow('${k}')" title="Bring the ${nm} row back">+ ${nm} row</button>`;
+  }).join(' ');
 }
 
 function updateSavingsBalance(value) {
@@ -7450,7 +7486,7 @@ function seedIfEmpty() {
 // ═══════════════════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════════════════
-const BUILD_ID = '2026-06-28-nocaps'
+const BUILD_ID = '2026-06-28-hide-rows'
 function boot() {
   console.log('[BUILD] budget ' + BUILD_ID);
   loadLocal();
